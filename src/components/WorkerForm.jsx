@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../supabaseClient'
+import { cn } from '../lib/utils'
 import Navbar from './Navbar'
 
 export default function WorkerForm() {
@@ -38,6 +40,10 @@ export default function WorkerForm() {
   })
 
   const [errors, setErrors] = useState({})
+  
+  // HR Records editing state
+  const [editingWorkerId, setEditingWorkerId] = useState(null)
+  const [editFormData, setEditFormData] = useState({})
 
   // Load workers from Supabase on component mount
   useEffect(() => {
@@ -226,21 +232,72 @@ export default function WorkerForm() {
       setLoading(false)
     }
   }
+  
+  // Handle edit worker in HR tab
+  const handleEditWorker = (worker) => {
+    setEditingWorkerId(worker.id)
+    setEditFormData({
+      full_name: worker.full_name,
+      father_name: worker.father_name,
+      date_of_birth: worker.date_of_birth,
+      religion: worker.religion || '',
+      phone_number: worker.phone_number,
+      cnic: worker.cnic,
+      designation: worker.designation,
+      salary: worker.salary,
+      uc_ward_name: worker.uc_ward_name,
+      status: worker.status,
+      address: worker.address || ''
+    })
+  }
+  
+  // Handle save edited worker
+  const handleSaveEdit = async (workerId) => {
+    try {
+      setLoading(true)
+      setError('')
+      
+      const { error: updateError } = await supabase
+        .from('workers')
+        .update(editFormData)
+        .eq('id', workerId)
+      
+      if (updateError) throw updateError
+      
+      setSuccess('Worker details updated successfully!')
+      setEditingWorkerId(null)
+      setEditFormData({})
+      
+      // Reload workers
+      await loadWorkers()
+      
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('Error updating worker:', err)
+      setError(err.message || 'Failed to update worker')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setEditingWorkerId(null)
+    setEditFormData({})
+  }
+  
+  // Handle edit form change
+  const handleEditChange = (e, field) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: e.target.value
+    }))
+  }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Simulated Particles Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Large glowing orbs */}
-        <div className="absolute top-20 left-20 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-20 right-20 w-80 h-80 bg-gray-400/5 rounded-full blur-3xl animate-float-delayed"></div>
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-white/3 rounded-full blur-3xl animate-drift"></div>
-        
-        {/* Small particle dots */}
-        <div className="absolute top-10 left-1/4 w-2 h-2 bg-white/20 rounded-full blur-sm animate-pulse-glow"></div>
-        <div className="absolute top-32 right-1/4 w-1.5 h-1.5 bg-white/15 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '0.5s'}}></div>
-        <div className="absolute bottom-40 left-1/3 w-1 h-1 bg-white/25 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-white/18 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '1.5s'}}></div>
+    <div className="min-h-screen bg-black text-white relative">
+      {/* Clean minimal background - GitHub style */}
+      <div className="absolute inset-0 bg-black">
         <div className="absolute bottom-1/4 right-20 w-1.5 h-1.5 bg-white/22 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '2s'}}></div>
         <div className="absolute top-2/3 left-20 w-1 h-1 bg-white/15 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '2.5s'}}></div>
         <div className="absolute top-20 right-1/2 w-2 h-2 bg-white/20 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '3s'}}></div>
@@ -253,173 +310,239 @@ export default function WorkerForm() {
       {/* Main Content Area */}
       <div className="relative z-10 px-4 pb-8">
         {/* Error and Success Messages */}
-        {error && (
-          <div className="max-w-4xl mx-auto mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="max-w-4xl mx-auto mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-xl text-green-400 text-sm">
-            {success}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-4xl mx-auto mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-sm"
+            >
+              {error}
+            </motion.div>
+          )}
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="max-w-4xl mx-auto mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-xl text-green-400 text-sm"
+            >
+              {success}
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
-          <div className="max-w-7xl mx-auto p-4 md:p-8">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Dashboard Overview</h2>
-              <p className="text-gray-400">Municipal Employee Management System</p>
-            </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-7xl mx-auto p-4 md:p-8"
+          >
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8 pb-4 border-b border-gray-800"
+            >
+              <h2 className="text-3xl font-semibold text-white mb-1.5">
+                Dashboard
+              </h2>
+              <p className="text-gray-500 text-sm">Municipal Employee Management System</p>
+            </motion.div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
+              {[
+                {
+                  icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+                  color: 'cyan',
+                  value: workers.length,
+                  title: 'Total Employees',
+                  subtitle: 'Active workforce',
+                  delay: 0.1
+                },
+                {
+                  icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                  color: 'green',
+                  value: workers.filter(w => w.status === 'Active').length,
+                  title: 'Active Workers',
+                  subtitle: 'Currently employed',
+                  delay: 0.2
+                },
+                {
+                  icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
+                  color: 'blue',
+                  value: 6,
+                  title: 'UC/Ward Areas',
+                  subtitle: 'Coverage zones',
+                  delay: 0.3
+                },
+                {
+                  icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                  color: 'yellow',
+                  value: `PKR ${workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}`,
+                  title: 'Monthly Payroll',
+                  subtitle: 'Total expenses',
+                  delay: 0.4
+                }
+              ].map((card, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: card.delay, duration: 0.2 }}
+                  className="bg-zinc-950 border border-gray-800 hover:border-gray-700 rounded-lg p-6 transition-colors cursor-default"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-white/5 rounded-md">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-sm font-medium">{card.title}</p>
                   </div>
-                  <span className="text-2xl font-bold text-white">{workers.length}</span>
-                </div>
-                <h3 className="text-white font-semibold mb-1">Total Employees</h3>
-                <p className="text-gray-400 text-sm">Active workforce</p>
-              </div>
-
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <div>
+                    <p className="text-3xl font-semibold text-white mb-1">{card.value}</p>
+                    <p className="text-gray-600 text-xs">{card.subtitle}</p>
                   </div>
-                  <span className="text-2xl font-bold text-white">{workers.filter(w => w.status === 'Active').length}</span>
-                </div>
-                <h3 className="text-white font-semibold mb-1">Active Workers</h3>
-                <p className="text-gray-400 text-sm">Currently employed</p>
-              </div>
-
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <span className="text-2xl font-bold text-white">6</span>
-                </div>
-                <h3 className="text-white font-semibold mb-1">UC/Ward Areas</h3>
-                <p className="text-gray-400 text-sm">Coverage zones</p>
-              </div>
-
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <span className="text-2xl font-bold text-white">PKR {workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}</span>
-                </div>
-                <h3 className="text-white font-semibold mb-1">Monthly Payroll</h3>
-                <p className="text-gray-400 text-sm">Total expenses</p>
-              </div>
+                </motion.div>
+              ))}
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8">
-              <h3 className="text-white font-semibold mb-4">Quick Actions</h3>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-zinc-950 border border-gray-800 rounded-lg p-6 mb-6"
+            >
+              <h3 className="text-base font-semibold text-white mb-4">
+                Quick Actions
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
+                <motion.button
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('registration')}
-                  className="flex items-center gap-3 p-4 bg-cyan-500/10 hover:bg-cyan-500/20 rounded-xl transition-all duration-200 text-left"
+                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
                 >
-                  <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 bg-white/5 rounded">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">Register New Employee</p>
-                    <p className="text-gray-400 text-sm">Add worker to system</p>
+                    <p className="text-white font-medium text-sm">Register New Employee</p>
+                    <p className="text-gray-600 text-xs">Add worker to system</p>
                   </div>
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('workers')}
-                  className="flex items-center gap-3 p-4 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all duration-200 text-left"
+                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
                 >
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 bg-white/5 rounded">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">View Employee Directory</p>
-                    <p className="text-gray-400 text-sm">Browse all workers</p>
+                    <p className="text-white font-medium text-sm">View Employee Directory</p>
+                    <p className="text-gray-600 text-xs">Browse all workers</p>
                   </div>
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('hr')}
-                  className="flex items-center gap-3 p-4 bg-green-500/10 hover:bg-green-500/20 rounded-xl transition-all duration-200 text-left"
+                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
                 >
-                  <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 bg-white/5 rounded">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-white font-medium">HR Records</p>
-                    <p className="text-gray-400 text-sm">Complete employee data</p>
+                    <p className="text-white font-medium text-sm">HR Records</p>
+                    <p className="text-gray-600 text-xs">Complete employee data</p>
                   </div>
-                </button>
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Recent Activity */}
-            {workers.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
-                <h3 className="text-white font-semibold mb-4">Recent Registrations</h3>
-                <div className="space-y-3">
-                  {workers.slice(0, 5).map((worker) => (
-                    <div key={worker.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-                      <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-bold border border-white/10">
-                        {worker.full_name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-white font-medium">{worker.full_name}</p>
-                        <p className="text-gray-400 text-sm">{worker.designation} • {worker.uc_ward_name}</p>
-                      </div>
-                      <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
-                        {worker.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+            <AnimatePresence>
+              {workers.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: 0.6 }}
+                  className="bg-zinc-950 border border-gray-800 rounded-lg p-6"
+                >
+                  <h3 className="text-base font-semibold text-white mb-4">
+                    Recent Registrations
+                  </h3>
+                  <div className="space-y-3">
+                    {workers.slice(0, 5).map((worker, index) => (
+                      <motion.div 
+                        key={worker.id} 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.7 + index * 0.1 }}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                        className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                            {worker.full_name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">{worker.full_name}</p>
+                            <p className="text-gray-600 text-xs">{worker.designation} • {worker.uc_ward_name}</p>
+                          </div>
+                        </div>
+                        <span className="px-2 py-1 bg-white/5 text-gray-400 text-xs rounded border border-gray-800">
+                          {worker.status}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
         
         {activeTab === 'registration' && (
-          <div className="flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center justify-center p-4"
+          >
             {/* Registration Form */}
             <div className="relative z-10 w-full max-w-4xl">
-              {/* Glow effect behind card */}
-              <div className="absolute inset-0 bg-white/10 rounded-3xl blur-3xl"></div>
-              
-              {/* Glass card */}
-              <div className="relative bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl p-8 md:p-12">
+              {/* Clean card */}
+              <motion.div 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="relative bg-zinc-950 border border-gray-800 rounded-lg p-8 md:p-12"
+              >
           {/* Header */}
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
+          <div className="mb-8 pb-6 border-b border-gray-800">
+            <h1 className="text-2xl font-semibold text-white mb-2">
               Worker Registration
             </h1>
-            <div className="h-1 w-24 bg-white mx-auto rounded-full shadow-lg shadow-white/50"></div>
-            <p className="text-gray-400 mt-4 text-sm md:text-base">Fill in the details to register a new worker</p>
+            <p className="text-gray-500 text-sm">Fill in the details to register a new worker</p>
           </div>
 
           {/* Form */}
@@ -447,7 +570,7 @@ export default function WorkerForm() {
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="Enter full name"
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.fullName ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.fullName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
                   />
                   {errors.fullName && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -466,7 +589,7 @@ export default function WorkerForm() {
                     value={formData.fatherName}
                     onChange={handleChange}
                     placeholder="Enter father's name"
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.fatherName ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.fatherName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
                   />
                   {errors.fatherName && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -487,7 +610,7 @@ export default function WorkerForm() {
                     name="dateOfBirth"
                     value={formData.dateOfBirth}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.dateOfBirth ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.dateOfBirth ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors`}
                   />
                   {errors.dateOfBirth && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -506,7 +629,7 @@ export default function WorkerForm() {
                     value={formData.religion}
                     onChange={handleChange}
                     placeholder="Enter religion"
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10"
+                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors"
                   />
                 </div>
 
@@ -520,7 +643,7 @@ export default function WorkerForm() {
                     value={formData.phoneNumber}
                     onChange={handleChange}
                     placeholder="+92 300 0000000"
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.phoneNumber ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.phoneNumber ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
                   />
                   {errors.phoneNumber && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -533,12 +656,7 @@ export default function WorkerForm() {
 
             {/* Identification Section */}
             <div className="space-y-4 pt-6">
-              <h2 className="text-cyan-400 text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-                  </svg>
-                </span>
+              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
                 Identification
               </h2>
 
@@ -554,7 +672,7 @@ export default function WorkerForm() {
                     value={formData.cnic}
                     onChange={handleChange}
                     placeholder="00000-0000000-0"
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.cnic ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.cnic ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
                   />
                   {errors.cnic && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -572,7 +690,7 @@ export default function WorkerForm() {
                     name="cnicIssueDate"
                     value={formData.cnicIssueDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10"
+                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors"
                   />
                 </div>
 
@@ -585,7 +703,7 @@ export default function WorkerForm() {
                     name="cnicExpiryDate"
                     value={formData.cnicExpiryDate}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10"
+                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors"
                   />
                 </div>
               </div>
@@ -593,12 +711,7 @@ export default function WorkerForm() {
 
             {/* Employment Details Section */}
             <div className="space-y-4 pt-6">
-              <h2 className="text-cyan-400 text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </span>
+              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
                 Employment Details
               </h2>
 
@@ -612,7 +725,7 @@ export default function WorkerForm() {
                     name="designation"
                     value={formData.designation}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.designation ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10 appearance-none cursor-pointer`}
+                    className={`w-full px-3 py-2 bg-black border ${errors.designation ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
                   >
                     <option value="" className="bg-gray-900">Select designation</option>
                     <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
@@ -631,19 +744,16 @@ export default function WorkerForm() {
                 <div>
                   <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">
                     Salary (PKR)
-                    <span className="text-xs text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full">Auto-filled</span>
+                    <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-filled</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="salary"
-                      value={formData.salary}
-                      readOnly
-                      placeholder="Select designation first"
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-cyan-400 placeholder-gray-600 focus:outline-none cursor-not-allowed opacity-80 shadow-inner shadow-cyan-500/10"
-                    />
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/5 to-blue-500/5 pointer-events-none"></div>
-                  </div>
+                  <input
+                    type="text"
+                    name="salary"
+                    value={formData.salary}
+                    readOnly
+                    placeholder="Select designation first"
+                    className="w-full px-3 py-2 bg-zinc-950 border border-gray-700 rounded-md text-gray-400 text-sm placeholder-gray-600 focus:outline-none cursor-not-allowed"
+                  />
                 </div>
               </div>
 
@@ -657,7 +767,7 @@ export default function WorkerForm() {
                   name="joiningDate"
                   value={formData.joiningDate}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-white/5 border ${errors.joiningDate ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
+                  className={`w-full px-3 py-2 bg-black border ${errors.joiningDate ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors`}
                 />
                 {errors.joiningDate && (
                   <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -669,13 +779,7 @@ export default function WorkerForm() {
 
             {/* Location & Assignment Section */}
             <div className="space-y-4 pt-6">
-              <h2 className="text-cyan-400 text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </span>
+              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
                 Location & Assignment
                 <span className="text-xs text-gray-500 font-normal ml-2">(Maps to attendance point)</span>
               </h2>
@@ -683,13 +787,13 @@ export default function WorkerForm() {
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
                   UC / Ward <span className="text-red-400">*</span>
-                  <span className="text-xs text-blue-400 ml-2">(Will be dynamically connected)</span>
+                  <span className="text-xs text-gray-500 ml-2">(Will be dynamically connected)</span>
                 </label>
                 <select
                   name="ucWard"
                   value={formData.ucWard}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 bg-white/5 border ${errors.ucWard ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10 appearance-none cursor-pointer`}
+                  className={`w-full px-3 py-2 bg-black border ${errors.ucWard ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
                 >
                   <option value="" className="bg-gray-900">Select UC/Ward</option>
                   {ucWardOptions.map(uc => (
@@ -704,12 +808,12 @@ export default function WorkerForm() {
                   </p>
                 )}
                 {formData.ucWard && (
-                  <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="mt-2 p-3 bg-white/5 border border-gray-800 rounded-md flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="text-xs text-blue-300">
-                      Attendance Point: <span className="font-semibold">{ucWardOptions.find(uc => uc.id === parseInt(formData.ucWard))?.attendancePoint}</span>
+                    <span className="text-xs text-gray-400">
+                      Attendance Point: <span className="font-semibold text-white">{ucWardOptions.find(uc => uc.id === parseInt(formData.ucWard))?.attendancePoint}</span>
                     </span>
                   </div>
                 )}
@@ -718,13 +822,8 @@ export default function WorkerForm() {
 
             {/* Conditional Field - Vehicle Code (Only for Drivers) */}
             {formData.designation === 'Driver' && (
-              <div className="space-y-4 pt-6 border-t border-white/10">
-                <h2 className="text-cyan-400 text-lg font-semibold flex items-center gap-2 mb-4">
-                  <span className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                    </svg>
-                  </span>
+              <div className="space-y-4 pt-6 border-t border-gray-800">
+                <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
                   Vehicle Information
                 </h2>
 
@@ -778,14 +877,19 @@ export default function WorkerForm() {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-6">
-              <button
+            <div className="pt-6 border-t border-gray-800">
+              <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                whileHover={{ backgroundColor: '#ffffff' }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "w-full py-2.5 bg-white hover:bg-gray-100 text-black font-medium text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black",
+                  loading && "opacity-50 cursor-not-allowed"
+                )}
               >
                 {loading ? 'Registering...' : 'Register Worker'}
-              </button>
+              </motion.button>
             </div>
           </form>
 
@@ -795,18 +899,41 @@ export default function WorkerForm() {
               All fields marked with <span className="text-red-400">*</span> are required
             </p>
           </div>
+              </motion.div>
             </div>
-          </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Workers Directory Tab */}
         {activeTab === 'workers' && (
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Workers Directory</h2>
-              <p className="text-gray-400">View and manage all registered workers</p>
-            </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-7xl mx-auto"
+          >
+            <motion.div 
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8 flex items-center justify-between"
+            >
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">Workers Directory</h2>
+                <p className="text-gray-400">View and manage all registered workers - Read Only</p>
+              </div>
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring" }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span className="text-blue-400 text-sm font-medium">View Only</span>
+              </motion.div>
+            </motion.div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -878,8 +1005,15 @@ export default function WorkerForm() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {workers.map((worker) => (
-                        <tr key={worker.id} className="hover:bg-white/5 transition-colors">
+                      {workers.map((worker, index) => (
+                        <motion.tr 
+                          key={worker.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                          className="transition-colors"
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-semibold text-sm border border-white/10 flex-shrink-0">
@@ -938,25 +1072,21 @@ export default function WorkerForm() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <button className="p-2 text-gray-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-white/10" title="View Details">
+                              <motion.button 
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="p-2 text-gray-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-white/10" 
+                                title="View Details"
+                              >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
-                              </button>
-                              <button className="p-2 text-gray-400 hover:text-yellow-400 transition-colors rounded-lg hover:bg-white/10" title="Edit">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                              <button className="p-2 text-gray-400 hover:text-red-400 transition-colors rounded-lg hover:bg-white/10" title="Archive">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l4 4 4-4" />
-                                </svg>
-                              </button>
+                              </motion.button>
+                              <span className="text-xs text-gray-500 italic ml-2">Read-only</span>
                             </div>
                           </td>
-                        </tr>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
@@ -989,16 +1119,39 @@ export default function WorkerForm() {
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* HR Records Tab */}
         {activeTab === 'hr' && (
-          <div className="max-w-7xl mx-auto">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">HR Records</h2>
-              <p className="text-gray-400">Complete employee records and documentation</p>
-            </div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="max-w-7xl mx-auto"
+          >
+            <motion.div 
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8 flex items-center justify-between"
+            >
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2">HR Records</h2>
+                <p className="text-gray-400">Complete employee records and documentation - Customizable</p>
+              </div>
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring" }}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg"
+              >
+                <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span className="text-yellow-400 text-sm font-medium">Editable Records</span>
+              </motion.div>
+            </motion.div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -1024,15 +1177,17 @@ export default function WorkerForm() {
                 </button>
               </div>
             ) : (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-white/5 border-b border-white/10">
+                      <tr className="border-b border-white/10 bg-white/5">
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Designation</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Father's Name</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Designation</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">UC/Ward</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Salary</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
@@ -1040,65 +1195,259 @@ export default function WorkerForm() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {workers.map((worker) => (
-                        <tr key={worker.id} className="hover:bg-white/5 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-semibold text-sm border border-white/10">
-                                {worker.full_name?.charAt(0).toUpperCase()}
+                      {workers.map((worker, index) => (
+                        editingWorkerId === worker.id ? (
+                          // Edit Mode Row
+                          <motion.tr 
+                            key={worker.id}
+                            initial={{ backgroundColor: 'rgba(6, 182, 212, 0)' }}
+                            animate={{ backgroundColor: 'rgba(6, 182, 212, 0.1)' }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <td colSpan="9" className="px-6 py-6">
+                              <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-white">Editing Employee Record</h3>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleSaveEdit(worker.id)}
+                                    disabled={loading}
+                                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-all duration-200 flex items-center gap-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEdit}
+                                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all duration-200"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
                               </div>
-                              <div>
-                                <div className="text-white font-medium">{worker.full_name}</div>
-                                <div className="text-gray-400 text-xs">{worker.father_name}</div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {/* Full Name */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Full Name</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.full_name || ''}
+                                    onChange={(e) => handleEditChange(e, 'full_name')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Father's Name */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Father's Name</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.father_name || ''}
+                                    onChange={(e) => handleEditChange(e, 'father_name')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* CNIC */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">CNIC</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.cnic || ''}
+                                    onChange={(e) => handleEditChange(e, 'cnic')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Phone Number */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Phone Number</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.phone_number || ''}
+                                    onChange={(e) => handleEditChange(e, 'phone_number')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Designation */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Designation</label>
+                                  <select
+                                    value={editFormData.designation || ''}
+                                    onChange={(e) => handleEditChange(e, 'designation')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  >
+                                    <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
+                                    <option value="Helper" className="bg-gray-900">Helper</option>
+                                    <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
+                                    <option value="Driver" className="bg-gray-900">Driver</option>
+                                  </select>
+                                </div>
+                                
+                                {/* UC/Ward */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">UC/Ward</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.uc_ward_name || ''}
+                                    onChange={(e) => handleEditChange(e, 'uc_ward_name')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Salary */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Salary (PKR)</label>
+                                  <input
+                                    type="number"
+                                    value={editFormData.salary || ''}
+                                    onChange={(e) => handleEditChange(e, 'salary')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Status */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Status</label>
+                                  <select
+                                    value={editFormData.status || 'Active'}
+                                    onChange={(e) => handleEditChange(e, 'status')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  >
+                                    <option value="Active" className="bg-gray-900">Active</option>
+                                    <option value="Inactive" className="bg-gray-900">Inactive</option>
+                                    <option value="On Leave" className="bg-gray-900">On Leave</option>
+                                    <option value="Terminated" className="bg-gray-900">Terminated</option>
+                                  </select>
+                                </div>
+                                
+                                {/* Religion */}
+                                <div>
+                                  <label className="block text-gray-400 text-xs mb-2">Religion</label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.religion || ''}
+                                    onChange={(e) => handleEditChange(e, 'religion')}
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                                  />
+                                </div>
+                                
+                                {/* Address */}
+                                <div className="md:col-span-2 lg:col-span-3">
+                                  <label className="block text-gray-400 text-xs mb-2">Address</label>
+                                  <textarea
+                                    value={editFormData.address || ''}
+                                    onChange={(e) => handleEditChange(e, 'address')}
+                                    rows="2"
+                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 resize-none"
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-white text-sm">{worker.designation}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-300 text-sm font-mono">{worker.cnic}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-300 text-sm">{worker.phone_number}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-gray-300 text-xs">{worker.uc_ward_name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-white text-sm font-semibold">PKR {worker.salary?.toLocaleString()}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
-                              {worker.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <button className="text-gray-400 hover:text-white transition-colors">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
+                            </td>
+                          </motion.tr>
+                        ) : (
+                          // View Mode Row
+                          <motion.tr 
+                            key={worker.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                            className="transition-colors"
+                          >
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-bold text-sm border border-white/10">
+                                  {worker.full_name?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium">{worker.full_name}</p>
+                                  <p className="text-gray-400 text-xs">
+                                    {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm">{worker.father_name}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm font-mono">{worker.cnic}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm">{worker.phone_number}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm">{worker.designation}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm">{worker.uc_ward_name}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm font-medium">PKR {worker.salary?.toLocaleString()}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                                worker.status === 'Active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                worker.status === 'Inactive' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' :
+                                worker.status === 'On Leave' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                                'bg-red-500/20 text-red-400 border border-red-500/30'
+                              }`}>
+                                {worker.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <motion.button
+                                onClick={() => handleEditWorker(worker)}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Edit
+                              </motion.button>
+                            </td>
+                          </motion.tr>
+                        )
                       ))}
                     </tbody>
                   </table>
                 </div>
-
+                
                 {/* Summary Stats */}
                 <div className="bg-white/5 border-t border-white/10 px-6 py-4">
-                  <div className="flex flex-wrap gap-6 text-sm">
+                  <h3 className="text-white font-semibold mb-4 text-sm">Summary Statistics</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <span className="text-gray-400">Total Workers:</span>
-                      <span className="text-white font-semibold ml-2">{workers.length}</span>
+                      <p className="text-gray-400 text-xs mb-1">Total Workers</p>
+                      <p className="text-white text-xl font-bold">{workers.length}</p>
                     </div>
                     <div>
-                      <span className="text-gray-400">Active:</span>
-                      <span className="text-green-400 font-semibold ml-2">{workers.filter(w => w.status === 'Active').length}</span>
+                      <p className="text-gray-400 text-xs mb-1">Active</p>
+                      <p className="text-green-400 text-xl font-bold">{workers.filter(w => w.status === 'Active').length}</p>
                     </div>
                     <div>
-                      <span className="text-gray-400">Total Payroll:</span>
-                      <span className="text-white font-semibold ml-2">
-                        PKR {workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}
-                      </span>
+                      <p className="text-gray-400 text-xs mb-1">Total Payroll</p>
+                      <p className="text-white text-xl font-bold">
+                        PKR {(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs mb-1">Avg. Salary</p>
+                      <p className="text-white text-xl font-bold">
+                        PKR {workers.length > 0 ? (Math.round(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / workers.length) / 1000).toFixed(0) : '0'}K
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

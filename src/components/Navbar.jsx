@@ -46,14 +46,14 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
   ]
 
   return (
-    <nav className="bg-black/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
+    <nav className="bg-black border-b border-gray-800 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center mr-3">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3">
+                <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -75,14 +75,14 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
                 onClick={() => setActiveTab(item.id)}
                 className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
                   activeTab === item.id
-                    ? 'bg-cyan-500/20 text-cyan-400 shadow-lg shadow-cyan-500/20'
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    ? 'bg-white text-black'
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {item.icon}
                 <span>{item.label}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-1 px-2 py-0.5 text-xs bg-cyan-500 text-white rounded-full">
+                  <span className="ml-1 px-2 py-0.5 text-xs bg-white text-black rounded-full font-semibold">
                     {item.badge}
                   </span>
                 )}
@@ -117,15 +117,15 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
               </button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-black/90 backdrop-blur-xl rounded-lg shadow-lg border border-white/20 py-1">
-                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white">
+                <div className="absolute right-0 mt-2 w-48 bg-zinc-950 rounded-lg shadow-lg border border-gray-800 py-1">
+                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-white/5 hover:text-white">
                     Profile Settings
                   </button>
-                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white">
+                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-white/5 hover:text-white">
                     System Settings
                   </button>
-                  <hr className="my-1 border-white/20" />
-                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white">
+                  <hr className="my-1 border-gray-800" />
+                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-white/5 hover:text-white">
                     Sign Out
                   </button>
                 </div>
@@ -137,18 +137,26 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300 group"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <div className="w-6 h-5 relative flex flex-col justify-between">
+                <span className={`block h-0.5 w-full bg-current rounded-full transition-all duration-300 origin-center ${
+                  mobileMenuOpen ? 'rotate-45 translate-y-2' : ''
+                }`}></span>
+                <span className={`block h-0.5 w-full bg-current rounded-full transition-all duration-300 ${
+                  mobileMenuOpen ? 'opacity-0 scale-0' : 'opacity-100'
+                }`}></span>
+                <span className={`block h-0.5 w-full bg-current rounded-full transition-all duration-300 origin-center ${
+                  mobileMenuOpen ? '-rotate-45 -translate-y-2' : ''
+                }`}></span>
+              </div>
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/10 py-4">
+          <div className="md:hidden border-t border-gray-800 py-4">
             <div className="space-y-1">
               {navItems.map((item) => (
                 <button
@@ -159,14 +167,14 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeTab === item.id
-                      ? 'bg-cyan-500/20 text-cyan-400'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      ? 'bg-white text-black'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   {item.icon}
                   <span>{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="ml-auto px-2 py-0.5 text-xs bg-cyan-500 text-white rounded-full">
+                    <span className="ml-auto px-2 py-0.5 text-xs bg-white text-black rounded-full font-semibold">
                       {item.badge}
                     </span>
                   )}
@@ -174,7 +182,7 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
               ))}
               
               {/* Mobile User Section */}
-              <div className="pt-4 border-t border-white/10 mt-4">
+              <div className="pt-4 border-t border-gray-800 mt-4">
                 <div className="flex items-center gap-3 px-3 py-2">
                   <div className="w-8 h-8 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center">
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +194,7 @@ export default function Navbar({ activeTab, setActiveTab, workers }) {
                     <p className="text-xs text-gray-400">System Administrator</p>
                   </div>
                 </div>
-                <button className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-white/10 rounded-lg mt-2">
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-lg mt-2">
                   Sign Out
                 </button>
               </div>
