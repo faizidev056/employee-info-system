@@ -1,0 +1,231 @@
+import React, { useState, useRef, useEffect } from 'react'
+// eslint-disable-next-line no-unused-vars
+import { motion, AnimatePresence } from 'framer-motion'
+
+export default function DatePicker({ name, value, onChange, placeholder, error, className = '' }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+  const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null)
+  const calendarRef = useRef(null)
+  const inputRef = useRef(null)
+
+  // Update selected date when value prop changes
+  useEffect(() => {
+    setSelectedDate(value ? new Date(value) : null)
+  }, [value])
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target) &&
+          inputRef.current && !inputRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ]
+
+  const daysOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate()
+  }
+
+  const getFirstDayOfMonth = (month, year) => {
+    return new Date(year, month, 1).getDay()
+  }
+
+  const handleDateSelect = (day) => {
+    const newDate = new Date(currentYear, currentMonth, day)
+    setSelectedDate(newDate)
+    setIsOpen(false)
+
+    // Format date as YYYY-MM-DD for input
+    const formattedDate = newDate.toISOString().split('T')[0]
+
+    // Create synthetic event for onChange
+    const event = {
+      target: {
+        name,
+        value: formattedDate
+      }
+    }
+    onChange(event)
+  }
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11)
+      setCurrentYear(currentYear - 1)
+    } else {
+      setCurrentMonth(currentMonth - 1)
+    }
+  }
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0)
+      setCurrentYear(currentYear + 1)
+    } else {
+      setCurrentMonth(currentMonth + 1)
+    }
+  }
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear)
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear)
+    const days = []
+
+    // Empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>)
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const isSelected = selectedDate &&
+        selectedDate.getDate() === day &&
+        selectedDate.getMonth() === currentMonth &&
+        selectedDate.getFullYear() === currentYear
+
+      const isToday = new Date().getDate() === day &&
+        new Date().getMonth() === currentMonth &&
+        new Date().getFullYear() === currentYear
+
+      days.push(
+        <motion.button
+          key={day}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => handleDateSelect(day)}
+          className={`h-8 w-8 rounded-md text-sm font-medium transition-colors ${
+            isSelected
+              ? 'bg-cyan-500 text-black'
+              : isToday
+              ? 'bg-white/20 text-white border border-white/30'
+              : 'text-gray-300 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          {day}
+        </motion.button>
+      )
+    }
+
+    return days
+  }
+
+  const formatDisplayDate = (date) => {
+    if (!date) return ''
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          readOnly
+          value={formatDisplayDate(selectedDate)}
+          placeholder={placeholder}
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full px-3 py-2 bg-black border ${error ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors cursor-pointer pr-10 ${className}`}
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            ref={calendarRef}
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="absolute z-50 mt-2 w-80 bg-zinc-900 border border-gray-700 rounded-lg shadow-xl p-4"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handlePrevMonth}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </motion.button>
+
+              <h3 className="text-white font-semibold">
+                {months[currentMonth]} {currentYear}
+              </h3>
+
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleNextMonth}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </motion.button>
+            </div>
+
+            {/* Days of week */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {daysOfWeek.map(day => (
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs font-medium text-gray-500">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendar()}
+            </div>
+
+            {/* Today button */}
+            <div className="mt-4 pt-3 border-t border-gray-700">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  const today = new Date()
+                  handleDateSelect(today.getDate())
+                  setCurrentMonth(today.getMonth())
+                  setCurrentYear(today.getFullYear())
+                }}
+                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-md transition-colors"
+              >
+                Today
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

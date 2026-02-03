@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react'
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../supabaseClient'
-import { cn } from '../lib/utils'
 import Navbar from './Navbar'
+import PersonalInfo from './WorkerFormParts/PersonalInfo'
+import Identification from './WorkerFormParts/Identification'
+import EmploymentDetails from './WorkerFormParts/EmploymentDetails'
+import LocationAssignment from './WorkerFormParts/LocationAssignment'
+import VehicleInfo from './WorkerFormParts/VehicleInfo'
+import AddressSection from './WorkerFormParts/AddressSection'
+import SubmitButton from './WorkerFormParts/SubmitButton'
 
-export default function WorkerForm() {
+export default function WorkerManager() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [workers, setWorkers] = useState([])
   const [loading, setLoading] = useState(false)
@@ -189,7 +196,7 @@ export default function WorkerForm() {
       }
 
       // Insert into Supabase
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('workers')
         .insert([newWorker])
         .select()
@@ -295,20 +302,35 @@ export default function WorkerForm() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white relative">
-      {/* Clean minimal background - GitHub style */}
-      <div className="absolute inset-0 bg-black">
-        <div className="absolute bottom-1/4 right-20 w-1.5 h-1.5 bg-white/22 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-2/3 left-20 w-1 h-1 bg-white/15 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '2.5s'}}></div>
-        <div className="absolute top-20 right-1/2 w-2 h-2 bg-white/20 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '3s'}}></div>
-        <div className="absolute bottom-20 left-1/2 w-1.5 h-1.5 bg-white/18 rounded-full blur-sm animate-pulse-glow" style={{animationDelay: '3.5s'}}></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white relative overflow-hidden">
+      {/* Enhanced Background with Multiple Layers */}
+      <div className="absolute inset-0">
+        {/* Primary gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"></div>
+
+        {/* Animated mesh gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-purple-500/5 animate-pulse"></div>
+
+        {/* Floating orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-float-slow"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/8 rounded-full blur-3xl animate-float-slower"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/6 rounded-full blur-3xl animate-float"></div>
+
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.02%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%221%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+
+        {/* Animated particles */}
+        <div className="absolute top-20 left-20 w-1 h-1 bg-cyan-400/60 rounded-full animate-ping" style={{animationDelay: '0s'}}></div>
+        <div className="absolute top-40 right-32 w-1 h-1 bg-purple-400/60 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-32 left-1/3 w-1 h-1 bg-blue-400/60 rounded-full animate-ping" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-20 right-20 w-1 h-1 bg-cyan-400/60 rounded-full animate-ping" style={{animationDelay: '3s'}}></div>
       </div>
 
       {/* Navbar */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} workers={workers} />
 
       {/* Main Content Area */}
-      <div className="relative z-10 px-4 pb-8">
+      <div className="relative z-10 px-4 pb-8 pt-4">
         {/* Error and Success Messages */}
         <AnimatePresence>
           {error && (
@@ -359,7 +381,10 @@ export default function WorkerForm() {
               {[
                 {
                   icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-                  color: 'cyan',
+                  gradient: 'from-cyan-500/20 to-blue-500/20',
+                  borderColor: 'border-cyan-500/30',
+                  shadowColor: 'shadow-cyan-500/20',
+                  iconColor: 'text-cyan-400',
                   value: workers.length,
                   title: 'Total Employees',
                   subtitle: 'Active workforce',
@@ -367,7 +392,10 @@ export default function WorkerForm() {
                 },
                 {
                   icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                  color: 'green',
+                  gradient: 'from-green-500/20 to-emerald-500/20',
+                  borderColor: 'border-green-500/30',
+                  shadowColor: 'shadow-green-500/20',
+                  iconColor: 'text-green-400',
                   value: workers.filter(w => w.status === 'Active').length,
                   title: 'Active Workers',
                   subtitle: 'Currently employed',
@@ -375,7 +403,10 @@ export default function WorkerForm() {
                 },
                 {
                   icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
-                  color: 'blue',
+                  gradient: 'from-blue-500/20 to-indigo-500/20',
+                  borderColor: 'border-blue-500/30',
+                  shadowColor: 'shadow-blue-500/20',
+                  iconColor: 'text-blue-400',
                   value: 6,
                   title: 'UC/Ward Areas',
                   subtitle: 'Coverage zones',
@@ -383,7 +414,10 @@ export default function WorkerForm() {
                 },
                 {
                   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-                  color: 'yellow',
+                  gradient: 'from-yellow-500/20 to-orange-500/20',
+                  borderColor: 'border-yellow-500/30',
+                  shadowColor: 'shadow-yellow-500/20',
+                  iconColor: 'text-yellow-400',
                   value: `PKR ${workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}`,
                   title: 'Monthly Payroll',
                   subtitle: 'Total expenses',
@@ -392,23 +426,32 @@ export default function WorkerForm() {
               ].map((card, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: card.delay, duration: 0.2 }}
-                  className="bg-zinc-950 border border-gray-800 hover:border-gray-700 rounded-lg p-6 transition-colors cursor-default"
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: card.delay, duration: 0.5, type: "spring", bounce: 0.4 }}
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: `0 20px 40px -12px rgba(0, 0, 0, 0.5), 0 0 20px ${card.shadowColor.split('-')[1]}-500/20`
+                  }}
+                  className={`bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border ${card.borderColor} rounded-2xl p-6 shadow-xl ${card.shadowColor} hover:shadow-2xl transition-all duration-300 cursor-default group`}
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-white/5 rounded-md">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`p-3 bg-gradient-to-br ${card.gradient} rounded-xl group-hover:scale-110 transition-transform duration-300`}>
+                      <svg className={`w-6 h-6 ${card.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
                       </svg>
                     </div>
-                    <p className="text-gray-500 text-sm font-medium">{card.title}</p>
+                    <div className="flex items-center space-x-1">
+                      <div className={`w-2 h-2 bg-gradient-to-r ${card.gradient.split(' ')[1]} rounded-full animate-pulse`}></div>
+                      <span className="text-xs text-slate-400 font-medium">Live</span>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-3xl font-semibold text-white mb-1">{card.value}</p>
-                    <p className="text-gray-600 text-xs">{card.subtitle}</p>
+                    <p className="text-3xl font-bold text-white mb-1 group-hover:scale-105 transition-transform duration-300">{card.value}</p>
+                    <p className="text-slate-300 font-semibold text-sm mb-1">{card.title}</p>
+                    <p className="text-slate-500 text-xs">{card.subtitle}</p>
                   </div>
+                  <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity duration-300`}></div>
                 </motion.div>
               ))}
             </div>
@@ -418,60 +461,86 @@ export default function WorkerForm() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-zinc-950 border border-gray-800 rounded-lg p-6 mb-6"
+              className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 mb-6 shadow-xl shadow-slate-900/50"
             >
-              <h3 className="text-base font-semibold text-white mb-4">
-                Quick Actions
-              </h3>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-cyan-500/30">
+                  <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
+                  <p className="text-slate-400 text-sm">Common tasks and shortcuts</p>
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <motion.button
-                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('registration')}
-                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
+                  className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-700/50 hover:from-cyan-500/10 hover:to-blue-500/10 border border-slate-600/50 hover:border-cyan-500/30 rounded-xl p-4 transition-all duration-300 text-left"
                 >
-                  <div className="p-2 bg-white/5 rounded">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium text-sm">Register New Employee</p>
-                    <p className="text-gray-600 text-xs">Add worker to system</p>
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                      </div>
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm mb-1">Register New Employee</p>
+                      <p className="text-slate-400 text-xs">Add worker to system</p>
+                    </div>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('workers')}
-                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
+                  className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-700/50 hover:from-blue-500/10 hover:to-indigo-500/10 border border-slate-600/50 hover:border-blue-500/30 rounded-xl p-4 transition-all duration-300 text-left"
                 >
-                  <div className="p-2 bg-white/5 rounded">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium text-sm">View Employee Directory</p>
-                    <p className="text-gray-600 text-xs">Browse all workers</p>
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                      </div>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm mb-1">View Employee Directory</p>
+                      <p className="text-slate-400 text-xs">Browse all workers</p>
+                    </div>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                  whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('hr')}
-                  className="flex items-center gap-3 p-4 bg-black border border-gray-800 hover:border-gray-700 rounded-md transition-colors text-left w-full"
+                  className="group relative overflow-hidden bg-gradient-to-br from-slate-800/50 to-slate-700/50 hover:from-purple-500/10 hover:to-pink-500/10 border border-slate-600/50 hover:border-purple-500/30 rounded-xl p-4 transition-all duration-300 text-left"
                 >
-                  <div className="p-2 bg-white/5 rounded">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-white font-medium text-sm">HR Records</p>
-                    <p className="text-gray-600 text-xs">Complete employee data</p>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm mb-1">HR Records</p>
+                      <p className="text-slate-400 text-xs">Complete employee data</p>
+                    </div>
                   </div>
                 </motion.button>
               </div>
@@ -485,11 +554,19 @@ export default function WorkerForm() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ delay: 0.6 }}
-                  className="bg-zinc-950 border border-gray-800 rounded-lg p-6"
+                  className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-6 shadow-xl shadow-slate-900/50"
                 >
-                  <h3 className="text-base font-semibold text-white mb-4">
-                    Recent Registrations
-                  </h3>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center border border-green-500/30">
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Recent Registrations</h3>
+                      <p className="text-slate-400 text-sm">Latest employee additions</p>
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     {workers.slice(0, 5).map((worker, index) => (
                       <motion.div 
@@ -497,21 +574,25 @@ export default function WorkerForm() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.7 + index * 0.1 }}
-                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
-                        className="flex items-center justify-between p-4 border-b border-gray-800 last:border-0 transition-colors"
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        className="group relative overflow-hidden flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/50 to-slate-700/50 hover:from-slate-700/50 hover:to-slate-600/50 border border-slate-600/30 hover:border-slate-500/50 rounded-xl transition-all duration-300 cursor-pointer"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="relative z-10 flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm border border-cyan-400/30 shadow-lg shadow-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
                             {worker.full_name?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-white font-medium text-sm">{worker.full_name}</p>
-                            <p className="text-gray-600 text-xs">{worker.designation} • {worker.uc_ward_name}</p>
+                            <p className="text-white font-semibold text-sm group-hover:text-cyan-300 transition-colors">{worker.full_name}</p>
+                            <p className="text-slate-400 text-xs">{worker.designation} • {worker.uc_ward_name}</p>
                           </div>
                         </div>
-                        <span className="px-2 py-1 bg-white/5 text-gray-400 text-xs rounded border border-gray-800">
-                          {worker.status}
-                        </span>
+                        <div className="relative z-10 flex items-center gap-2">
+                          <span className="px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30 shadow-lg shadow-green-500/10">
+                            {worker.status}
+                          </span>
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
@@ -530,375 +611,60 @@ export default function WorkerForm() {
           >
             {/* Registration Form */}
             <div className="relative z-10 w-full max-w-4xl">
-              {/* Clean card */}
+              {/* Enhanced card with gradient background */}
               <motion.div 
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
-                className="relative bg-zinc-950 border border-gray-800 rounded-lg p-8 md:p-12"
+                className="relative bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 md:p-12 shadow-2xl shadow-slate-900/50 overflow-hidden"
               >
-          {/* Header */}
-          <div className="mb-8 pb-6 border-b border-gray-800">
-            <h1 className="text-2xl font-semibold text-white mb-2">
-              Worker Registration
-            </h1>
-            <p className="text-gray-500 text-sm">Fill in the details to register a new worker</p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Personal Information Section */}
-            <div className="space-y-4">
-              <h2 className="text-white text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center text-white shadow-lg shadow-white/20">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </span>
-                Personal Information
-              </h2>
-
-              {/* Full Name & Father Name */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Full Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    placeholder="Enter full name"
-                    className={`w-full px-3 py-2 bg-black border ${errors.fullName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
-                  />
-                  {errors.fullName && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.fullName}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Father's Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="fatherName"
-                    value={formData.fatherName}
-                    onChange={handleChange}
-                    placeholder="Enter father's name"
-                    className={`w-full px-3 py-2 bg-black border ${errors.fatherName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
-                  />
-                  {errors.fatherName && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.fatherName}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Date of Birth, Religion, Phone Number */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Date of Birth <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    name="dateOfBirth"
-                    value={formData.dateOfBirth}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-black border ${errors.dateOfBirth ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors`}
-                  />
-                  {errors.dateOfBirth && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.dateOfBirth}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Religion
-                  </label>
-                  <input
-                    type="text"
-                    name="religion"
-                    value={formData.religion}
-                    onChange={handleChange}
-                    placeholder="Enter religion"
-                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Phone Number <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="+92 300 0000000"
-                    className={`w-full px-3 py-2 bg-black border ${errors.phoneNumber ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
-                  />
-                  {errors.phoneNumber && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.phoneNumber}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Identification Section */}
-            <div className="space-y-4 pt-6">
-              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
-                Identification
-              </h2>
-
-              {/* CNIC Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    CNIC Number <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="cnic"
-                    value={formData.cnic}
-                    onChange={handleChange}
-                    placeholder="00000-0000000-0"
-                    className={`w-full px-3 py-2 bg-black border ${errors.cnic ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
-                  />
-                  {errors.cnic && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.cnic}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    CNIC Issue Date
-                  </label>
-                  <input
-                    type="date"
-                    name="cnicIssueDate"
-                    value={formData.cnicIssueDate}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    CNIC Expiry Date
-                  </label>
-                  <input
-                    type="date"
-                    name="cnicExpiryDate"
-                    value={formData.cnicExpiryDate}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Employment Details Section */}
-            <div className="space-y-4 pt-6">
-              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
-                Employment Details
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Designation */}
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Designation <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    name="designation"
-                    value={formData.designation}
-                    onChange={handleChange}
-                    className={`w-full px-3 py-2 bg-black border ${errors.designation ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
-                  >
-                    <option value="" className="bg-gray-900">Select designation</option>
-                    <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
-                    <option value="Helper" className="bg-gray-900">Helper</option>
-                    <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
-                    <option value="Driver" className="bg-gray-900">Driver</option>
-                  </select>
-                  {errors.designation && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.designation}
-                    </p>
-                  )}
-                </div>
-
-                {/* Salary - Auto-filled */}
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">
-                    Salary (PKR)
-                    <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-filled</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="salary"
-                    value={formData.salary}
-                    readOnly
-                    placeholder="Select designation first"
-                    className="w-full px-3 py-2 bg-zinc-950 border border-gray-700 rounded-md text-gray-400 text-sm placeholder-gray-600 focus:outline-none cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Joining Date */}
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Joining Date <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="joiningDate"
-                  value={formData.joiningDate}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 bg-black border ${errors.joiningDate ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors`}
-                />
-                {errors.joiningDate && (
-                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                    <span>⚠</span> {errors.joiningDate}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Location & Assignment Section */}
-            <div className="space-y-4 pt-6">
-              <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
-                Location & Assignment
-                <span className="text-xs text-gray-500 font-normal ml-2">(Maps to attendance point)</span>
-              </h2>
-
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  UC / Ward <span className="text-red-400">*</span>
-                  <span className="text-xs text-gray-500 ml-2">(Will be dynamically connected)</span>
-                </label>
-                <select
-                  name="ucWard"
-                  value={formData.ucWard}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 bg-black border ${errors.ucWard ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
-                >
-                  <option value="" className="bg-gray-900">Select UC/Ward</option>
-                  {ucWardOptions.map(uc => (
-                    <option key={uc.id} value={uc.id} className="bg-gray-900">
-                      {uc.name} - {uc.attendancePoint}
-                    </option>
-                  ))}
-                </select>
-                {errors.ucWard && (
-                  <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                    <span>⚠</span> {errors.ucWard}
-                  </p>
-                )}
-                {formData.ucWard && (
-                  <div className="mt-2 p-3 bg-white/5 border border-gray-800 rounded-md flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-xs text-gray-400">
-                      Attendance Point: <span className="font-semibold text-white">{ucWardOptions.find(uc => uc.id === parseInt(formData.ucWard))?.attendancePoint}</span>
-                    </span>
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-purple-500/5 opacity-50"></div>
+                
+                {/* Header */}
+                <div className="relative z-10 mb-8 pb-6 border-b border-slate-700/50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-xl flex items-center justify-center border border-cyan-500/30">
+                      <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                        Worker Registration
+                      </h1>
+                      <p className="text-slate-400 text-sm mt-1">Fill in the details to register a new worker</p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Conditional Field - Vehicle Code (Only for Drivers) */}
-            {formData.designation === 'Driver' && (
-              <div className="space-y-4 pt-6 border-t border-gray-800">
-                <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">
-                  Vehicle Information
-                </h2>
-
-                <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Vehicle Code <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="vehicleCode"
-                    value={formData.vehicleCode}
-                    onChange={handleChange}
-                    placeholder="Enter vehicle code (e.g., VEH-2026-001)"
-                    className={`w-full px-4 py-3 bg-white/5 border ${errors.vehicleCode ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
-                  />
-                  {errors.vehicleCode && (
-                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
-                      <span>⚠</span> {errors.vehicleCode}
-                    </p>
-                  )}
-                  <p className="text-gray-500 text-xs mt-1">Required for driver designation</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-slate-400">All systems operational</span>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Address Section */}
-            <div className="space-y-4 pt-6 border-t border-white/10">
-              <h2 className="text-cyan-400 text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                </span>
-                Address
-              </h2>
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+                  {/* Subcomponents */}
+                  <PersonalInfo formData={formData} errors={errors} onChange={handleChange} />
+                  <Identification formData={formData} errors={errors} onChange={handleChange} />
+                  <EmploymentDetails formData={formData} errors={errors} onChange={handleChange} />
+                  <LocationAssignment formData={formData} errors={errors} onChange={handleChange} ucWardOptions={ucWardOptions} />
 
-              {/* Address */}
-              <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Complete Address
-                </label>
-                <textarea
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  rows="3"
-                  placeholder="Enter complete address"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10 resize-none"
-                ></textarea>
-              </div>
-            </div>
+                  {formData.designation === 'Driver' && (
+                    <VehicleInfo formData={formData} errors={errors} onChange={handleChange} />
+                  )}
 
-            {/* Submit Button */}
-            <div className="pt-6 border-t border-gray-800">
-              <motion.button
-                type="submit"
-                disabled={loading}
-                whileHover={{ backgroundColor: '#ffffff' }}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  "w-full py-2.5 bg-white hover:bg-gray-100 text-black font-medium text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black",
-                  loading && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                {loading ? 'Registering...' : 'Register Worker'}
-              </motion.button>
-            </div>
-          </form>
+                  <AddressSection formData={formData} onChange={handleChange} />
 
-          {/* Footer Note */}
-          <div className="mt-8 pt-6 border-t border-white/10 text-center">
-            <p className="text-gray-500 text-sm">
-              All fields marked with <span className="text-red-400">*</span> are required
-            </p>
-          </div>
+                  <SubmitButton loading={loading} />
+                </form>
+
+                {/* Footer Note */}
+                <div className="relative z-10 mt-8 pt-6 border-t border-slate-700/50 text-center">
+                  <p className="text-slate-500 text-sm">
+                    All fields marked with <span className="text-red-400 font-semibold">*</span> are required
+                  </p>
+                </div>
               </motion.div>
             </div>
           </motion.div>
@@ -918,15 +684,22 @@ export default function WorkerForm() {
               transition={{ delay: 0.1 }}
               className="mb-8 flex items-center justify-between"
             >
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Workers Directory</h2>
-                <p className="text-gray-400">View and manage all registered workers - Read Only</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Employee Directory</h2>
+                  <p className="text-slate-400">View and manage all registered workers - Read Only</p>
+                </div>
               </div>
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-xl shadow-lg shadow-blue-500/10"
               >
                 <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -943,47 +716,57 @@ export default function WorkerForm() {
                 </div>
               </div>
             ) : workers.length === 0 ? (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-12 text-center">
-                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+                className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-12 text-center shadow-2xl shadow-slate-900/50"
+              >
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-600/30">
+                  <svg className="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">No Workers Registered Yet</h3>
-                <p className="text-gray-400 mb-6">Start by registering your first worker</p>
-                <button
+                <h3 className="text-2xl font-bold text-white mb-2">No Workers Registered Yet</h3>
+                <p className="text-slate-400 mb-8 text-lg">Start by registering your first employee to populate the directory</p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setActiveTab('registration')}
-                  className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-all duration-300"
+                  className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 shadow-lg shadow-cyan-500/25"
                 >
-                  Register First Worker
-                </button>
-              </div>
+                  Register First Employee
+                </motion.button>
+              </motion.div>
             ) : (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden shadow-2xl shadow-slate-900/50">
                 {/* Search and Filters Bar */}
-                <div className="p-6 border-b border-white/10">
+                <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
-                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                           type="text"
                           placeholder="Search employees..."
-                          className="pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm"
+                          className="pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200"
                         />
                       </div>
-                      <select className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm">
-                        <option value="" className="bg-gray-900">All Designations</option>
-                        <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
-                        <option value="Helper" className="bg-gray-900">Helper</option>
-                        <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
-                        <option value="Driver" className="bg-gray-900">Driver</option>
+                      <select className="px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200">
+                        <option value="" className="bg-slate-800">All Designations</option>
+                        <option value="Sanitary Supervisor" className="bg-slate-800">Sanitary Supervisor</option>
+                        <option value="Helper" className="bg-slate-800">Helper</option>
+                        <option value="Sanitary Worker" className="bg-slate-800">Sanitary Worker</option>
+                        <option value="Driver" className="bg-slate-800">Driver</option>
                       </select>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      Showing {workers.length} employee{workers.length !== 1 ? 's' : ''}
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-xl">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                      <span className="text-cyan-400 text-sm font-medium">
+                        {workers.length} employee{workers.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -992,27 +775,31 @@ export default function WorkerForm() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-white/5 border-b border-white/10">
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Designation</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Phone</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">DOB</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">UC/Ward</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Salary</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                      <tr className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50">
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Employee</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Designation</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">CNIC</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">DOB</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">UC/Ward</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Salary</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/10">
+                    <tbody className="divide-y divide-slate-700/50">
                       {workers.map((worker, index) => (
                         <motion.tr 
                           key={worker.id}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.05 }}
-                          whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                          className="transition-colors"
+                          whileHover={{ 
+                            backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                            scale: 1.01,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                          }}
+                          className="group transition-all duration-200 hover:bg-slate-800/30"
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
@@ -1093,27 +880,27 @@ export default function WorkerForm() {
                 </div>
 
                 {/* Summary Stats */}
-                <div className="bg-white/5 border-t border-white/10 px-6 py-4">
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 text-sm">
-                    <div>
-                      <span className="text-gray-400">Total Workers:</span>
-                      <span className="text-white font-semibold ml-2">{workers.length}</span>
+                <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-t border-slate-600/50 px-6 py-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div className="text-center">
+                      <p className="text-slate-400 text-xs font-medium mb-1">Total Workers</p>
+                      <p className="text-2xl font-bold text-white">{workers.length}</p>
                     </div>
-                    <div>
-                      <span className="text-gray-400">Active:</span>
-                      <span className="text-green-400 font-semibold ml-2">{workers.filter(w => w.status === 'Active').length}</span>
+                    <div className="text-center">
+                      <p className="text-slate-400 text-xs font-medium mb-1">Active</p>
+                      <p className="text-2xl font-bold text-green-400">{workers.filter(w => w.status === 'Active').length}</p>
                     </div>
-                    <div>
-                      <span className="text-gray-400">Total Payroll:</span>
-                      <span className="text-white font-semibold ml-2">
-                        PKR {workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}
-                      </span>
+                    <div className="text-center">
+                      <p className="text-slate-400 text-xs font-medium mb-1">Total Payroll</p>
+                      <p className="text-2xl font-bold text-cyan-400">
+                        PKR {(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
+                      </p>
                     </div>
-                    <div>
-                      <span className="text-gray-400">Avg. Salary:</span>
-                      <span className="text-white font-semibold ml-2">
-                        PKR {workers.length > 0 ? Math.round(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / workers.length).toLocaleString() : '0'}
-                      </span>
+                    <div className="text-center">
+                      <p className="text-slate-400 text-xs font-medium mb-1">Avg. Salary</p>
+                      <p className="text-2xl font-bold text-yellow-400">
+                        PKR {workers.length > 0 ? (Math.round(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / workers.length) / 1000).toFixed(0) : '0'}K
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1136,20 +923,27 @@ export default function WorkerForm() {
               transition={{ delay: 0.1 }}
               className="mb-8 flex items-center justify-between"
             >
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">HR Records</h2>
-                <p className="text-gray-400">Complete employee records and documentation - Customizable</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center border border-purple-500/30">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">HR Records</h2>
+                  <p className="text-slate-400">Complete employee records and documentation - Customizable</p>
+                </div>
               </div>
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl shadow-lg shadow-purple-500/10"
               >
-                <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span className="text-yellow-400 text-sm font-medium">Editable Records</span>
+                <span className="text-purple-400 text-sm font-medium">Editable Records</span>
               </motion.div>
             </motion.div>
 
@@ -1161,21 +955,28 @@ export default function WorkerForm() {
                 </div>
               </div>
             ) : workers.length === 0 ? (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-12 text-center">
-                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+                className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-12 text-center shadow-2xl shadow-slate-900/50"
+              >
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-700/50 to-slate-600/50 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-600/30">
+                  <svg className="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-2">No HR Records Available</h3>
-                <p className="text-gray-400 mb-6">Register workers to see their HR records here</p>
-                <button
+                <h3 className="text-2xl font-bold text-white mb-2">No HR Records Available</h3>
+                <p className="text-slate-400 mb-8 text-lg">Register employees to access their complete HR documentation here</p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setActiveTab('registration')}
-                  className="px-6 py-3 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-all duration-300"
+                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-purple-500/25"
                 >
-                  Register Worker
-                </button>
-              </div>
+                  Register Employee
+                </motion.button>
+              </motion.div>
             ) : (
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
                 {/* Table */}

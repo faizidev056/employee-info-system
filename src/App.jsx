@@ -1,8 +1,8 @@
-import WorkerForm from './components/WorkerForm'
+import WorkerManager from './components/WorkerManager'
 
 function App() {
   return (
-    <WorkerForm />
+    <WorkerManager />
   )
 }
 
