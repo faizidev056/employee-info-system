@@ -170,6 +170,10 @@ export default function WorkerManager() {
           age--
         }
         shouldClearError = age >= 18
+      } else if (name === 'cnic') {
+        // CNIC format validation: XXXXX-XXXXXXX-X
+        const cnicRegex = /^\d{5}-\d{7}-\d{1}$/
+        shouldClearError = value && cnicRegex.test(value)
       } else if (typeof value === 'string' && value.trim()) {
         shouldClearError = true
       } else if (value) {
@@ -209,7 +213,15 @@ export default function WorkerManager() {
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required'
     
     // Identification
-    if (!formData.cnic.trim()) newErrors.cnic = 'CNIC number is required'
+    if (!formData.cnic.trim()) {
+      newErrors.cnic = 'CNIC number is required'
+    } else {
+      // Validate CNIC format: XXXXX-XXXXXXX-X
+      const cnicRegex = /^\d{5}-\d{7}-\d{1}$/
+      if (!cnicRegex.test(formData.cnic)) {
+        newErrors.cnic = 'CNIC must follow format XXXXX-XXXXXXX-X'
+      }
+    }
     
     // Employment Details
     if (!formData.designation) newErrors.designation = 'Please select a designation'
@@ -353,14 +365,15 @@ export default function WorkerManager() {
     setEditFormData({
       full_name: worker.full_name,
       father_name: worker.father_name,
-      date_of_birth: worker.date_of_birth,
+      date_of_birth: worker.date_of_birth || '',
       religion: worker.religion || '',
       phone_number: worker.phone_number,
       cnic: worker.cnic,
+      cnic_issue_date: worker.cnic_issue_date || '',
+      cnic_expiry_date: worker.cnic_expiry_date || '',
       designation: worker.designation,
       salary: worker.salary,
       uc_ward_name: worker.uc_ward_name,
-      status: worker.status,
       address: worker.address || ''
     })
   }
@@ -686,8 +699,8 @@ export default function WorkerManager() {
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         <div className="relative z-10 flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm border border-cyan-400/30 shadow-lg shadow-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
-                            {worker.full_name?.charAt(0).toUpperCase()}
+                          <div className="w-10 h-10 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-bold text-sm border border-slate-500/30 flex-shrink-0">
+                            {index + 1}
                           </div>
                           <div>
                             <p className="text-white font-semibold text-sm group-hover:text-cyan-300 transition-colors">{worker.full_name}</p>
@@ -930,7 +943,7 @@ export default function WorkerManager() {
                 </div>
 
                 {/* Table */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-hidden">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50">
@@ -973,8 +986,8 @@ export default function WorkerManager() {
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-semibold text-sm border border-white/10 flex-shrink-0">
-                                  {worker.full_name?.charAt(0).toUpperCase()}
+                                <div className="w-8 h-8 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-8">
+                                  {index + 1}
                                 </div>
                                 <div className="min-w-0">
                                   <div className="text-white font-medium truncate">{worker.full_name}</div>
@@ -1034,7 +1047,7 @@ export default function WorkerManager() {
                     </div>
                     <div className="text-center">
                       <p className="text-slate-400 text-xs font-medium mb-1">Active</p>
-                      <p className="text-2xl font-bold text-green-400">{workers.filter(w => w.status === 'Active').length}</p>
+                      <p className="text-2xl font-bold text-green-400">{filteredWorkers.filter(w => w.status === 'Active').length}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-slate-400 text-xs font-medium mb-1">{monthFilter ? 'Filtered' : 'Total'} Payroll</p>
@@ -1123,16 +1136,16 @@ export default function WorkerManager() {
             ) : (
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
                 {/* Table */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-hidden">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-white/10 bg-white/5">
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Father's Name</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">DOB</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Phone</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Designation</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">UC/Ward</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC Dates</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Salary</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
@@ -1140,199 +1153,66 @@ export default function WorkerManager() {
                     </thead>
                     <tbody className="divide-y divide-white/10">
                       {workers.map((worker, index) => (
-                        editingWorkerId === worker.id ? (
-                          // Edit Mode Row
-                          <motion.tr 
-                            key={worker.id}
-                            initial={{ backgroundColor: 'rgba(6, 182, 212, 0)' }}
-                            animate={{ backgroundColor: 'rgba(6, 182, 212, 0.1)' }}
-                            transition={{ duration: 0.3 }}
-                          >
-                            <td colSpan="9" className="px-6 py-6">
-                              <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-lg font-bold text-white">Editing Employee Record</h3>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleSaveEdit(worker.id)}
-                                    disabled={loading}
-                                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-all duration-200 flex items-center gap-2"
-                                  >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={handleCancelEdit}
-                                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all duration-200"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {/* Full Name */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Full Name</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.full_name || ''}
-                                    onChange={(e) => handleEditChange(e, 'full_name')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Father's Name */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Father's Name</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.father_name || ''}
-                                    onChange={(e) => handleEditChange(e, 'father_name')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* CNIC */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">CNIC</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.cnic || ''}
-                                    onChange={(e) => handleEditChange(e, 'cnic')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Phone Number */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Phone Number</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.phone_number || ''}
-                                    onChange={(e) => handleEditChange(e, 'phone_number')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Designation */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Designation</label>
-                                  <select
-                                    value={editFormData.designation || ''}
-                                    onChange={(e) => handleEditChange(e, 'designation')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  >
-                                    <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
-                                    <option value="Helper" className="bg-gray-900">Helper</option>
-                                    <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
-                                    <option value="Driver" className="bg-gray-900">Driver</option>
-                                  </select>
-                                </div>
-                                
-                                {/* UC/Ward */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">UC/Ward</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.uc_ward_name || ''}
-                                    onChange={(e) => handleEditChange(e, 'uc_ward_name')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Salary */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Salary (PKR)</label>
-                                  <input
-                                    type="number"
-                                    value={editFormData.salary || ''}
-                                    onChange={(e) => handleEditChange(e, 'salary')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Status */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Status</label>
-                                  <select
-                                    value={editFormData.status || 'Active'}
-                                    onChange={(e) => handleEditChange(e, 'status')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  >
-                                    <option value="Active" className="bg-gray-900">Active</option>
-                                    <option value="Inactive" className="bg-gray-900">Inactive</option>
-                                    <option value="On Leave" className="bg-gray-900">On Leave</option>
-                                    <option value="Terminated" className="bg-gray-900">Terminated</option>
-                                  </select>
-                                </div>
-                                
-                                {/* Religion */}
-                                <div>
-                                  <label className="block text-gray-400 text-xs mb-2">Religion</label>
-                                  <input
-                                    type="text"
-                                    value={editFormData.religion || ''}
-                                    onChange={(e) => handleEditChange(e, 'religion')}
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                                  />
-                                </div>
-                                
-                                {/* Address */}
-                                <div className="md:col-span-2 lg:col-span-3">
-                                  <label className="block text-gray-400 text-xs mb-2">Address</label>
-                                  <textarea
-                                    value={editFormData.address || ''}
-                                    onChange={(e) => handleEditChange(e, 'address')}
-                                    rows="2"
-                                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 resize-none"
-                                  />
-                                </div>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        ) : (
-                          // View Mode Row
-                          <motion.tr 
-                            key={worker.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                            className="transition-colors"
-                          >
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-bold text-sm border border-white/10">
-                                  {worker.full_name?.charAt(0).toUpperCase()}
+                        <motion.tr 
+                          key={worker.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                          className="transition-colors"
+                        >
+                          {/* Employee (Name + Father's Name) */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-8">
+                                {index + 1}
                                 </div>
                                 <div>
                                   <p className="text-white font-medium">{worker.full_name}</p>
-                                  <p className="text-gray-400 text-xs">
-                                    {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}
-                                  </p>
+                                  <p className="text-gray-400 text-xs">{worker.father_name}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <p className="text-white text-sm">{worker.father_name}</p>
-                            </td>
+                            
+                            {/* CNIC */}
                             <td className="px-6 py-4">
                               <p className="text-white text-sm font-mono">{worker.cnic}</p>
                             </td>
+                            
+                            {/* DOB */}
+                            <td className="px-6 py-4">
+                              <p className="text-white text-sm">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}</p>
+                            </td>
+                            
+                            {/* Phone */}
                             <td className="px-6 py-4">
                               <p className="text-white text-sm">{worker.phone_number}</p>
                             </td>
+                            
+                            {/* Designation + Vehicle (if assigned) */}
                             <td className="px-6 py-4">
-                              <p className="text-white text-sm">{worker.designation}</p>
+                              <div>
+                                <p className="text-white text-sm font-medium">{worker.designation}</p>
+                                {worker.vehicle_code && (
+                                  <p className="text-gray-400 text-xs">Vehicle: {worker.vehicle_code}</p>
+                                )}
+                              </div>
                             </td>
+                            
+                            {/* CNIC Issue & Expiry Dates */}
                             <td className="px-6 py-4">
-                              <p className="text-white text-sm">{worker.uc_ward_name}</p>
+                              <div className="space-y-1 min-w-max">
+                                <p className="text-white text-sm whitespace-nowrap">Issue: {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString() : 'N/A'}</p>
+                                <p className="text-white text-sm whitespace-nowrap">Expiry: {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString() : 'N/A'}</p>
+                              </div>
                             </td>
+                            
+                            {/* Salary */}
                             <td className="px-6 py-4">
                               <p className="text-white text-sm font-medium">PKR {worker.salary?.toLocaleString()}</p>
                             </td>
+                            
+                            {/* Status */}
                             <td className="px-6 py-4">
                               <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
                                 worker.status === 'Active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
@@ -1343,6 +1223,8 @@ export default function WorkerManager() {
                                 {worker.status}
                               </span>
                             </td>
+                            
+                            {/* Actions */}
                             <td className="px-6 py-4">
                               <motion.button
                                 onClick={() => handleEditWorker(worker)}
@@ -1357,8 +1239,7 @@ export default function WorkerManager() {
                               </motion.button>
                             </td>
                           </motion.tr>
-                        )
-                      ))}
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -1393,6 +1274,205 @@ export default function WorkerManager() {
             )}
           </motion.div>
         )}
+
+        {/* Edit Modal */}
+        <AnimatePresence>
+          {editingWorkerId && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCancelEdit}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              >
+                {/* Modal Header */}
+                <div className="sticky top-0 flex items-center justify-between p-6 border-b border-white/10 bg-slate-900/90 backdrop-blur">
+                  <h2 className="text-xl font-bold text-white">Edit Employee Record</h2>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                  >
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Full Name */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Full Name</label>
+                      <input
+                        type="text"
+                        value={editFormData.full_name || ''}
+                        onChange={(e) => handleEditChange(e, 'full_name')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Father's Name */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Father's Name</label>
+                      <input
+                        type="text"
+                        value={editFormData.father_name || ''}
+                        onChange={(e) => handleEditChange(e, 'father_name')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Date of Birth */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editFormData.date_of_birth || ''}
+                        onChange={(e) => handleEditChange(e, 'date_of_birth')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* CNIC */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">CNIC</label>
+                      <input
+                        type="text"
+                        value={editFormData.cnic || ''}
+                        onChange={(e) => handleEditChange(e, 'cnic')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* CNIC Issue Date */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">CNIC Issue Date</label>
+                      <input
+                        type="date"
+                        value={editFormData.cnic_issue_date || ''}
+                        onChange={(e) => handleEditChange(e, 'cnic_issue_date')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* CNIC Expiry Date */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">CNIC Expiry Date</label>
+                      <input
+                        type="date"
+                        value={editFormData.cnic_expiry_date || ''}
+                        onChange={(e) => handleEditChange(e, 'cnic_expiry_date')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Phone Number */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Phone Number</label>
+                      <input
+                        type="text"
+                        value={editFormData.phone_number || ''}
+                        onChange={(e) => handleEditChange(e, 'phone_number')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Designation */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Designation</label>
+                      <select
+                        value={editFormData.designation || ''}
+                        onChange={(e) => handleEditChange(e, 'designation')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      >
+                        <option value="" className="bg-gray-900">Select Designation</option>
+                        <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
+                        <option value="Helper" className="bg-gray-900">Helper</option>
+                        <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
+                        <option value="Driver" className="bg-gray-900">Driver</option>
+                      </select>
+                    </div>
+                    
+                    {/* UC/Ward */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">UC/Ward</label>
+                      <input
+                        type="text"
+                        value={editFormData.uc_ward_name || ''}
+                        onChange={(e) => handleEditChange(e, 'uc_ward_name')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Salary */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Salary (PKR)</label>
+                      <input
+                        type="number"
+                        value={editFormData.salary || ''}
+                        onChange={(e) => handleEditChange(e, 'salary')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Religion */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Religion</label>
+                      <input
+                        type="text"
+                        value={editFormData.religion || ''}
+                        onChange={(e) => handleEditChange(e, 'religion')}
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      />
+                    </div>
+                    
+                    {/* Address */}
+                    <div className="lg:col-span-3">
+                      <label className="block text-gray-400 text-xs mb-2 font-medium">Address</label>
+                      <textarea
+                        value={editFormData.address || ''}
+                        onChange={(e) => handleEditChange(e, 'address')}
+                        rows="3"
+                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="sticky bottom-0 flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-slate-900/90 backdrop-blur">
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const currentWorker = workers.find(w => w.id === editingWorkerId)
+                      if (currentWorker) handleSaveEdit(currentWorker.id)
+                    }}
+                    disabled={loading}
+                    className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 rounded-lg transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Changes
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
