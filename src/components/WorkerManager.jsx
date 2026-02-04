@@ -83,7 +83,42 @@ export default function WorkerManager() {
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
-      setWorkers(data || [])
+
+      const workersData = data || []
+
+      // For terminated workers that don't have a termination_date stored, try to recover it
+      const missingTerminationIds = workersData
+        .filter(w => w.status === 'Terminated' && !w.termination_date)
+        .map(w => w.id)
+
+      if (missingTerminationIds.length > 0) {
+        const { data: historyData, error: historyError } = await supabase
+          .from('status_history')
+          .select('worker_id, new_status, changed_at')
+          .in('worker_id', missingTerminationIds)
+          .eq('new_status', 'Terminated')
+          .order('changed_at', { ascending: false })
+
+        if (!historyError && historyData && historyData.length > 0) {
+          // Map worker_id -> latest termination changed_at (ISO)
+          const latestMap = {}
+          for (const entry of historyData) {
+            if (!latestMap[entry.worker_id]) {
+              latestMap[entry.worker_id] = entry.changed_at
+            }
+          }
+
+          // Attach termination_date (YYYY-MM-DD) to workers where missing
+          for (let i = 0; i < workersData.length; i++) {
+            const w = workersData[i]
+            if (w.status === 'Terminated' && !w.termination_date && latestMap[w.id]) {
+              workersData[i] = { ...w, termination_date: latestMap[w.id].split('T')[0] }
+            }
+          }
+        }
+      }
+
+      setWorkers(workersData)
     } catch (err) {
       console.error('Error loading workers:', err)
       setError('Failed to load workers from database')
@@ -541,6 +576,15 @@ export default function WorkerManager() {
       
       setSuccess(`Employee status updated to ${newStatus}`)
       await loadWorkers()
+      
+      // Ensure termination_date present in UI even if DB doesn't persist the column yet
+      if (newStatus === 'Terminated') {
+        const dateStr = updatePayload.termination_date
+        setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, termination_date: dateStr, status: newStatus } : w))
+      } else if (newStatus === 'Active') {
+        setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, termination_date: null, status: newStatus } : w))
+      }
+      
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating status:', err)
@@ -1127,7 +1171,7 @@ export default function WorkerManager() {
                     <tbody className="divide-y divide-slate-700/50">
                       {filteredWorkers.length === 0 ? (
                         <tr>
-                          <td colSpan="9" className="px-6 py-12 text-center">
+                          <td colSpan="12" className="px-6 py-12 text-center">
                             <div className="flex flex-col items-center justify-center gap-3">
                               <svg className="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1378,13 +1422,13 @@ export default function WorkerManager() {
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-12">SR</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-48">Employee</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-36">CNIC</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Employee Code</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-24">DOB</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Phone</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Joining</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-20 hidden sm:table-cell">Religion</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-32">Designation</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Employee Code</th>
                         <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-36">CNIC Dates</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Salary</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-24">Joining Date</th>
                         <th className="px-3 py-2 text-center font-semibold text-gray-300 uppercase tracking-wider w-36">Status</th>
                       </tr>
                     </thead>
@@ -1418,12 +1462,7 @@ export default function WorkerManager() {
                               <p className="text-white text-sm font-mono truncate">{worker.cnic || 'N/A'}</p>
                             </td>
 
-                          {/* Employee Code */}
-                          <td className="px-3 py-2">
-                            <p className="text-white text-sm font-mono font-semibold truncate">{worker.employee_code || 'N/A'}</p>
-                          </td>
-                            
-                            {/* DOB */}
+{/* DOB */}
                             <td className="px-3 py-2">
                               <p className="text-white text-xs truncate">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}</p>
                             </td>
@@ -1432,12 +1471,12 @@ export default function WorkerManager() {
                             <td className="px-3 py-2">
                               <p className="text-white text-xs truncate">{worker.phone_number}</p>
                             </td>
-                            
-                            {/* Joining Date */}
-                            <td className="px-3 py-2">
-                              <p className="text-white text-xs truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}</p>
+
+                            {/* Religion */}
+                            <td className="px-3 py-2 hidden sm:table-cell">
+                              <p className="text-gray-300 text-sm">{worker.religion || '—'}</p>
                             </td>
-                            
+
                             {/* Designation + Vehicle (if assigned) */}
                             <td className="px-3 py-2">
                               <div className="min-w-0">
@@ -1447,17 +1486,22 @@ export default function WorkerManager() {
                                 )}
                               </div>
                             </td>
+
+                            {/* Employee Code */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-sm font-mono font-semibold truncate">{worker.employee_code || 'N/A'}</p>
+                            </td>
                             
                             {/* CNIC Issue & Expiry Dates */}
                             <td className="px-3 py-2">
                               <p className="text-white text-xs truncate">Issue: {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString() : 'N/A'} • Expiry: {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString() : 'N/A'}</p>
                             </td>
-                            
-                            {/* Salary */}
-                            <td className="px-3 py-2 text-right">
-                              <p className="text-white text-xs font-medium">{worker.salary?.toLocaleString()}</p>
+
+                            {/* Joining Date (moved next to CNIC Dates) */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-xs truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}</p>
                             </td>
-                            
+
                             {/* Status with Actions Dropdown and History */}
                             <td className="px-3 py-2 text-center w-36">
                               <div className="flex items-center justify-center gap-2">
@@ -1575,7 +1619,8 @@ export default function WorkerManager() {
                 <table className="w-full table-fixed text-sm">
                   <thead>
                     <tr className="border-b border-white/10 bg-white/5 text-xs">
-                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[22%]">Employee Name</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-12">#</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[21%]">Employee Name</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%]">CNIC</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[10%]">Employee Code</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%]">Designation</th>
@@ -1584,12 +1629,13 @@ export default function WorkerManager() {
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[8%]">DOB</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[8%]">Joining Date</th>
                       <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[10%]">Termination Date</th>
-                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%] hidden md:table-cell">UC / Ward</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[11%] hidden md:table-cell">UC / Ward</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
                     {workers.filter(w => w.status === 'Terminated').map((worker, idx) => (
                       <tr key={worker.id} className="hover:bg-white/2 transition-colors">
+                        <td className="px-3 py-3 text-sm font-semibold text-white">{idx + 1}</td>
                         <td className="px-3 py-3">
                           <div className="min-w-0">
                             <p className="text-white text-sm font-medium truncate">{worker.full_name}</p>
@@ -1603,13 +1649,13 @@ export default function WorkerManager() {
                         <td className="px-3 py-3 hidden sm:table-cell text-slate-200">{worker.religion || '—'}</td>
                         <td className="px-3 py-3 text-slate-200">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : '—'}</td>
                         <td className="px-3 py-3 text-slate-200">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : '—'}</td>
-                        <td className="px-3 py-3 text-slate-200">{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString() : 'Unknown'}</td>
                         <td className="px-3 py-3 hidden md:table-cell text-slate-200">{worker.uc_ward_name || '—'}</td>
                       </tr>
                     ))}
                     {workers.filter(w => w.status === 'Terminated').length === 0 && (
                       <tr>
-                        <td className="px-3 py-6 text-center text-slate-400" colSpan={10}>No terminated employees</td>
+                        <td className="px-3 py-6 text-center text-slate-400" colSpan={11}>No terminated employees</td>
                       </tr>
                     )}
                   </tbody>
