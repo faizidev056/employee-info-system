@@ -29,6 +29,23 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
         </div>
 
         <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">Employee Code
+            <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-generated</span>
+          </label>
+          <input
+            type="text"
+            name="employeeCode"
+            value={formData.employeeCode}
+            readOnly
+            placeholder="Select designation first"
+            className="w-full px-3 py-2 bg-zinc-950 border border-gray-700 rounded-md text-gray-400 text-sm placeholder-gray-600 focus:outline-none cursor-not-allowed font-mono"
+          />
+          {errors.employeeCode && (
+            <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.employeeCode}</p>
+          )}
+        </div>
+
+        <div>
           <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">Salary (PKR)
             <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-filled</span>
           </label>

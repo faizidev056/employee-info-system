@@ -20,6 +20,7 @@ CREATE TABLE workers (
     attendance_point TEXT NOT NULL,
     vehicle_code TEXT,
     address TEXT,
+    termination_date DATE,
     status TEXT DEFAULT 'Active' NOT NULL
 );
 

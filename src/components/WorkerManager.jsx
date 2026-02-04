@@ -11,6 +11,7 @@ import VehicleInfo from './WorkerFormParts/VehicleInfo'
 import AddressSection from './WorkerFormParts/AddressSection'
 import SubmitButton from './WorkerFormParts/SubmitButton'
 import MonthPicker from './WorkerFormParts/MonthPicker'
+import Attendance from './Attendance'
 import { getAutocompleteToken } from '../lib/utils'
 
 export default function WorkerManager() {
@@ -35,6 +36,7 @@ export default function WorkerManager() {
     
     // Employment Details
     designation: '',
+    employeeCode: '',
     salary: '',
     joiningDate: '',
     
@@ -61,6 +63,10 @@ export default function WorkerManager() {
   // HR Records editing state
   const [editingWorkerId, setEditingWorkerId] = useState(null)
   const [editFormData, setEditFormData] = useState({})
+  
+  // Status management state
+  const [terminationModal, setTerminationModal] = useState({ open: false, workerId: null, worker: null })
+  const [historyModal, setHistoryModal] = useState({ open: false, workerId: null, history: [] })
 
   // Load workers from Supabase on component mount
   useEffect(() => {
@@ -86,7 +92,7 @@ export default function WorkerManager() {
     }
   }
 
-  // Filter workers based on search query, designation, and month
+  // Filter workers based on search query, designation, and month (Employee Directory)
   const filteredWorkers = workers.filter(worker => {
     // Search filter (by name or CNIC)
     const searchLower = searchQuery.toLowerCase()
@@ -115,12 +121,83 @@ export default function WorkerManager() {
     return matchesSearch && matchesDesignation && matchesMonth()
   })
 
-  // Designation to Salary mapping (all 40,000 PKR)
+  // HR Records filters (separate from directory)
+  const [hrSearchQuery, setHrSearchQuery] = useState('')
+  const [hrDesignationFilter, setHrDesignationFilter] = useState('')
+  const [hrMonthFilter, setHrMonthFilter] = useState('')
+
+  const hrFilteredWorkers = workers.filter(worker => {
+    const searchLower = hrSearchQuery.toLowerCase()
+    const matchesSearch =
+      !hrSearchQuery ||
+      worker.full_name?.toLowerCase().includes(searchLower) ||
+      worker.cnic?.includes(hrSearchQuery)
+
+    const matchesDesignation =
+      !hrDesignationFilter ||
+      worker.designation === hrDesignationFilter
+
+    const matchesMonth = () => {
+      if (!hrMonthFilter) return true
+      const joiningDate = new Date(worker.joining_date)
+      const [year, month] = hrMonthFilter.split('-')
+      return (
+        joiningDate.getFullYear() === parseInt(year) &&
+        joiningDate.getMonth() + 1 === parseInt(month)
+      )
+    }
+
+    return matchesSearch && matchesDesignation && matchesMonth()
+  })
+
+  // Designation to Code and Salary mapping
   const designationSalary = {
     'Sanitary Supervisor': '40,000',
     'Helper': '40,000',
     'Sanitary Worker': '40,000',
     'Driver': '40,000',
+  }
+
+  const designationCodeMap = {
+    'Sanitary Supervisor': 'SS',
+    'Helper': 'H',
+    'Sanitary Worker': 'SW',
+    'Driver': 'D',
+  }
+
+  // Function to generate next employee code for a designation
+  const generateEmployeeCode = async (designation) => {
+    if (!designation) return ''
+    
+    try {
+      const codePrefix = designationCodeMap[designation]
+      if (!codePrefix) return ''
+      
+      // Fetch all codes for this designation to find the next serial number
+      const { data, error } = await supabase
+        .from('workers')
+        .select('employee_code')
+        .like('employee_code', `ZKB/${codePrefix}/%`)
+        .order('employee_code', { ascending: false })
+        .limit(1)
+      
+      if (error) throw error
+      
+      let nextSerial = 1
+      if (data && data.length > 0) {
+        const lastCode = data[0].employee_code
+        const serialMatch = lastCode.match(/(\d+)$/)
+        if (serialMatch) {
+          nextSerial = parseInt(serialMatch[1]) + 1
+        }
+      }
+      
+      const serialStr = String(nextSerial).padStart(3, '0')
+      return `ZKB/${codePrefix}/${serialStr}`
+    } catch (err) {
+      console.error('Error generating employee code:', err)
+      return ''
+    }
   }
 
   // Dummy UC/Ward data (embedded for now, will be dynamic later)
@@ -139,9 +216,13 @@ export default function WorkerManager() {
     setFormData(prev => {
       const updated = { ...prev, [name]: value }
       
-      // Auto-fill salary when designation is selected
+      // Auto-fill salary and generate employee code when designation is selected
       if (name === 'designation' && value) {
         updated.salary = designationSalary[value] || ''
+        // Generate employee code for selected designation
+        generateEmployeeCode(value).then(code => {
+          setFormData(prev => ({ ...prev, employeeCode: code }))
+        })
         // Clear vehicle code if designation changed from Driver
         if (value !== 'Driver') {
           updated.vehicleCode = ''
@@ -225,6 +306,7 @@ export default function WorkerManager() {
     
     // Employment Details
     if (!formData.designation) newErrors.designation = 'Please select a designation'
+    if (!formData.employeeCode) newErrors.employeeCode = 'Employee code not generated. Please reselect designation'
     if (!formData.joiningDate) newErrors.joiningDate = 'Joining date is required'
     
     // Location & Assignment
@@ -303,6 +385,7 @@ export default function WorkerManager() {
         cnic_issue_date: formData.cnicIssueDate || null,
         cnic_expiry_date: formData.cnicExpiryDate || null,
         designation: formData.designation,
+        employee_code: formData.employeeCode,
         salary: parseInt(formData.salary.replace(',', '')),
         joining_date: formData.joiningDate,
         uc_ward_id: parseInt(formData.ucWard),
@@ -334,6 +417,7 @@ export default function WorkerManager() {
         cnicIssueDate: '',
         cnicExpiryDate: '',
         designation: '',
+        employeeCode: '',
         salary: '',
         joiningDate: '',
         ucWard: '',
@@ -419,6 +503,87 @@ export default function WorkerManager() {
       ...prev,
       [field]: e.target.value
     }))
+  }
+  
+  // Handle status update
+  const handleStatusUpdate = async (workerId, newStatus) => {
+    try {
+      setLoading(true)
+      
+      // Prepare update payload: set termination_date when terminating, clear when reactivating
+      const updatePayload = { status: newStatus }
+      if (newStatus === 'Terminated') {
+        // Use UTC date in YYYY-MM-DD
+        updatePayload.termination_date = new Date().toISOString().split('T')[0]
+      } else if (newStatus === 'Active') {
+        updatePayload.termination_date = null
+      }
+
+      // Update status (and termination date if applicable) in database
+      const { error: updateError } = await supabase
+        .from('workers')
+        .update(updatePayload)
+        .eq('id', workerId)
+      
+      if (updateError) throw updateError
+      
+      // Add to status history
+      const { error: historyError } = await supabase
+        .from('status_history')
+        .insert({
+          worker_id: workerId,
+          old_status: workers.find(w => w.id === workerId)?.status,
+          new_status: newStatus,
+          changed_at: new Date().toISOString()
+        })
+      
+      if (historyError) console.error('History error:', historyError)
+      
+      setSuccess(`Employee status updated to ${newStatus}`)
+      await loadWorkers()
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      console.error('Error updating status:', err)
+      setError(err.message || 'Failed to update status')
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  // Handle terminate employee
+  const handleTerminateClick = (workerId) => {
+    const worker = workers.find(w => w.id === workerId)
+    setTerminationModal({ open: true, workerId, worker })
+  }
+  
+  // Confirm termination
+  const confirmTermination = async () => {
+    if (!terminationModal.workerId) return
+
+    await handleStatusUpdate(terminationModal.workerId, 'Terminated')
+    setTerminationModal({ open: false, workerId: null, worker: null })
+  }
+  
+  // View employee history
+  const handleViewHistory = async (workerId) => {
+    try {
+      const { data, error } = await supabase
+        .from('status_history')
+        .select('*')
+        .eq('worker_id', workerId)
+        .order('changed_at', { ascending: false })
+      
+      if (error) throw error
+      
+      setHistoryModal({ 
+        open: true, 
+        workerId, 
+        history: data || [] 
+      })
+    } catch (err) {
+      console.error('Error loading history:', err)
+      setError('Failed to load status history')
+    }
   }
 
   return (
@@ -538,7 +703,7 @@ export default function WorkerManager() {
                   borderColor: 'border-yellow-500/30',
                   shadowColor: 'shadow-yellow-500/20',
                   iconColor: 'text-yellow-400',
-                  value: `PKR ${workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}`,
+                  value: `${workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}`,
                   title: 'Monthly Payroll',
                   subtitle: 'Total expenses',
                   delay: 0.4
@@ -946,15 +1111,17 @@ export default function WorkerManager() {
                 <div className="overflow-x-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50">
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Employee</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Designation</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Phone</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Religion</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">DOB</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Joining Date</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">UC/Ward</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Salary</th>
+                      <tr className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50 text-xs">
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-48">Employee</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-36">CNIC</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-28">Employee Code</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-32">Designation</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-28">Phone</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider hidden sm:table-cell w-24">Religion</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider hidden sm:table-cell w-24">DOB</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider w-28">Joining Date</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider hidden sm:table-cell w-28">UC/Ward</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-300 uppercase tracking-wider hidden sm:table-cell w-28">Salary</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
@@ -984,25 +1151,36 @@ export default function WorkerManager() {
                             }}
                             className="group transition-all duration-200 hover:bg-slate-800/30"
                           >
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 py-2">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-8">
+                                <div className="w-7 h-7 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-7">
                                   {index + 1}
                                 </div>
                                 <div className="min-w-0">
-                                  <div className="text-white font-medium truncate">{worker.full_name}</div>
+                                  <div className="text-white text-sm font-medium truncate">{worker.full_name}</div>
                                   <div className="text-gray-400 text-xs truncate">{worker.father_name}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+
+                            {/* CNIC */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-sm font-mono truncate">{worker.cnic || 'N/A'}</p>
+                            </td>
+
+                            {/* Employee Code */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-sm font-mono font-semibold truncate">{worker.employee_code || 'N/A'}</p>
+                            </td>
+
+                            <td className="px-3 py-2">
                               <div className="text-white text-sm">{worker.designation}</div>
                               {worker.vehicle_code && (
-                                <div className="text-gray-400 text-xs">Vehicle: {worker.vehicle_code}</div>
+                                <div className="text-gray-400 text-xs truncate">Vehicle: {worker.vehicle_code}</div>
                               )}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-gray-300 text-sm">{worker.phone_number}</div>
+                            <td className="px-3 py-2">
+                              <div className="text-gray-300 text-sm truncate">{worker.phone_number}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-gray-300 text-sm">{worker.religion || 'N/A'}</div>
@@ -1029,7 +1207,7 @@ export default function WorkerManager() {
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-white text-sm font-semibold">PKR {worker.salary?.toLocaleString()}</div>
+                              <div className="text-white text-sm font-semibold">{worker.salary?.toLocaleString()}</div>
                             </td>
                           </motion.tr>
                         ))
@@ -1052,7 +1230,7 @@ export default function WorkerManager() {
                     <div className="text-center">
                       <p className="text-slate-400 text-xs font-medium mb-1">{monthFilter ? 'Filtered' : 'Total'} Payroll</p>
                       <p className="text-2xl font-bold text-cyan-400">
-                        PKR {(filteredWorkers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
+{(filteredWorkers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
                       </p>
                       {monthFilter && (
                         <p className="text-slate-500 text-xs mt-1">({filteredWorkers.length} employee{filteredWorkers.length !== 1 ? 's' : ''})</p>
@@ -1090,6 +1268,60 @@ export default function WorkerManager() {
                   <p className="text-slate-400">Complete employee records and documentation - Customizable</p>
                 </div>
               </div>
+
+              {/* HR Filters (refreshed styling to blend with UI) */}
+              <div className="p-4 border-b border-white/8 bg-gradient-to-r from-slate-900/30 to-slate-800/20 rounded-2xl w-full">
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  {/* Search input */}
+                  <div className="flex-1 min-w-0">
+                    <div className="relative">
+                      <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      <input
+                        type="text"
+                        placeholder="Search by name or CNIC..."
+                        value={hrSearchQuery}
+                        onChange={(e) => setHrSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Controls: Designation, Month/Year, Count, Clear */}
+                  <div className="flex items-center gap-3">
+                    <select 
+                      value={hrDesignationFilter}
+                      onChange={(e) => setHrDesignationFilter(e.target.value)}
+                      className="px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200 cursor-pointer min-w-[170px]"
+                    >
+                      <option value="" className="bg-slate-800">All Designations</option>
+                      <option value="Sanitary Supervisor" className="bg-slate-800">Sanitary Supervisor</option>
+                      <option value="Helper" className="bg-slate-800">Helper</option>
+                      <option value="Sanitary Worker" className="bg-slate-800">Sanitary Worker</option>
+                      <option value="Driver" className="bg-slate-800">Driver</option>
+                    </select>
+
+                    <MonthPicker 
+                      value={hrMonthFilter}
+                      onChange={(e) => setHrMonthFilter(e.target.value)}
+                    />
+
+                    <div className="px-3 py-1 bg-purple-600/10 border border-purple-600/20 rounded-full text-purple-200 text-sm font-medium">
+                      {hrFilteredWorkers.length} of {workers.length}
+                    </div>
+
+                    {(hrSearchQuery || hrDesignationFilter || hrMonthFilter) && (
+                      <button
+                        onClick={() => { setHrSearchQuery(''); setHrDesignationFilter(''); setHrMonthFilter('') }}
+                        className="px-3 py-1 bg-transparent hover:bg-white/5 border border-white/6 rounded-lg text-slate-200 text-xs font-medium transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -1101,7 +1333,10 @@ export default function WorkerManager() {
                 </svg>
                 <span className="text-purple-400 text-sm font-medium">Editable Records</span>
               </motion.div>
+
             </motion.div>
+
+
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -1139,20 +1374,22 @@ export default function WorkerManager() {
                 <div className="overflow-x-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-white/10 bg-white/5">
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Employee</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">DOB</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Phone</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Designation</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">CNIC Dates</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Salary</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                      <tr className="border-b border-white/10 bg-white/5 text-xs">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-12">SR</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-48">Employee</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-36">CNIC</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Employee Code</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-24">DOB</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Phone</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Joining</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-32">Designation</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-36">CNIC Dates</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-28">Salary</th>
+                        <th className="px-3 py-2 text-center font-semibold text-gray-300 uppercase tracking-wider w-36">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {workers.map((worker, index) => (
+                      {hrFilteredWorkers.map((worker, index) => (
                         <motion.tr 
                           key={worker.id}
                           initial={{ opacity: 0, x: -20 }}
@@ -1161,82 +1398,132 @@ export default function WorkerManager() {
                           whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                           className="transition-colors"
                         >
+                          {/* SR */}
+                          <td className="px-3 py-2">
+                            <div className="w-7 h-7 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-7">
+                              {index + 1}
+                            </div>
+                          </td>
+                          
                           {/* Employee (Name + Father's Name) */}
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-slate-700 to-slate-600 rounded-lg flex items-center justify-center text-white font-semibold text-xs border border-slate-500/30 flex-shrink-0 min-w-8">
-                                {index + 1}
-                                </div>
-                                <div>
-                                  <p className="text-white font-medium">{worker.full_name}</p>
-                                  <p className="text-gray-400 text-xs">{worker.father_name}</p>
-                                </div>
-                              </div>
+                          <td className="px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{worker.full_name}</p>
+                              <p className="text-gray-400 text-xs truncate">{worker.father_name}</p>
+                            </div>
+                          </td>
+                          
+                          {/* CNIC */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-sm font-mono truncate">{worker.cnic || 'N/A'}</p>
                             </td>
-                            
-                            {/* CNIC */}
-                            <td className="px-6 py-4">
-                              <p className="text-white text-sm font-mono">{worker.cnic}</p>
-                            </td>
+
+                          {/* Employee Code */}
+                          <td className="px-3 py-2">
+                            <p className="text-white text-sm font-mono font-semibold truncate">{worker.employee_code || 'N/A'}</p>
+                          </td>
                             
                             {/* DOB */}
-                            <td className="px-6 py-4">
-                              <p className="text-white text-sm">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}</p>
+                            <td className="px-3 py-2">
+                              <p className="text-white text-xs truncate">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}</p>
                             </td>
                             
                             {/* Phone */}
-                            <td className="px-6 py-4">
-                              <p className="text-white text-sm">{worker.phone_number}</p>
+                            <td className="px-3 py-2">
+                              <p className="text-white text-xs truncate">{worker.phone_number}</p>
+                            </td>
+                            
+                            {/* Joining Date */}
+                            <td className="px-3 py-2">
+                              <p className="text-white text-xs truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}</p>
                             </td>
                             
                             {/* Designation + Vehicle (if assigned) */}
-                            <td className="px-6 py-4">
-                              <div>
-                                <p className="text-white text-sm font-medium">{worker.designation}</p>
+                            <td className="px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-white text-xs font-medium truncate">{worker.designation}</p>
                                 {worker.vehicle_code && (
-                                  <p className="text-gray-400 text-xs">Vehicle: {worker.vehicle_code}</p>
+                                  <p className="text-gray-400 text-xs truncate">Vehicle: {worker.vehicle_code}</p>
                                 )}
                               </div>
                             </td>
                             
                             {/* CNIC Issue & Expiry Dates */}
-                            <td className="px-6 py-4">
-                              <div className="space-y-1 min-w-max">
-                                <p className="text-white text-sm whitespace-nowrap">Issue: {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString() : 'N/A'}</p>
-                                <p className="text-white text-sm whitespace-nowrap">Expiry: {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString() : 'N/A'}</p>
-                              </div>
+                            <td className="px-3 py-2">
+                              <p className="text-white text-xs truncate">Issue: {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString() : 'N/A'} • Expiry: {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString() : 'N/A'}</p>
                             </td>
                             
                             {/* Salary */}
-                            <td className="px-6 py-4">
-                              <p className="text-white text-sm font-medium">PKR {worker.salary?.toLocaleString()}</p>
+                            <td className="px-3 py-2 text-right">
+                              <p className="text-white text-xs font-medium">{worker.salary?.toLocaleString()}</p>
                             </td>
                             
-                            {/* Status */}
-                            <td className="px-6 py-4">
-                              <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                                worker.status === 'Active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                worker.status === 'Inactive' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30' :
-                                worker.status === 'On Leave' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                                'bg-red-500/20 text-red-400 border border-red-500/30'
-                              }`}>
-                                {worker.status}
-                              </span>
-                            </td>
-                            
-                            {/* Actions */}
-                            <td className="px-6 py-4">
-                              <motion.button
-                                onClick={() => handleEditWorker(worker)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Edit
-                              </motion.button>
+                            {/* Status with Actions Dropdown and History */}
+                            <td className="px-3 py-2 text-center w-36">
+                              <div className="flex items-center justify-center gap-2">
+                                {/* Status Button with Dropdown */}
+                                <div className="relative group">
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className={`px-2 py-1 text-xs font-semibold rounded-full transition-all duration-200 ${
+                                      worker.status === 'Active' ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30' :
+                                      worker.status === 'Inactive' ? 'bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30' :
+                                      worker.status === 'On Leave' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30' :
+                                      'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                                    }`}
+                                  >
+                                    {worker.status}
+                                  </motion.button>
+                                  
+                                  {/* Dropdown Menu */}
+                                  <div className="absolute left-0 mt-1 hidden group-hover:block bg-slate-900 border border-white/10 rounded-lg shadow-xl z-10 min-w-max">
+                                    {worker.status === 'Active' && (
+                                      <button
+                                        onClick={() => handleTerminateClick(worker.id)}
+                                        className="block w-full text-left px-3 py-2 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium rounded-t-lg"
+                                      >
+                                        Terminate
+                                      </button>
+                                    )}
+                                    {worker.status === 'Terminated' && (
+                                      <button
+                                        onClick={() => handleStatusUpdate(worker.id, 'Active')}
+                                        className="block w-full text-left px-3 py-2 text-green-400 hover:bg-green-500/10 transition-colors text-sm font-medium rounded-t-lg"
+                                      >
+                                        Reactivate
+                                      </button>
+                                    )}
+                                    {worker.status === 'Inactive' && (
+                                      <button
+                                        onClick={() => handleStatusUpdate(worker.id, 'Active')}
+                                        className="block w-full text-left px-3 py-2 text-green-400 hover:bg-green-500/10 transition-colors text-sm font-medium rounded-t-lg"
+                                      >
+                                        Activate
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleViewHistory(worker.id)}
+                                      className="block w-full text-left px-3 py-2 text-purple-400 hover:bg-purple-500/10 transition-colors text-sm font-medium border-t border-white/10 rounded-b-lg"
+                                    >
+                                      History
+                                    </button>
+                                  </div>
+                                </div>
+                                
+                                {/* Three Dots Menu for Edit */}
+                                <motion.button
+                                  onClick={() => handleEditWorker(worker)}
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="text-gray-400 hover:text-gray-200 transition-colors"
+                                  title="Edit employee"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                                  </svg>
+                                </motion.button>
+                              </div>
                             </td>
                           </motion.tr>
                         ))}
@@ -1247,7 +1534,7 @@ export default function WorkerManager() {
                 {/* Summary Stats */}
                 <div className="bg-white/5 border-t border-white/10 px-6 py-4">
                   <h3 className="text-white font-semibold mb-4 text-sm">Summary Statistics</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-gray-400 text-xs mb-1">Total Workers</p>
                       <p className="text-white text-xl font-bold">{workers.length}</p>
@@ -1259,19 +1546,90 @@ export default function WorkerManager() {
                     <div>
                       <p className="text-gray-400 text-xs mb-1">Total Payroll</p>
                       <p className="text-white text-xl font-bold">
-                        PKR {(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
+{(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
                       </p>
                     </div>
-                    <div>
-                      <p className="text-gray-400 text-xs mb-1">Avg. Salary</p>
-                      <p className="text-white text-xl font-bold">
-                        PKR {workers.length > 0 ? (Math.round(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / workers.length) / 1000).toFixed(0) : '0'}K
-                      </p>
-                    </div>
+
                   </div>
                 </div>
               </div>
             )}
+          </motion.div>
+        )}
+
+        {/* Terminated Employees Tab */}
+        {activeTab === 'terminated' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="max-w-7xl mx-auto">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-red-400 bg-clip-text text-transparent">Terminated Employees</h2>
+                <p className="text-slate-400">Read-only listing of terminated employees for auditing and reporting</p>
+              </div>
+              <div className="px-3 py-1 bg-rose-600/10 border border-rose-600/20 rounded-full text-rose-200 text-sm font-medium">
+                {workers.filter(w => w.status === 'Terminated').length} terminated
+              </div>
+            </div>
+
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="overflow-x-hidden">
+                <table className="w-full table-fixed text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-white/5 text-xs">
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[22%]">Employee Name</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%]">CNIC</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[10%]">Employee Code</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%]">Designation</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[10%]">Phone</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[8%] hidden sm:table-cell">Religion</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[8%]">DOB</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[8%]">Joining Date</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[10%]">Termination Date</th>
+                      <th className="px-3 py-2 text-left font-semibold text-gray-300 uppercase tracking-wider w-[12%] hidden md:table-cell">UC / Ward</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {workers.filter(w => w.status === 'Terminated').map((worker, idx) => (
+                      <tr key={worker.id} className="hover:bg-white/2 transition-colors">
+                        <td className="px-3 py-3">
+                          <div className="min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{worker.full_name}</p>
+                            <p className="text-gray-400 text-xs truncate">{worker.father_name}</p>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 font-mono text-sm text-slate-200">{worker.cnic}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.employee_code}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.designation}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.phone_number}</td>
+                        <td className="px-3 py-3 hidden sm:table-cell text-slate-200">{worker.religion || '—'}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-3 text-slate-200">{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString() : '—'}</td>
+                        <td className="px-3 py-3 hidden md:table-cell text-slate-200">{worker.uc_ward_name || '—'}</td>
+                      </tr>
+                    ))}
+                    {workers.filter(w => w.status === 'Terminated').length === 0 && (
+                      <tr>
+                        <td className="px-3 py-6 text-center text-slate-400" colSpan={10}>No terminated employees</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Attendance Tab */}
+        {activeTab === 'attendance' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="max-w-7xl mx-auto">
+            <div className="mb-4">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Overall Attendance</h2>
+              <p className="text-slate-400">Monthly attendance sheets — click a cell to toggle (P/A/L) for the current month. Past months are read-only.</p>
+            </div>
+
+            <div>
+              <Attendance workers={workers} />
+            </div>
           </motion.div>
         )}
 
@@ -1468,6 +1826,116 @@ export default function WorkerManager() {
                     </svg>
                     Save Changes
                   </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Termination Confirmation Modal */}
+        <AnimatePresence>
+          {terminationModal.open && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setTerminationModal({ open: false, workerId: null })}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-gradient-to-br from-slate-900 to-slate-800 border border-red-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6"
+              >
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-500/20 rounded-full">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 0a9 9 0 110-18 9 9 0 010 18z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-white text-center mb-4">Terminate Employee?</h2>
+                {terminationModal.worker && (
+                  <p className="text-gray-300 text-center mb-6 text-sm"><span className="font-semibold">Name:</span> {terminationModal.worker.full_name} | <span className="font-semibold">CNIC:</span> <span className="font-mono">{terminationModal.worker.cnic}</span></p>
+                )}
+                <p className="text-gray-400 text-center mb-6 text-sm">Are you sure you want to terminate this employee? This action will update their status to "Terminated".</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => setTerminationModal({ open: false, workerId: null, worker: null })}
+                    className="px-4 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 border border-gray-500/30 rounded-lg transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmTermination}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all duration-200 font-medium disabled:opacity-50"
+                  >
+                    Terminate
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Status History Modal */}
+        <AnimatePresence>
+          {historyModal.open && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+              >
+                <div className="sticky top-0 p-6 border-b border-white/10 bg-slate-900/90 backdrop-blur">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white">Status History</h2>
+                    <button
+                      onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
+                      className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {historyModal.history && historyModal.history.length > 0 ? (
+                    <div className="space-y-4">
+                      {historyModal.history.map((entry, idx) => (
+                        <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <p className="text-sm text-gray-400">Status Changed</p>
+                              <p className="text-white font-medium">
+                                {entry.old_status} → <span className={`${
+                                  entry.new_status === 'Active' ? 'text-green-400' :
+                                  entry.new_status === 'Terminated' ? 'text-red-400' :
+                                  'text-yellow-400'
+                                }`}>{entry.new_status}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(entry.changed_at).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-400">No status changes recorded yet</p>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
