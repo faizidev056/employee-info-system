@@ -160,15 +160,15 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
       days.push(
         <motion.button
           key={day}
-          whileHover={{ scale: 1.1 }}
+          whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => handleDateSelect(day)}
-          className={`h-8 w-8 rounded-md text-sm font-medium transition-colors ${
+          className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all ${
             isSelected
-              ? 'bg-cyan-500 text-black'
+              ? 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/50'
               : isToday
-              ? 'bg-white/20 text-white border border-white/30'
-              : 'text-gray-300 hover:bg-white/10 hover:text-white'
+              ? 'bg-slate-700/50 text-cyan-400 border border-cyan-500/50 font-bold'
+              : 'text-slate-300 hover:bg-slate-700/50 hover:text-white hover:border border-slate-700/30'
           }`}
         >
           {day}
@@ -223,30 +223,30 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-80 bg-zinc-900 border border-gray-700 rounded-lg shadow-xl p-4"
+            className="absolute z-50 mt-2 w-80 bg-gradient-to-br from-slate-900 to-slate-800 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl shadow-slate-900/50 p-5"
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-700/30">
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
                 onClick={handlePrevMonth}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-700/50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </motion.button>
 
-              <h3 className="text-white font-semibold">
+              <h3 className="text-white font-semibold text-base bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                 {months[currentMonth]} {currentYear}
               </h3>
 
               <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
                 onClick={handleNextMonth}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-700/50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -255,21 +255,21 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
             </div>
 
             {/* Days of week */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="grid grid-cols-7 gap-1 mb-3">
               {daysOfWeek.map(day => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs font-medium text-gray-500">
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs font-semibold text-slate-400 uppercase tracking-wide">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-2">
               {renderCalendar()}
             </div>
 
             {/* Today button */}
-            <div className="mt-4 pt-3 border-t border-gray-700">
+            <div className="mt-5 pt-4 border-t border-slate-700/30">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -279,7 +279,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
                   setCurrentMonth(today.getMonth())
                   setCurrentYear(today.getFullYear())
                 }}
-                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-md transition-colors"
+                className="w-full py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-400 text-sm font-medium rounded-lg transition-colors border border-cyan-500/30 hover:border-cyan-500/50"
               >
                 Today
               </motion.button>

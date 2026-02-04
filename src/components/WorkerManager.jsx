@@ -10,7 +10,8 @@ import LocationAssignment from './WorkerFormParts/LocationAssignment'
 import VehicleInfo from './WorkerFormParts/VehicleInfo'
 import AddressSection from './WorkerFormParts/AddressSection'
 import SubmitButton from './WorkerFormParts/SubmitButton'
-import { getAutocompleteToken } from '../lib/utils' 
+import MonthPicker from './WorkerFormParts/MonthPicker'
+import { getAutocompleteToken } from '../lib/utils'
 
 export default function WorkerManager() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -49,6 +50,11 @@ export default function WorkerManager() {
   })
 
   const [errors, setErrors] = useState({})
+  
+  // Directory filters state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [designationFilter, setDesignationFilter] = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
 
   const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
   
@@ -79,6 +85,35 @@ export default function WorkerManager() {
       setLoading(false)
     }
   }
+
+  // Filter workers based on search query, designation, and month
+  const filteredWorkers = workers.filter(worker => {
+    // Search filter (by name or CNIC)
+    const searchLower = searchQuery.toLowerCase()
+    const matchesSearch = 
+      !searchQuery || 
+      worker.full_name?.toLowerCase().includes(searchLower) ||
+      worker.cnic?.includes(searchQuery)
+    
+    // Designation filter
+    const matchesDesignation = 
+      !designationFilter || 
+      worker.designation === designationFilter
+    
+    // Month filter (by joining date) - only show active employees who joined in that month
+    const matchesMonth = () => {
+      if (!monthFilter) return true
+      const joiningDate = new Date(worker.joining_date)
+      const [year, month] = monthFilter.split('-')
+      return (
+        joiningDate.getFullYear() === parseInt(year) &&
+        joiningDate.getMonth() + 1 === parseInt(month) &&
+        worker.status === 'Active'
+      )
+    }
+    
+    return matchesSearch && matchesDesignation && matchesMonth()
+  })
 
   // Designation to Salary mapping (all 40,000 PKR)
   const designationSalary = {
@@ -832,31 +867,64 @@ export default function WorkerManager() {
               <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden shadow-2xl shadow-slate-900/50">
                 {/* Search and Filters Bar */}
                 <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-700/50">
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                      {/* Search Bar */}
+                      <div className="relative flex-1">
                         <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                           type="text"
-                          placeholder="Search employees..."
-                          className="pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200"
+                          placeholder="Search by name or CNIC..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200"
                         />
                       </div>
-                      <select className="px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200">
+                      
+                      {/* Designation Filter */}
+                      <select 
+                        value={designationFilter}
+                        onChange={(e) => setDesignationFilter(e.target.value)}
+                        className="px-4 py-3 bg-slate-800/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 text-sm transition-all duration-200 cursor-pointer"
+                      >
                         <option value="" className="bg-slate-800">All Designations</option>
                         <option value="Sanitary Supervisor" className="bg-slate-800">Sanitary Supervisor</option>
                         <option value="Helper" className="bg-slate-800">Helper</option>
                         <option value="Sanitary Worker" className="bg-slate-800">Sanitary Worker</option>
                         <option value="Driver" className="bg-slate-800">Driver</option>
                       </select>
+                      
+                      {/* Month Filter */}
+                      <div className="flex-1 sm:flex-initial">
+                        <MonthPicker 
+                          value={monthFilter}
+                          onChange={(e) => setMonthFilter(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-xl">
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-                      <span className="text-cyan-400 text-sm font-medium">
-                        {workers.length} employee{workers.length !== 1 ? 's' : ''}
-                      </span>
+
+                    {/* Filter Summary and Count */}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-xl">
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                        <span className="text-cyan-400 text-sm font-medium">
+                          {filteredWorkers.length} of {workers.length} employee{workers.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {(searchQuery || designationFilter || monthFilter) && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery('')
+                            setDesignationFilter('')
+                            setMonthFilter('')
+                          }}
+                          className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg text-red-400 text-xs font-medium transition-colors"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -868,112 +936,100 @@ export default function WorkerManager() {
                       <tr className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-b border-slate-600/50">
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Employee</th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Designation</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">CNIC</th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Religion</th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">DOB</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Joining Date</th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">UC/Ward</th>
                         <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Salary</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
-                      {workers.map((worker, index) => (
-                        <motion.tr 
-                          key={worker.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          whileHover={{ 
-                            backgroundColor: 'rgba(6, 182, 212, 0.05)',
-                            scale: 1.01,
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                          }}
-                          className="group transition-all duration-200 hover:bg-slate-800/30"
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-semibold text-sm border border-white/10 flex-shrink-0">
-                                {worker.full_name?.charAt(0).toUpperCase()}
+                      {filteredWorkers.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center justify-center gap-3">
+                              <svg className="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                              <p className="text-slate-400 font-medium">No employees found matching your filters</p>
+                              <p className="text-slate-500 text-sm">Try adjusting your search criteria</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredWorkers.map((worker, index) => (
+                          <motion.tr 
+                            key={worker.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            whileHover={{ 
+                              backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                              scale: 1.01,
+                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                            }}
+                            className="group transition-all duration-200 hover:bg-slate-800/30"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-white/20 to-white/5 rounded-lg flex items-center justify-center text-white font-semibold text-sm border border-white/10 flex-shrink-0">
+                                  {worker.full_name?.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-white font-medium truncate">{worker.full_name}</div>
+                                  <div className="text-gray-400 text-xs truncate">{worker.father_name}</div>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <div className="text-white font-medium truncate">{worker.full_name}</div>
-                                <div className="text-gray-400 text-xs truncate">{worker.father_name}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-white text-sm">{worker.designation}</div>
+                              {worker.vehicle_code && (
+                                <div className="text-gray-400 text-xs">Vehicle: {worker.vehicle_code}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-gray-300 text-sm">{worker.phone_number}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-gray-300 text-sm">{worker.religion || 'N/A'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-gray-300 text-sm">
+                                {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-white text-sm">{worker.designation}</div>
-                            {worker.vehicle_code && (
-                              <div className="text-gray-400 text-xs">Vehicle: {worker.vehicle_code}</div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-gray-300 text-sm font-mono">{worker.cnic}</div>
-                            {worker.cnic_issue_date && (
-                              <div className="text-gray-400 text-xs">Issued: {new Date(worker.cnic_issue_date).toLocaleDateString()}</div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-gray-300 text-sm">{worker.phone_number}</div>
-                            {worker.religion && (
-                              <div className="text-gray-400 text-xs">{worker.religion}</div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-gray-300 text-sm">
-                              {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}
-                            </div>
-                            <div className="text-gray-400 text-xs">
-                              Age: {worker.date_of_birth ? Math.floor((new Date() - new Date(worker.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25)) : 'N/A'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-gray-300 text-sm max-w-32 truncate">{worker.uc_ward_name}</div>
-                            {worker.attendance_point && (
-                              <div className="text-gray-400 text-xs max-w-32 truncate" title={worker.attendance_point}>
-                                {worker.attendance_point}
+                              <div className="text-gray-400 text-xs">
+                                Age: {worker.date_of_birth ? Math.floor((new Date() - new Date(worker.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25)) : 'N/A'}
                               </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-white text-sm font-semibold">PKR {worker.salary?.toLocaleString()}</div>
-                            <div className="text-gray-400 text-xs">
-                              Joined: {worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full border border-green-500/30">
-                              {worker.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <motion.button 
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="p-2 text-gray-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-white/10" 
-                                title="View Details"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </motion.button>
-                              <span className="text-xs text-gray-500 italic ml-2">Read-only</span>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-white text-sm font-semibold">
+                                {worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-gray-300 text-sm max-w-32 truncate">{worker.uc_ward_name}</div>
+                              {worker.attendance_point && (
+                                <div className="text-gray-400 text-xs max-w-32 truncate" title={worker.attendance_point}>
+                                  {worker.attendance_point}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-white text-sm font-semibold">PKR {worker.salary?.toLocaleString()}</div>
+                            </td>
+                          </motion.tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Summary Stats */}
                 <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/80 border-t border-slate-600/50 px-6 py-6">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                     <div className="text-center">
-                      <p className="text-slate-400 text-xs font-medium mb-1">Total Workers</p>
+                      <p className="text-slate-400 text-xs font-medium mb-1">Total Workers (Overall)</p>
                       <p className="text-2xl font-bold text-white">{workers.length}</p>
                     </div>
                     <div className="text-center">
@@ -981,16 +1037,13 @@ export default function WorkerManager() {
                       <p className="text-2xl font-bold text-green-400">{workers.filter(w => w.status === 'Active').length}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-slate-400 text-xs font-medium mb-1">Total Payroll</p>
+                      <p className="text-slate-400 text-xs font-medium mb-1">{monthFilter ? 'Filtered' : 'Total'} Payroll</p>
                       <p className="text-2xl font-bold text-cyan-400">
-                        PKR {(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
+                        PKR {(filteredWorkers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
                       </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-slate-400 text-xs font-medium mb-1">Avg. Salary</p>
-                      <p className="text-2xl font-bold text-yellow-400">
-                        PKR {workers.length > 0 ? (Math.round(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / workers.length) / 1000).toFixed(0) : '0'}K
-                      </p>
+                      {monthFilter && (
+                        <p className="text-slate-500 text-xs mt-1">({filteredWorkers.length} employee{filteredWorkers.length !== 1 ? 's' : ''})</p>
+                      )}
                     </div>
                   </div>
                 </div>
