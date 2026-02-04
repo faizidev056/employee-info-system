@@ -1,18 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
+import { getAutocompleteToken } from '../../lib/utils' 
 
 export default function DatePicker({ name, value, onChange, placeholder, error, className = '' }) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : null)
+  const [inputValue, setInputValue] = useState(value || '')
   const calendarRef = useRef(null)
   const inputRef = useRef(null)
 
-  // Update selected date when value prop changes
+  // Update selected date and input value when value prop changes
   useEffect(() => {
-    setSelectedDate(value ? new Date(value) : null)
+    if (value) {
+      const dateParts = value.split('-')
+      if (dateParts.length === 3) {
+        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date)
+          setInputValue(value)
+        }
+      } else {
+        const date = new Date(value)
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date)
+          const formattedDate = date.toISOString().split('T')[0]
+          setInputValue(formattedDate)
+        }
+      }
+    } else {
+      setSelectedDate(null)
+      setInputValue('')
+    }
   }, [value])
 
   // Close calendar when clicking outside
@@ -43,19 +64,55 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
     return new Date(year, month, 1).getDay()
   }
 
+  const handleInputChange = (e) => {
+    const inputVal = e.target.value
+    setInputValue(inputVal)
+    
+    let parsedDate = null
+    if (inputVal.trim()) {
+      // Try to parse as YYYY-MM-DD first
+      const dateParts = inputVal.split('-')
+      if (dateParts.length === 3 && dateParts[0].length === 4 && dateParts[1].length <= 2 && dateParts[2].length <= 2) {
+        const year = parseInt(dateParts[0])
+        const month = parseInt(dateParts[1]) - 1
+        const day = parseInt(dateParts[2])
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+          parsedDate = new Date(year, month, day)
+          if (isNaN(parsedDate.getTime())) {
+            parsedDate = null
+          }
+        }
+      } else if (inputVal.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
+        // Try other common formats
+        parsedDate = new Date(inputVal)
+        if (isNaN(parsedDate.getTime())) {
+          parsedDate = null
+        }
+      }
+    }
+    setSelectedDate(parsedDate)
+    
+    // Create synthetic event with the formatted date value
+    const syntheticEvent = {
+      target: {
+        name,
+        value: parsedDate ? parsedDate.toISOString().split('T')[0] : inputVal
+      }
+    }
+    onChange(syntheticEvent)
+  }
+
   const handleDateSelect = (day) => {
     const newDate = new Date(currentYear, currentMonth, day)
     setSelectedDate(newDate)
+    setInputValue(newDate.toISOString().split('T')[0])
     setIsOpen(false)
-
-    // Format date as YYYY-MM-DD for input
-    const formattedDate = newDate.toISOString().split('T')[0]
 
     // Create synthetic event for onChange
     const event = {
       target: {
         name,
-        value: formattedDate
+        value: newDate.toISOString().split('T')[0]
       }
     }
     onChange(event)
@@ -137,11 +194,15 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
         <input
           ref={inputRef}
           type="text"
-          readOnly
-          value={formatDisplayDate(selectedDate)}
+          name={name}
+          value={inputValue}
           placeholder={placeholder}
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-full px-3 py-2 bg-black border ${error ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors cursor-pointer pr-10 ${className}`}
+          onChange={handleInputChange}
+          onClick={() => setIsOpen(false)}
+          autoComplete="new-password"
+          readOnly
+          onFocus={(e) => { e.target.removeAttribute('readonly'); setIsOpen(false) }}
+          className={`w-full px-3 py-2 bg-black border ${error ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors pr-10 ${className}`}
         />
         <button
           type="button"

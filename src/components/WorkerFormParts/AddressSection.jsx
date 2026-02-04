@@ -1,4 +1,5 @@
 import React from 'react'
+import { getAutocompleteToken } from '../../lib/utils'
 
 export default function AddressSection({ formData, onChange }) {
   return (
@@ -20,6 +21,9 @@ export default function AddressSection({ formData, onChange }) {
           onChange={onChange}
           rows="3"
           placeholder="Enter complete address"
+          autoComplete={getAutocompleteToken()}
+          onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
+          onBlur={(e) => { e.target.removeAttribute('data-focused') }}
           className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10 resize-none"
         ></textarea>
       </div>

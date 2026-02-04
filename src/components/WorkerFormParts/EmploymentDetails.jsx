@@ -1,5 +1,6 @@
 import React from 'react'
 import DatePicker from './DatePicker'
+import { getAutocompleteToken } from '../../lib/utils' 
 
 export default function EmploymentDetails({ formData, errors, onChange }) {
   return (
@@ -13,6 +14,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             name="designation"
             value={formData.designation}
             onChange={onChange}
+            autoComplete={getAutocompleteToken()}
             className={`w-full px-3 py-2 bg-black border ${errors.designation ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
           >
             <option value="" className="bg-gray-900">Select designation</option>
@@ -47,7 +49,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
           name="joiningDate"
           value={formData.joiningDate}
           onChange={onChange}
-          placeholder="Select joining date"
+          placeholder="YYYY-MM-DD or select date"
           error={errors.joiningDate}
         />
         {errors.joiningDate && (

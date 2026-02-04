@@ -10,6 +10,7 @@ import LocationAssignment from './WorkerFormParts/LocationAssignment'
 import VehicleInfo from './WorkerFormParts/VehicleInfo'
 import AddressSection from './WorkerFormParts/AddressSection'
 import SubmitButton from './WorkerFormParts/SubmitButton'
+import { getAutocompleteToken } from '../lib/utils' 
 
 export default function WorkerManager() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -38,6 +39,7 @@ export default function WorkerManager() {
     
     // Location & Assignment
     ucWard: '',
+    attendancePoint: '',
     
     // Conditional Field
     vehicleCode: '',
@@ -47,6 +49,8 @@ export default function WorkerManager() {
   })
 
   const [errors, setErrors] = useState({})
+
+  const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
   
   // HR Records editing state
   const [editingWorkerId, setEditingWorkerId] = useState(null)
@@ -86,12 +90,12 @@ export default function WorkerManager() {
 
   // Dummy UC/Ward data (embedded for now, will be dynamic later)
   const ucWardOptions = [
-    { id: 1, name: 'UC-1 Model Town', attendancePoint: 'Model Town Community Center' },
-    { id: 2, name: 'UC-2 Johar Town', attendancePoint: 'Johar Town Park Office' },
-    { id: 3, name: 'UC-3 Gulberg', attendancePoint: 'Gulberg Main Office' },
-    { id: 4, name: 'UC-4 DHA Phase 1', attendancePoint: 'DHA Phase 1 Gate' },
-    { id: 5, name: 'UC-5 Cantt', attendancePoint: 'Cantt Station Office' },
-    { id: 6, name: 'UC-6 Shadman', attendancePoint: 'Shadman Circle Office' },
+    { id: 1, name: 'UC-1 Model Town', attendancePoints: ['Model Town Community Center', 'Model Town Park'] },
+    { id: 2, name: 'UC-2 Johar Town', attendancePoints: ['Johar Town Park Office'] },
+    { id: 3, name: 'UC-3 Gulberg', attendancePoints: ['Gulberg Main Office', 'Gulberg Market', 'Gulberg Park'] },
+    { id: 4, name: 'UC-4 DHA Phase 1', attendancePoints: ['DHA Phase 1 Gate'] },
+    { id: 5, name: 'UC-5 Cantt', attendancePoints: ['Cantt Station Office', 'Cantt Hospital'] },
+    { id: 6, name: 'UC-6 Shadman', attendancePoints: ['Shadman Circle Office'] },
   ]
 
   const handleChange = (e) => {
@@ -109,12 +113,37 @@ export default function WorkerManager() {
         }
       }
       
+      // Clear attendance point when UC/Ward changes
+      if (name === 'ucWard') {
+        updated.attendancePoint = ''
+      }
+      
       return updated
     })
 
-    // Clear error for this field
+    // Clear error for this field when valid input is provided
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }))
+      // Check if the new value would pass validation
+      let shouldClearError = false
+      
+      if (name === 'dateOfBirth' && value) {
+        const birthDate = new Date(value)
+        const today = new Date()
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--
+        }
+        shouldClearError = age >= 18
+      } else if (typeof value === 'string' && value.trim()) {
+        shouldClearError = true
+      } else if (value) {
+        shouldClearError = true
+      }
+      
+      if (shouldClearError) {
+        setErrors(prev => ({ ...prev, [name]: '' }))
+      }
     }
   }
 
@@ -141,6 +170,7 @@ export default function WorkerManager() {
         newErrors.dateOfBirth = 'Worker must be at least 18 years old to be eligible'
       }
     }
+    if (!formData.religion) newErrors.religion = 'Religion is required'
     if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Phone number is required'
     
     // Identification
@@ -152,6 +182,10 @@ export default function WorkerManager() {
     
     // Location & Assignment
     if (!formData.ucWard) newErrors.ucWard = 'Please select UC/Ward'
+    const selectedUC = ucWardOptions.find(uc => uc.id === parseInt(formData.ucWard))
+    if (selectedUC && selectedUC.attendancePoints.length > 1 && !formData.attendancePoint) {
+      newErrors.attendancePoint = 'Please select an attendance point'
+    }
     
     // Conditional validation for Driver
     if (formData.designation === 'Driver' && !formData.vehicleCode.trim()) {
@@ -159,13 +193,50 @@ export default function WorkerManager() {
     }
     
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors }
+  }
+
+  // Quick DB connectivity test
+  const checkDb = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const { data, error } = await supabase.from('workers').select('id').limit(1)
+      if (error) throw error
+      setSuccess(`DB reachable — found ${data?.length || 0} row(s)`)
+      setTimeout(() => setSuccess(''), 4000)
+    } catch (err) {
+      console.error('DB check error:', err)
+      setError(err.message || 'DB check failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    console.log('Form submitted with data:', formData)
+    
+    const validation = validateForm()
+    console.log('Validation result:', validation)
+    
+    if (!validation.isValid) {
+      console.log('Validation failed. Errors:', validation.errors)
+      // Scroll to first error field
+      const firstErrorField = Object.keys(validation.errors)[0]
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`)
+        console.log('Scrolling to field:', firstErrorField, 'Element found:', !!element)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          element.focus()
+        }
+      }
+      return
+    }
+
+    console.log('Validation passed, submitting to database...')
 
     try {
       setLoading(true)
@@ -189,7 +260,7 @@ export default function WorkerManager() {
         joining_date: formData.joiningDate,
         uc_ward_id: parseInt(formData.ucWard),
         uc_ward_name: selectedUC?.name || '',
-        attendance_point: selectedUC?.attendancePoint || '',
+        attendance_point: formData.attendancePoint || selectedUC?.attendancePoints[0] || '',
         vehicle_code: formData.vehicleCode || null,
         address: formData.address,
         status: 'Active'
@@ -219,6 +290,7 @@ export default function WorkerManager() {
         salary: '',
         joiningDate: '',
         ucWard: '',
+        attendancePoint: '',
         vehicleCode: '',
         address: '',
       })
@@ -643,7 +715,25 @@ export default function WorkerManager() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-medium text-white">Registration Form</h2>
+                    <button
+                      type="button"
+                      onClick={checkDb}
+                      className="text-xs bg-white/5 hover:bg-white/10 text-white px-3 py-1 rounded-md border border-white/10"
+                    >Test DB</button>
+                    {!supabaseConfigured && (
+                      <p className="text-xs text-yellow-400">Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY</p>
+                    )}
+                  </div>
+                  <div>{error && <p className="text-red-400 text-sm">{error}</p>}</div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="relative z-10 space-y-8" autoComplete={getAutocompleteToken()} spellCheck="false" autoCapitalize="off">
+                  {/* Anti-autofill hidden fields to reduce browser suggestions */}
+                  <input type="text" name="__no_autofill_username" autoComplete={getAutocompleteToken()} style={{display: 'none'}} aria-hidden="true" />
+                  <input type="password" name="__no_autofill_password" autoComplete={getAutocompleteToken()} style={{display: 'none'}} aria-hidden="true" />
                   {/* Subcomponents */}
                   <PersonalInfo formData={formData} errors={errors} onChange={handleChange} />
                   <Identification formData={formData} errors={errors} onChange={handleChange} />

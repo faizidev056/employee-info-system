@@ -1,5 +1,6 @@
 import React from 'react'
 import DatePicker from './DatePicker'
+import { getAutocompleteToken } from '../../lib/utils' 
 
 export default function PersonalInfo({ formData, errors, onChange }) {
   return (
@@ -24,6 +25,10 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             value={formData.fullName}
             onChange={onChange}
             placeholder="Enter full name"
+            autoComplete="new-password"
+            readOnly
+            onFocus={(e) => { e.target.removeAttribute('readonly'); e.target.setAttribute('data-focused', 'true') }}
+            onBlur={(e) => { e.target.removeAttribute('data-focused') }}
             className={`w-full px-3 py-2 bg-black border ${errors.fullName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
           />
           {errors.fullName && (
@@ -41,6 +46,10 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             value={formData.fatherName}
             onChange={onChange}
             placeholder="Enter father's name"
+            autoComplete="new-password"
+            readOnly
+            onFocus={(e) => { e.target.removeAttribute('readonly'); e.target.setAttribute('data-focused', 'true') }}
+            onBlur={(e) => { e.target.removeAttribute('data-focused') }}
             className={`w-full px-3 py-2 bg-black border ${errors.fatherName ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
           />
           {errors.fatherName && (
@@ -58,7 +67,7 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             name="dateOfBirth"
             value={formData.dateOfBirth}
             onChange={onChange}
-            placeholder="Select date of birth"
+            placeholder="YYYY-MM-DD or select date"
             error={errors.dateOfBirth}
           />
           {errors.dateOfBirth && (
@@ -67,15 +76,25 @@ export default function PersonalInfo({ formData, errors, onChange }) {
         </div>
 
         <div>
-          <label className="block text-gray-300 text-sm font-medium mb-2">Religion</label>
-          <input
-            type="text"
+          <label className="block text-gray-300 text-sm font-medium mb-2">
+            Religion <span className="text-red-400">*</span>
+          </label>
+          <select
             name="religion"
             value={formData.religion}
             onChange={onChange}
-            placeholder="Enter religion"
-            className="w-full px-3 py-2 bg-black border border-gray-700 rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors"
-          />
+            autoComplete="off"
+            className={`w-full px-3 py-2 bg-black border ${errors.religion ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
+          >
+            <option value="" className="bg-gray-900">Select religion</option>
+            <option value="Islam" className="bg-gray-900">Islam</option>
+            <option value="Christian" className="bg-gray-900">Christian</option>
+            <option value="Valmiki" className="bg-gray-900">Valmiki</option>
+            <option value="Others" className="bg-gray-900">Others</option>
+          </select>
+          {errors.religion && (
+            <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.religion}</p>
+          )}
         </div>
 
         <div>
@@ -86,6 +105,9 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             value={formData.phoneNumber}
             onChange={onChange}
             placeholder="+92 300 0000000"
+            autoComplete={getAutocompleteToken()}
+            onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
+            onBlur={(e) => { e.target.removeAttribute('data-focused') }}
             className={`w-full px-3 py-2 bg-black border ${errors.phoneNumber ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
           />
           {errors.phoneNumber && (

@@ -1,4 +1,5 @@
 import React from 'react'
+import { getAutocompleteToken } from '../../lib/utils' 
 
 export default function VehicleInfo({ formData, errors, onChange }) {
   return (
@@ -13,6 +14,9 @@ export default function VehicleInfo({ formData, errors, onChange }) {
           value={formData.vehicleCode}
           onChange={onChange}
           placeholder="Enter vehicle code (e.g., VEH-2026-001)"
+          autoComplete={getAutocompleteToken()}
+          onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
+          onBlur={(e) => { e.target.removeAttribute('data-focused') }}
           className={`w-full px-4 py-3 bg-white/5 border ${errors.vehicleCode ? 'border-red-500/50' : 'border-white/10'} rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all duration-300 hover:bg-white/10`}
         />
         {errors.vehicleCode && (

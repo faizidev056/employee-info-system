@@ -1,5 +1,6 @@
 import React from 'react'
 import DatePicker from './DatePicker'
+import { getAutocompleteToken } from '../../lib/utils' 
 
 export default function Identification({ formData, errors, onChange }) {
   return (
@@ -15,6 +16,9 @@ export default function Identification({ formData, errors, onChange }) {
             value={formData.cnic}
             onChange={onChange}
             placeholder="00000-0000000-0"
+            autoComplete={getAutocompleteToken()}
+            onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
+            onBlur={(e) => { e.target.removeAttribute('data-focused') }}
             className={`w-full px-3 py-2 bg-black border ${errors.cnic ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors`}
           />
           {errors.cnic && (
@@ -28,7 +32,7 @@ export default function Identification({ formData, errors, onChange }) {
             name="cnicIssueDate"
             value={formData.cnicIssueDate}
             onChange={onChange}
-            placeholder="Select issue date"
+            placeholder="YYYY-MM-DD or select date"
           />
         </div>
 
@@ -38,7 +42,7 @@ export default function Identification({ formData, errors, onChange }) {
             name="cnicExpiryDate"
             value={formData.cnicExpiryDate}
             onChange={onChange}
-            placeholder="Select expiry date"
+            placeholder="YYYY-MM-DD or select date"
           />
         </div>
       </div>
