@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
-import { getAutocompleteToken } from '../../lib/utils' 
+import { getAutocompleteToken } from '../../lib/utils'
 
 export default function DatePicker({ name, value, onChange, placeholder, error, className = '' }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -40,7 +40,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (calendarRef.current && !calendarRef.current.contains(event.target) &&
-          inputRef.current && !inputRef.current.contains(event.target)) {
+        inputRef.current && !inputRef.current.contains(event.target)) {
         setIsOpen(false)
       }
     }
@@ -67,7 +67,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
   const handleInputChange = (e) => {
     const inputVal = e.target.value
     setInputValue(inputVal)
-    
+
     let parsedDate = null
     if (inputVal.trim()) {
       // Try to parse as YYYY-MM-DD first
@@ -91,7 +91,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
       }
     }
     setSelectedDate(parsedDate)
-    
+
     // Create synthetic event with the formatted date value
     const syntheticEvent = {
       target: {
@@ -163,13 +163,12 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
           whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => handleDateSelect(day)}
-          className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all ${
-            isSelected
-              ? 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-lg shadow-cyan-500/50'
+          className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all ${isSelected
+              ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
               : isToday
-              ? 'bg-slate-700/50 text-cyan-400 border border-cyan-500/50 font-bold'
-              : 'text-slate-300 hover:bg-slate-700/50 hover:text-white hover:border border-slate-700/30'
-          }`}
+                ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold'
+                : 'text-slate-600 hover:bg-gray-100 hover:text-slate-900'
+            }`}
         >
           {day}
         </motion.button>
@@ -202,12 +201,12 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
           autoComplete="new-password"
           readOnly
           onFocus={(e) => { e.target.removeAttribute('readonly'); setIsOpen(false) }}
-          className={`w-full px-3 py-2 bg-black border ${error ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gray-500 transition-colors pr-10 ${className}`}
+          className={`w-full px-3 py-2 bg-white border ${error ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors pr-10 shadow-sm ${className}`}
         />
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -223,22 +222,22 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-80 bg-gradient-to-br from-slate-900 to-slate-800 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl shadow-slate-900/50 p-5"
+            className="absolute z-50 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl shadow-slate-200/50 p-5"
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-700/30">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
               <motion.button
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.85 }}
                 onClick={handlePrevMonth}
-                className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-700/50"
+                className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-lg hover:bg-gray-50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </motion.button>
 
-              <h3 className="text-white font-semibold text-base bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+              <h3 className="text-slate-900 font-bold text-base">
                 {months[currentMonth]} {currentYear}
               </h3>
 
@@ -246,7 +245,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.85 }}
                 onClick={handleNextMonth}
-                className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors rounded-lg hover:bg-slate-700/50"
+                className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors rounded-lg hover:bg-gray-50"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -269,7 +268,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
             </div>
 
             {/* Today button */}
-            <div className="mt-5 pt-4 border-t border-slate-700/30">
+            <div className="mt-5 pt-4 border-t border-gray-100">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -279,7 +278,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
                   setCurrentMonth(today.getMonth())
                   setCurrentYear(today.getFullYear())
                 }}
-                className="w-full py-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 text-cyan-400 text-sm font-medium rounded-lg transition-colors border border-cyan-500/30 hover:border-cyan-500/50"
+                className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-slate-600 hover:text-slate-900 text-sm font-medium rounded-lg transition-colors border border-gray-200"
               >
                 Today
               </motion.button>

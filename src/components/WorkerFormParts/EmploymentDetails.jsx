@@ -1,27 +1,27 @@
 import React from 'react'
 import DatePicker from './DatePicker'
-import { getAutocompleteToken } from '../../lib/utils' 
+import { getAutocompleteToken } from '../../lib/utils'
 
 export default function EmploymentDetails({ formData, errors, onChange }) {
   return (
     <div className="space-y-4 pt-6">
-      <h2 className="text-base font-semibold text-white mb-4 pb-2 border-b border-gray-800">Employment Details</h2>
+      <h2 className="text-base font-semibold text-slate-900 mb-4 pb-2 border-b border-gray-100">Employment Details</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label className="block text-gray-300 text-sm font-medium mb-2">Designation <span className="text-red-400">*</span></label>
+          <label className="block text-slate-700 text-sm font-semibold mb-2">Designation <span className="text-red-400">*</span></label>
           <select
             name="designation"
             value={formData.designation}
             onChange={onChange}
             autoComplete={getAutocompleteToken()}
-            className={`w-full px-3 py-2 bg-black border ${errors.designation ? 'border-red-600' : 'border-gray-700'} rounded-md text-white text-sm focus:outline-none focus:border-gray-500 transition-colors appearance-none cursor-pointer`}
+            className={`w-full px-3 py-2 bg-white border ${errors.designation ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors appearance-none cursor-pointer shadow-sm`}
           >
-            <option value="" className="bg-gray-900">Select designation</option>
-            <option value="Sanitary Supervisor" className="bg-gray-900">Sanitary Supervisor</option>
-            <option value="Helper" className="bg-gray-900">Helper</option>
-            <option value="Sanitary Worker" className="bg-gray-900">Sanitary Worker</option>
-            <option value="Driver" className="bg-gray-900">Driver</option>
+            <option value="" className="bg-white text-slate-900">Select designation</option>
+            <option value="Sanitary Supervisor" className="bg-white text-slate-900">Sanitary Supervisor</option>
+            <option value="Helper" className="bg-white text-slate-900">Helper</option>
+            <option value="Sanitary Worker" className="bg-white text-slate-900">Sanitary Worker</option>
+            <option value="Driver" className="bg-white text-slate-900">Driver</option>
           </select>
           {errors.designation && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.designation}</p>
@@ -29,8 +29,8 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
         </div>
 
         <div>
-          <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">Employee Code
-            <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-generated</span>
+          <label className="block text-slate-700 text-sm font-semibold mb-2 flex items-center gap-2">Employee Code
+            <span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">Auto-generated</span>
           </label>
           <input
             type="text"
@@ -38,7 +38,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             value={formData.employeeCode}
             readOnly
             placeholder="Select designation first"
-            className="w-full px-3 py-2 bg-zinc-950 border border-gray-700 rounded-md text-gray-400 text-sm placeholder-gray-600 focus:outline-none cursor-not-allowed font-mono"
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed font-mono shadow-sm"
           />
           {errors.employeeCode && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.employeeCode}</p>
@@ -46,8 +46,8 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
         </div>
 
         <div>
-          <label className="block text-gray-300 text-sm font-medium mb-2 flex items-center gap-2">Salary (PKR)
-            <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">Auto-filled</span>
+          <label className="block text-slate-700 text-sm font-semibold mb-2 flex items-center gap-2">Salary (PKR)
+            <span className="text-xs text-slate-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">Auto-filled</span>
           </label>
           <input
             type="text"
@@ -55,13 +55,13 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             value={formData.salary}
             readOnly
             placeholder="Select designation first"
-            className="w-full px-3 py-2 bg-zinc-950 border border-gray-700 rounded-md text-gray-400 text-sm placeholder-gray-600 focus:outline-none cursor-not-allowed"
+            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed shadow-sm"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-gray-300 text-sm font-medium mb-2">Joining Date <span className="text-red-400">*</span></label>
+        <label className="block text-slate-700 text-sm font-semibold mb-2">Joining Date <span className="text-red-400">*</span></label>
         <DatePicker
           name="joiningDate"
           value={formData.joiningDate}
