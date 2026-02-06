@@ -236,12 +236,16 @@ export default function HRTab() {
 
         <div className="flex items-center space-x-2">
           <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
-          <input id="fileInput" type="file" accept=".xlsx, .xls, .csv" onChange={handleFile} className="hidden" />
-          <label htmlFor="fileInput" className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</label>
+          {active === 'attendance' && (
+            <>
+              <input id="fileInput" type="file" accept=".xlsx, .xls, .csv" onChange={handleFile} className="hidden" />
+              <label htmlFor="fileInput" className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</label>
 
-          <button onClick={() => setShowPaste(true)} className="px-3 py-1 rounded-md bg-yellow-400 text-slate-900">Paste Data</button>
+              <button onClick={() => setShowPaste(true)} className="px-3 py-1 rounded-md bg-yellow-400 text-slate-900">Paste Data</button>
 
-          <button onClick={() => addRow()} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200">Add Row</button>
+              <button onClick={() => addRow()} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200">Add Row</button>
+            </>
+          )}
 
           <button onClick={() => exportReport(active)} className="px-3 py-1 rounded-md bg-emerald-600 text-white">Export {active === 'checkin' ? 'Check-In' : active === 'checkout' ? 'Check-Out' : 'Attendance'} Report</button>
         </div>
@@ -311,7 +315,6 @@ export default function HRTab() {
                 {templateHeaders.map((h) => (
                   <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : h === 'datetime' ? 'Date & Time' : h}</th>
                 ))}
-                <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white">
@@ -322,15 +325,12 @@ export default function HRTab() {
               )}
               {rows.map((r, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-4 py-2"><input value={r.sr} onChange={(e) => updateRowField(idx, 'sr', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.username} onChange={(e) => updateRowField(idx, 'username', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.cnic} onChange={(e) => updateRowField(idx, 'cnic', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.uc_ward} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.type} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.datetime} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full text-sm p-1 bg-transparent" /></td>
-                  <td className="px-4 py-2 text-right">
-                    <button onClick={() => removeRow(idx)} className="px-2 py-1 text-sm text-red-600 hover:underline">Remove</button>
-                  </td>
+                  <td className="px-4 py-2">{r.sr}</td>
+                  <td className="px-4 py-2">{r.username}</td>
+                  <td className="px-4 py-2">{r.cnic}</td>
+                  <td className="px-4 py-2">{r.uc_ward}</td>
+                  <td className="px-4 py-2">{r.type}</td>
+                  <td className="px-4 py-2">{r.datetime}</td>
                 </tr>
               ))}
             </tbody>
