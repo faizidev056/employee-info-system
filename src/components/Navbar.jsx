@@ -56,6 +56,7 @@ export default function Navbar() {
     } finally {
       setSigningOut(false)
       setUserMenuOpen(false)
+      setMobileMenuOpen(false)
     }
   }
 
@@ -289,6 +290,42 @@ export default function Navbar() {
                     </button>
                   ))
                 )}
+              </div>
+
+              {/* Mobile user block */}
+              <div className="border-t border-gray-100 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
+                          {(() => {
+                            const parts = (user.name || '').split(' ').filter(Boolean)
+                            return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0,2) : (parts[0][0] + parts[1][0]))).toUpperCase()
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                      <div className="text-xs text-slate-500 truncate">{user.email}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <button onClick={handleSignOut} disabled={signingOut} className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
+                      {signingOut ? (
+                        <svg className="w-4 h-4 text-red-600 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                          <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        'Sign Out'
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
