@@ -196,12 +196,7 @@ export default function Navbar() {
 
               <AnimatePresence>
                 {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 4, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 4, scale: 0.98 }}
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-100 shadow-lg shadow-gray-200/50 p-1"
-                  >
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-100 shadow-lg shadow-gray-200/50 p-1">
                     <div className="px-3 py-2 border-b border-gray-50 mb-1">
                       <p className="text-sm font-medium text-slate-900">{user.name}</p>
                       <p className="text-xs text-slate-500 truncate">{user.email}</p>
@@ -223,7 +218,7 @@ export default function Navbar() {
                       )}
                       <span>{signingOut ? 'Signing out...' : 'Sign Out'}</span>
                     </button>
-                  </motion.div>
+                  </div>
                 )}
               </AnimatePresence>
             </div>
@@ -245,12 +240,7 @@ export default function Navbar() {
         {/* Mobile Navigation */}
         <AnimatePresence>
           {mobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-gray-100"
-            >
+            <div className="md:hidden border-t border-gray-100">
               <div className="py-2 space-y-1">
                 {isWorkerManagerRoute ? (
                   // Worker Manager internal tabs (mobile)
@@ -300,7 +290,7 @@ export default function Navbar() {
                   ))
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
       </div>
