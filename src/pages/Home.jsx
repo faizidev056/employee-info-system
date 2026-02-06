@@ -11,17 +11,28 @@ const Home = () => {
 
     return (
         <div className="flex flex-col items-center justify-center h-screen bg-gray-50/50">
-            <div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center max-w-md w-full mx-4">
-                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 max-w-4xl w-full mx-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 rounded-lg border border-gray-100 shadow-sm">
+                        <h2 className="text-xl font-semibold mb-2">Worker Manager</h2>
+                        <p className="text-slate-500 mb-4">Manage employees, HR records, and attendance from the Worker Manager.</p>
+                        <div className="flex space-x-2">
+                            <button onClick={() => navigate('/workers?tab=dashboard')} className="px-4 py-2 rounded-md bg-slate-900 text-white">Open Worker Manager</button>
+                        </div>
+                    </div>
+
+                    <div className="p-6 rounded-lg border border-gray-100 shadow-sm">
+                        <h2 className="text-xl font-semibold mb-2">Daily Report</h2>
+                        <p className="text-slate-500 mb-4">Central hub for Daily Reporting — HR (Check-In / Check-Out) and Fleet reports.</p>
+                        <div className="flex space-x-2">
+                            <button onClick={() => navigate('/daily-report')} className="px-4 py-2 rounded-md bg-emerald-600 text-white">Open Daily Report</button>
+                        </div>
+                    </div>
                 </div>
-                <h1 className="text-3xl font-bold mb-2 text-slate-900 tracking-tight">Welcome Back!</h1>
-                <p className="mb-8 text-slate-500">You are successfully logged in to the Employee Info System.</p>
-                <button onClick={handleSignOut} className="w-full px-6 py-3 text-white bg-slate-900 hover:bg-slate-800 rounded-xl font-medium transition-colors shadow-lg shadow-slate-900/20">
-                    Sign Out
-                </button>
+
+                <div className="mt-6 text-center">
+                    <button onClick={handleSignOut} className="px-6 py-2 text-sm text-slate-600 hover:text-slate-900">Sign Out</button>
+                </div>
             </div>
         </div>
     );

@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
-export default function Navbar({ workers, activeTab, setActiveTab }) {
+export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const navigate = useNavigate()
   const location = useLocation()
-  const currentTab = location.pathname === '/workers' ? new URLSearchParams(location.search).get('tab') : null
+  const isWorkerManagerRoute = location.pathname === '/workers'
+  const currentTab = isWorkerManagerRoute ? new URLSearchParams(location.search).get('tab') || 'dashboard' : null
 
   const [signingOut, setSigningOut] = useState(false)
 
@@ -26,7 +27,17 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
     }
   }
 
+  // Worker Manager internal tabs
+  const workerManagerTabs = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'registration', label: 'New Registration' },
+    { id: 'workers', label: 'Employee Directory' },
+    { id: 'hr', label: 'HR Records' },
+    { id: 'terminated', label: 'Terminated' },
+    { id: 'attendance', label: 'Attendance' }
+  ]
 
+  // Top-level navigation tabs
   const navItems = [
     {
       id: 'dashboard',
@@ -40,49 +51,22 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
       )
     },
     {
-      id: 'registration',
-      label: 'New Registration',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-        </svg>
-      )
-    },
-    {
       id: 'workers',
-      label: 'Employee Directory',
+      label: 'Worker Manager',
+      path: '/workers?tab=dashboard',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
         </svg>
-      ),
-      badge: workers?.length || 0
-    },
-    {
-      id: 'hr',
-      label: 'HR Records',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
       )
     },
     {
-      id: 'terminated',
-      label: 'Terminated',
+      id: 'daily-report',
+      label: 'Daily Report',
+      path: '/daily-report',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-6l-6-4zM13 3v4" />
-        </svg>
-      ),
-      badge: workers?.filter(w => w.status === 'Terminated').length || 0
-    },
-    {
-      id: 'attendance',
-      label: 'Attendance',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3M16 7V3M3 11h18M5 21h14a2 2 0 002-2V7H3v12a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       )
     }
@@ -109,17 +93,34 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              setActiveTab ? (
+            {isWorkerManagerRoute ? (
+              // Worker Manager internal tabs
+              workerManagerTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => navigate(`/workers?tab=${tab.id}`)}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                    currentTab === tab.id
+                      ? 'text-white bg-slate-900 shadow-md'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))
+            ) : (
+              // Top-level navigation
+              navItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${activeTab === item.id
+                  onClick={() => navigate(item.path)}
+                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${
+                    location.pathname === item.path
                       ? 'text-slate-900 bg-gray-100'
                       : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'
-                    }`}
+                  }`}
                 >
-                  <span className={activeTab === item.id ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'}>
+                  <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -129,27 +130,8 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
                     </span>
                   )}
                 </button>
-              ) : (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/workers?tab=${item.id}`)}
-                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${(currentTab === item.id)
-                      ? 'text-slate-900 bg-gray-100'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'
-                    }`}
-                >
-                  <span className={currentTab === item.id ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'}>
-                    {item.icon}
-                  </span>
-                  <span>{item.label}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
-                    <span className="bg-slate-100 border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              )
-            ))}
+              ))
+            )}
           </div>
 
           {/* User Menu */}
@@ -224,21 +206,41 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
               className="md:hidden border-t border-gray-100"
             >
               <div className="py-2 space-y-1">
-                {navItems.map((item) => (
-                  setActiveTab ? (
+                {isWorkerManagerRoute ? (
+                  // Worker Manager internal tabs (mobile)
+                  workerManagerTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        navigate(`/workers?tab=${tab.id}`)
+                        setMobileMenuOpen(false)
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        currentTab === tab.id
+                          ? 'bg-gray-50 text-slate-900'
+                          : 'text-slate-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))
+                ) : (
+                  // Top-level navigation (mobile)
+                  navItems.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => {
-                        setActiveTab(item.id)
+                        navigate(item.path)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === item.id
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        location.pathname === item.path
                           ? 'bg-gray-50 text-slate-900'
                           : 'text-slate-600 hover:bg-gray-50'
-                        }`}
+                      }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className={activeTab === item.id ? 'text-slate-900' : 'text-slate-400'}>
+                        <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400'}>
                           {item.icon}
                         </span>
                         <span>{item.label}</span>
@@ -249,32 +251,9 @@ export default function Navbar({ workers, activeTab, setActiveTab }) {
                         </span>
                       )}
                     </button>
-                  ) : (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        navigate(`/workers?tab=${item.id}`)
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${(currentTab === item.id)
-                          ? 'bg-gray-50 text-slate-900'
-                          : 'text-slate-600 hover:bg-gray-50'
-                        }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className={currentTab === item.id ? 'text-slate-900' : 'text-slate-400'}>
-                          {item.icon}
-                        </span>
-                        <span>{item.label}</span>
-                      </div>
-                      {item.badge !== undefined && item.badge > 0 && (
-                        <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full font-semibold border border-slate-200">
-                          {item.badge}
-                        </span>
-                      )}
-                    </button>
-                  )
-                ))}              </div>
+                  ))
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
