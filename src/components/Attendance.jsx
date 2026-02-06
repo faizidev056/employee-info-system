@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import MonthPicker from './WorkerFormParts/MonthPicker'
 import { supabase } from '../supabaseClient'
 
@@ -27,7 +27,7 @@ export default function Attendance({ workers }) {
   const terminatedWorkers = useMemo(() => workers.filter(w => w.status === 'Terminated'), [workers])
 
   // fetch attendance rows for the month from DB
-  const loadAttendance = async () => {
+  const loadAttendance = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase.from('attendance_monthly').select('*').eq('month', month)
@@ -45,11 +45,11 @@ export default function Attendance({ workers }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [month])
 
   useEffect(() => {
     loadAttendance()
-  }, [month])
+  }, [loadAttendance])
 
   // cycle status for a cell (only editable if month === current month)
   const isEditable = () => {

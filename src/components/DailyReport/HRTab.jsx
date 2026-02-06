@@ -28,16 +28,7 @@ export default function HRTab() {
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState(null)
 
-  const addRow = (data = {}) => {
-    setRows(prev => ([...prev, {
-      sr: data.sr || '',
-      username: data.username || '',
-      cnic: data.cnic || '',
-      uc_ward: data.uc_ward || '',
-      type: data.type || '',
-      datetime: data.datetime || ''
-    }]))
-  }
+
 
   const updateRowField = (idx, field, value) => {
     setRows(prev => {
@@ -47,9 +38,7 @@ export default function HRTab() {
     })
   }
 
-  const deleteRow = (idx) => {
-    setRows(prev => prev.filter((_, i) => i !== idx))
-  }
+
 
   const handleTablePaste = async (e) => {
     // Capture clipboard text and apply it directly to the table (auto-apply)
@@ -529,14 +518,15 @@ export default function HRTab() {
         </div>
 
         <div className="flex items-center space-x-2">
-          <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
-          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
-
-          <button onClick={() => { initPasteGrid(5, templateHeaders.length); setUploadMode('paste'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-yellow-400 text-slate-900">Paste Data</button>
-
-          {active === 'attendance' && (
-            <button onClick={() => addRow()} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200">Add Row</button>
+          {active !== 'attendance' && (
+            <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
           )}
+
+          {active !== 'attendance' && (
+            <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
+          )}
+
+
 
           <button onClick={() => setRows([])} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100">Clear Table</button>
 
@@ -709,7 +699,7 @@ export default function HRTab() {
       )}
 
       {active !== 'attendance' && (
-        <div className="mb-3 text-sm text-slate-500">Tip: Click cells to edit inline. You can paste tabular data (CSV/TSV) directly into the table (Ctrl+V) or use the Upload / Paste buttons. The table structure matches the Excel template for easy import.</div>
+        <div className="mb-3 text-sm text-slate-500">Tip: Click cells to edit inline. You can upload a file using the <strong>Upload Report</strong> button. The table structure matches the Excel template for easy import.</div>
       )}
 
       <div className="overflow-x-auto border border-gray-100 rounded-md" onPaste={handleTablePaste}>
@@ -791,13 +781,12 @@ export default function HRTab() {
                 {templateHeaders.map((h) => (
                   <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : h === 'datetime' ? 'Date & Time' : h}</th>
                 ))}
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">&nbsp;</th>
               </tr>
             </thead>
             <tbody className="bg-white">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={templateHeaders.length + 1} className="p-6 text-slate-500 text-center">No records loaded. Upload a sheet or download the template to begin.</td>
+                  <td colSpan={templateHeaders.length} className="p-6 text-slate-500 text-center">No records loaded. Upload a sheet or download the template to begin.</td>
                 </tr>
               )}
               {rows.map((r, idx) => (
@@ -808,7 +797,6 @@ export default function HRTab() {
                   <td className="px-4 py-2"><input value={r.uc_ward || ''} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full p-1 text-sm" /></td>
                   <td className="px-4 py-2"><input value={r.type || ''} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full p-1 text-sm" /></td>
                   <td className="px-4 py-2"><input value={r.datetime || ''} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full p-1 text-sm" /></td>
-                  <td className="px-4 py-2 text-right"><button onClick={() => deleteRow(idx)} className="text-red-500 text-sm">Delete</button></td>
                 </tr>
               ))}
             </tbody>
