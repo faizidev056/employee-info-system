@@ -27,6 +27,7 @@ export default function HRTab() {
   const [pushAll, setPushAll] = useState(false)
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
 
 
@@ -546,6 +547,30 @@ export default function HRTab() {
         </div>
       </div>
 
+      {/* Search row (placed under HR / Fleet boxes) */}
+      <div className="mb-4">
+        <div className="flex items-center">
+          <div className="flex items-center space-x-4 w-full">
+            <div className="w-full max-w-md">
+              <div className="relative">
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search SR, Username or CNIC"
+                  className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full focus:ring-1 focus:ring-sky-300"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1.5 text-xs text-slate-500 px-2">✕</button>
+                )}
+              </div>
+            </div>
+
+            {/* Placeholder area for HR / Fleet boxes above — kept on the right side of this row */}
+            <div className="flex-1" />
+          </div>
+        </div>
+      </div>
+
       {showUploadModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-3xl p-4 bg-white rounded">
@@ -718,7 +743,12 @@ export default function HRTab() {
             </thead>
             <tbody className="bg-white">
               {(() => {
-                const attendance = computeAttendance()
+                const allAttendance = computeAttendance()
+                const attendance = searchQuery ? allAttendance.filter(a => {
+                  const q = searchQuery.toLowerCase().trim()
+                  return String(a.sr).toLowerCase().includes(q) || (a.username || '').toLowerCase().includes(q) || (a.cnic || '').toLowerCase().includes(q)
+                }) : allAttendance
+
                 if (!attendance.length) {
                   return (
                     <tr>
@@ -784,21 +814,27 @@ export default function HRTab() {
               </tr>
             </thead>
             <tbody className="bg-white">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={templateHeaders.length} className="p-6 text-slate-500 text-center">No records loaded. Upload a sheet or download the template to begin.</td>
-                </tr>
-              )}
-              {rows.map((r, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="px-4 py-2"><input value={r.sr || ''} onChange={(e) => updateRowField(idx, 'sr', e.target.value)} className="w-full p-1 text-sm bg-transparent" /></td>
-                  <td className="px-4 py-2"><input value={r.username || ''} onChange={(e) => updateRowField(idx, 'username', e.target.value)} className="w-full p-1 text-sm" /></td>
-                  <td className="px-4 py-2"><input value={r.cnic || ''} onChange={(e) => updateRowField(idx, 'cnic', e.target.value)} className="w-full p-1 text-sm" /></td>
-                  <td className="px-4 py-2"><input value={r.uc_ward || ''} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full p-1 text-sm" /></td>
-                  <td className="px-4 py-2"><input value={r.type || ''} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full p-1 text-sm" /></td>
-                  <td className="px-4 py-2"><input value={r.datetime || ''} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full p-1 text-sm" /></td>
-                </tr>
-              ))}
+              {(() => {
+                const q = (searchQuery || '').toLowerCase().trim()
+                const visibleRows = q ? rows.filter(r => String(r.sr || '').toLowerCase().includes(q) || (r.username || '').toLowerCase().includes(q) || (r.cnic || '').toLowerCase().includes(q)) : rows
+                if (visibleRows.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={templateHeaders.length} className="p-6 text-slate-500 text-center">No records loaded. Upload a sheet or download the template to begin.</td>
+                    </tr>
+                  )
+                }
+                return visibleRows.map((r, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="px-4 py-2"><input value={r.sr || ''} onChange={(e) => updateRowField(idx, 'sr', e.target.value)} className="w-full p-1 text-sm bg-transparent" /></td>
+                    <td className="px-4 py-2"><input value={r.username || ''} onChange={(e) => updateRowField(idx, 'username', e.target.value)} className="w-full p-1 text-sm" /></td>
+                    <td className="px-4 py-2"><input value={r.cnic || ''} onChange={(e) => updateRowField(idx, 'cnic', e.target.value)} className="w-full p-1 text-sm" /></td>
+                    <td className="px-4 py-2"><input value={r.uc_ward || ''} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full p-1 text-sm" /></td>
+                    <td className="px-4 py-2"><input value={r.type || ''} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full p-1 text-sm" /></td>
+                    <td className="px-4 py-2"><input value={r.datetime || ''} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full p-1 text-sm" /></td>
+                  </tr>
+                ))
+              })()}
             </tbody>
           </table>
         )}

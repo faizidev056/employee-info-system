@@ -17,6 +17,7 @@ export default function Attendance({ workers }) {
   const [attendance, setAttendance] = useState({}) // { worker_id: { '1': 'P', '2': 'A', ... } }
   const [_loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const daysInMonth = useMemo(() => {
     const [year, mon] = month.split('-').map(Number)
@@ -25,6 +26,18 @@ export default function Attendance({ workers }) {
 
   const activeWorkers = useMemo(() => workers.filter(w => w.status === 'Active'), [workers])
   const terminatedWorkers = useMemo(() => workers.filter(w => w.status === 'Terminated'), [workers])
+
+  const filteredActiveWorkers = useMemo(() => {
+    const q = (searchQuery || '').toLowerCase().trim()
+    if (!q) return activeWorkers
+    return activeWorkers.filter(w => (w.full_name || '').toLowerCase().includes(q) || (w.cnic || '').toLowerCase().includes(q) || (w.employee_code || '').toLowerCase().includes(q))
+  }, [activeWorkers, searchQuery])
+
+  const filteredTerminatedWorkers = useMemo(() => {
+    const q = (searchQuery || '').toLowerCase().trim()
+    if (!q) return terminatedWorkers
+    return terminatedWorkers.filter(w => (w.full_name || '').toLowerCase().includes(q) || (w.cnic || '').toLowerCase().includes(q) || (w.employee_code || '').toLowerCase().includes(q))
+  }, [terminatedWorkers, searchQuery])
 
   // fetch attendance rows for the month from DB
   const loadAttendance = useCallback(async () => {
@@ -111,6 +124,12 @@ export default function Attendance({ workers }) {
           </label>
         </div>
 
+        <div className="ml-4">
+          <div className="w-64">
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search name, CNIC, code" className="px-3 py-1 rounded-md border border-gray-200 text-sm w-full focus:ring-1 focus:ring-sky-300" />
+          </div>
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
           <button className="px-3 py-2 bg-emerald-500/20 text-emerald-300 rounded" onClick={() => loadAttendance()}>Reload</button>
           <button className="px-3 py-2 bg-cyan-500/20 text-cyan-300 rounded" disabled={!isEditable() || saving} onClick={saveMonth}>{saving ? 'Saving...' : 'Save'}</button>
@@ -137,7 +156,7 @@ export default function Attendance({ workers }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeWorkers.map((w, idx) => (
+                    {filteredActiveWorkers.map((w, idx) => (
                       <tr key={w.id} className="border-t border-white/5">
                         <td className="p-2">{idx + 1}</td>
                         <td className="p-2 truncate max-w-[160px]">{w.full_name}</td>
@@ -179,7 +198,7 @@ export default function Attendance({ workers }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {terminatedWorkers.map((w, idx) => (
+                    {filteredTerminatedWorkers.map((w, idx) => (
                       <tr key={w.id} className="border-t border-white/5">
                         <td className="p-2">{idx + 1}</td>
                         <td className="p-2 truncate max-w-[160px]">{w.full_name}</td>
