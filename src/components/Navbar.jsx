@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -13,6 +13,38 @@ export default function Navbar() {
   const currentTab = isWorkerManagerRoute ? new URLSearchParams(location.search).get('tab') || 'dashboard' : null
 
   const [signingOut, setSigningOut] = useState(false)
+  const [user, setUser] = useState({ name: 'Admin User', email: 'admin@eis.com', avatar_url: null })
+
+  useEffect(() => {
+    let mounted = true
+    const loadUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!mounted) return
+        if (user) {
+          const name = user.user_metadata?.full_name || user.user_metadata?.name || (user.email ? user.email.split('@')[0] : 'Admin User')
+          setUser({ name, email: user.email || 'admin@eis.com', avatar_url: user.user_metadata?.avatar_url || null })
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    loadUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user
+      if (u && mounted) {
+        const name = u.user_metadata?.full_name || u.user_metadata?.name || (u.email ? u.email.split('@')[0] : 'Admin User')
+        setUser({ name, email: u.email || 'admin@eis.com', avatar_url: u.user_metadata?.avatar_url || null })
+      }
+      if (!u && mounted) setUser({ name: 'Admin User', email: 'admin@eis.com', avatar_url: null })
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -143,12 +175,22 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
+                aria-expanded={userMenuOpen}
+                aria-haspopup="true"
+                title={`${user.name} — ${user.email}`}
                 className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
               >
-                <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center border border-gray-200">
-                  <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                <div className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
+                      {(() => {
+                        const parts = (user.name || '').split(' ').filter(Boolean)
+                        return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0,2) : (parts[0][0] + parts[1][0]))).toUpperCase()
+                      })()}
+                    </div>
+                  )}
                 </div>
               </button>
 
@@ -161,21 +203,25 @@ export default function Navbar() {
                     className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-100 shadow-lg shadow-gray-200/50 p-1"
                   >
                     <div className="px-3 py-2 border-b border-gray-50 mb-1">
-                      <p className="text-sm font-medium text-slate-900">Admin User</p>
-                      <p className="text-xs text-slate-500">admin@eis.com</p>
+                      <p className="text-sm font-medium text-slate-900">{user.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{user.email}</p>
                     </div>
-                    <button className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-gray-50 rounded-md transition-colors">
-                      Profile Settings
-                    </button>
-                    <button className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-gray-50 rounded-md transition-colors">
-                      System Settings
-                    </button>
                     <button
                       onClick={handleSignOut}
                       disabled={signingOut}
-                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors mt-1"
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors mt-1 flex items-center space-x-2"
                     >
-                      {signingOut ? 'Signing out...' : 'Sign Out'}
+                      {signingOut ? (
+                        <svg className="w-4 h-4 text-red-600 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                          <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                        </svg>
+                      )}
+                      <span>{signingOut ? 'Signing out...' : 'Sign Out'}</span>
                     </button>
                   </motion.div>
                 )}
