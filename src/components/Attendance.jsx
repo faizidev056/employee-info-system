@@ -15,7 +15,7 @@ export default function Attendance({ workers }) {
   const [showActive, setShowActive] = useState(true)
   const [showTerminated, setShowTerminated] = useState(true)
   const [attendance, setAttendance] = useState({}) // { worker_id: { '1': 'P', '2': 'A', ... } }
-  const [loading, setLoading] = useState(false)
+  const [_loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const daysInMonth = useMemo(() => {
@@ -30,14 +30,11 @@ export default function Attendance({ workers }) {
   const loadAttendance = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('attendance_monthly')
-        .select('*')
-        .eq('month', month)
+      const { data, error } = await supabase.from('attendance_monthly').select('*').eq('month', month)
 
       if (error) throw error
 
-      const rows = {}
+      const rows = {};
       (data || []).forEach(r => {
         rows[r.worker_id] = r.attendance_json || {}
       })

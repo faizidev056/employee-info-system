@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS attendance_monthly (
 );
 
 CREATE INDEX IF NOT EXISTS idx_attendance_month ON attendance_monthly(month);
+CREATE INDEX IF NOT EXISTS idx_attendance_worker ON attendance_monthly(worker_id);
+
+-- Enable Row Level Security
+ALTER TABLE attendance_monthly ENABLE ROW LEVEL SECURITY;
+
+-- Create policies to allow all authenticated users to read/write
+DROP POLICY IF EXISTS "Allow authenticated access" ON attendance_monthly;
+CREATE POLICY "Allow authenticated access" ON attendance_monthly
+  FOR ALL USING (true) WITH CHECK (true);
 
 -- Trigger to update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

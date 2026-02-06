@@ -1,11 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import DatePicker from './DatePicker'
 import { getAutocompleteToken } from '../../lib/utils'
 
 export default function Identification({ formData, errors, onChange }) {
-  // CNIC format: XXXXX-XXXXXXX-X (5 digits, hyphen, 7 digits, hyphen, 1 digit)
-  const cnicRegex = /^\d{5}-\d{7}-\d{1}$/
-
   const formatCnic = (value) => {
     // Remove any non-digit characters
     const digitsOnly = value.replace(/\D/g, '')

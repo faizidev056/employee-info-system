@@ -81,7 +81,7 @@ export default function WorkerManager() {
     if (tab && tab !== activeTab) {
       setActiveTab(tab)
     }
-  }, [searchParams])
+  }, [searchParams, activeTab])
 
   // Function to load workers from Supabase
   const loadWorkers = async () => {

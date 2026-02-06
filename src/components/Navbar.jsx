@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -25,7 +25,7 @@ export default function Navbar() {
           const name = user.user_metadata?.full_name || user.user_metadata?.name || (user.email ? user.email.split('@')[0] : 'Admin User')
           setUser({ name, email: user.email || 'admin@eis.com', avatar_url: user.user_metadata?.avatar_url || null })
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     }

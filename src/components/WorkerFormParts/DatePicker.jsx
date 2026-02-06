@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
-import { getAutocompleteToken } from '../../lib/utils'
 
 export default function DatePicker({ name, value, onChange, placeholder, error, className = '' }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -178,14 +177,6 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
     return days
   }
 
-  const formatDisplayDate = (date) => {
-    if (!date) return ''
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
 
   return (
     <div className="relative">
