@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import HRTab from './DailyReport/HRTab'
+import Fleet from './DailyReport/Fleet'
 
 export default function DailyReport() {
   const [activeSubTab, setActiveSubTab] = useState('hr')
@@ -22,7 +23,7 @@ export default function DailyReport() {
         {activeSubTab === 'hr' ? (
           <HRTab />
         ) : (
-          <div className="p-6 text-slate-600">Fleet module coming soon. Placeholder structure is in place for future implementation.</div>
+          <Fleet />
         )}
       </div>
     </div>

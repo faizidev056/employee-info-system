@@ -12,9 +12,23 @@ const templateHeaders = [
   'datetime'
 ]
 
+const attendanceHeaders = [
+  'check_in',
+  'check_out',
+  'username',
+  'father_name',
+  'cnic',
+  'designation',
+  'uc_ward',
+  'attendance_point',
+  'type'
+]
+
 export default function HRTab() {
   const [active, setActive] = useState('checkin')
-  const [rows, setRows] = useState([])
+  const [checkinRows, setCheckinRows] = useState([])
+  const [checkoutRows, setCheckoutRows] = useState([])
+  const [attendanceRows, setAttendanceRows] = useState([])
   const [pasteText, setPasteText] = useState('')
   const [pasteGrid, setPasteGrid] = useState([])
   const [pasteStart, setPasteStart] = useState({ r: 0, c: 0 })
@@ -28,11 +42,16 @@ export default function HRTab() {
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [workerData, setWorkerData] = useState({})
 
-
+  // Get current rows based on active tab
+  const rows = active === 'checkin' ? checkinRows : active === 'checkout' ? checkoutRows : []
+  const setRows = active === 'checkin' ? setCheckinRows : active === 'checkout' ? setCheckoutRows : () => {}
 
   const updateRowField = (idx, field, value) => {
-    setRows(prev => {
+    const currentRows = active === 'checkin' ? checkinRows : checkoutRows
+    const setCurrentRows = active === 'checkin' ? setCheckinRows : setCheckoutRows
+    setCurrentRows(prev => {
       const copy = [...prev]
       copy[idx] = { ...copy[idx], [field]: value }
       return copy
@@ -56,9 +75,31 @@ export default function HRTab() {
     if (key.includes('user') || key.includes('name')) return 'username'
     if (key.includes('cnic')) return 'cnic'
     if (key.includes('uc') || key.includes('ward')) return 'uc_ward'
-    if (key.includes('type')) return 'type'
+    if (key.includes('type') || key.includes('attendance type')) return 'type'
     if (key.includes('date') || key.includes('time')) return 'datetime'
+    if (key.includes('check-in') || key.includes('check_in')) return 'check_in'
+    if (key.includes('check-out') || key.includes('check_out')) return 'check_out'
+    if (key.includes('father') || key.includes('husband')) return 'father_name'
+    if (key.includes('designation')) return 'designation'
+    if (key.includes('attendance point')) return 'attendance_point'
     return null
+  }
+
+  const getHeaderLabel = (key) => {
+    const labels = {
+      sr: 'SR',
+      username: 'USERNAME',
+      father_name: 'FATHER/HUSBAND',
+      cnic: 'CNIC',
+      designation: 'DESIGNATION',
+      uc_ward: 'UC/WARD',
+      attendance_point: 'ATTENDANCE POINT',
+      check_in: 'CHECK-IN',
+      check_out: 'CHECK-OUT',
+      type: 'ATTENDANCE TYPE',
+      datetime: 'DATE&TIME'
+    }
+    return labels[key] || key.toUpperCase()
   }
 
   const handleApplyPaste = (directText) => {
@@ -107,7 +148,12 @@ export default function HRTab() {
   }
 
   const downloadTemplate = () => {
-    const headerRow = ['SR','Username','CNIC','UC/Ward','Type','Date&Time']
+    let headerRow
+    if (active === 'attendance') {
+      headerRow = ['CHECK-IN', 'CHECK-OUT', 'NAME', 'FATHER/HUSBAND', 'CNIC', 'DESIGNATION', 'UC/WARD', 'ATTENDANCE POINT', 'ATTENDANCE TYPE']
+    } else {
+      headerRow = ['SR','Username','CNIC','UC/Ward','Type','Date&Time']
+    }
     const ws = XLSX.utils.aoa_to_sheet([headerRow])
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
@@ -115,21 +161,30 @@ export default function HRTab() {
   }
 
   const computeAttendance = () => {
-    // Aggregate rows by username (fallback to sr or cnic) and compute last check-in/out
-    // Tracks keys and applies manual overrides from `attendanceOverrides`
+    // Aggregate check-in and check-out rows separately and merge them
     const map = new Map()
-    rows.forEach((r, idx) => {
-      const key = r.username || r.sr || r.cnic || `row-${idx}`
-      const existing = map.get(key) || { _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '', last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '', presentFlag: false, manual: false }
+    
+    // Process check-in rows
+    checkinRows.forEach((r, idx) => {
+      const key = r.username || r.sr || r.cnic || `checkin-${idx}`
+      const existing = map.get(key) || { 
+        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '', 
+        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '', 
+        presentFlag: false, absentFlag: false, manual: false 
+      }
       const dt = r.datetime || ''
       const type = (r.type || '').toLowerCase()
+
+      // Check if type explicitly marks as Absent
+      if (type.includes('absent')) {
+        existing.absentFlag = true
+      }
 
       // determine check-in timestamp
       let parsedIn = 0
       if (r.check_in) parsedIn = Date.parse(r.check_in) || 0
       else if (type.includes('in') || type.includes('check-in') || type.includes('checkin')) parsedIn = Date.parse(dt) || 0
       else if (type.includes('present')) {
-        // mark present even if no datetime
         existing.presentFlag = true
         parsedIn = Date.parse(dt) || 0
       }
@@ -138,19 +193,39 @@ export default function HRTab() {
         existing.last_check_in_ts = parsedIn
         existing.last_check_in = r.check_in || dt || new Date(parsedIn).toISOString()
       } else if (type.includes('present') && !existing.last_check_in_ts) {
-        // no timestamp but explicit 'present' marker
         existing.presentFlag = true
         existing.last_check_in = existing.last_check_in || 'Present'
       }
+
+      map.set(key, existing)
+    })
+
+    // Process check-out rows
+    checkoutRows.forEach((r, idx) => {
+      const key = r.username || r.sr || r.cnic || `checkout-${idx}`
+      const existing = map.get(key) || { 
+        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '', 
+        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '', 
+        presentFlag: false, absentFlag: false, manual: false 
+      }
+      const dt = r.datetime || ''
+      const type = (r.type || '').toLowerCase()
 
       // determine check-out timestamp
       let parsedOut = 0
       if (r.check_out) parsedOut = Date.parse(r.check_out) || 0
       else if (type.includes('out') || type.includes('check-out') || type.includes('checkout')) parsedOut = Date.parse(dt) || 0
+      else if (type.includes('present')) {
+        // also treat 'present' in checkout tab as a valid checkout
+        parsedOut = Date.parse(dt) || 0
+      }
 
       if (parsedOut && parsedOut > (existing.last_check_out_ts || 0)) {
         existing.last_check_out_ts = parsedOut
         existing.last_check_out = r.check_out || dt || new Date(parsedOut).toISOString()
+      } else if (type.includes('present') && !existing.last_check_out_ts) {
+        // if just 'present' marker but no valid timestamp
+        existing.last_check_out = existing.last_check_out || 'Present'
       }
 
       map.set(key, existing)
@@ -161,8 +236,10 @@ export default function HRTab() {
       const outTs = e.last_check_out_ts || 0
 
       let status = 'Absent'
+      // if explicit absent marker -> mark Absent (takes priority)
+      if (e.absentFlag) status = 'Absent'
       // if explicit present marker without timestamps -> mark Present
-      if (e.presentFlag && inTs === 0 && outTs === 0) status = 'Present'
+      else if (e.presentFlag && inTs === 0 && outTs === 0) status = 'Present'
       else if (inTs && (!outTs || inTs > outTs)) status = 'Present'
 
       // Apply manual override if present
@@ -189,6 +266,35 @@ export default function HRTab() {
     return res
   }
 
+  const getAttendanceStatusLetter = (status) => {
+    // Convert attendance status to P/L/A
+    if (status === 'Present') return 'P'
+    if (status === 'Absent') return 'A'
+    if (status === 'Leave') return 'L'
+    return '-'
+  }
+
+  const getCheckInStatus = (a) => {
+    // Return P if check-in exists (either has timestamp, check-in data, or check_in column from upload), otherwise -
+    const inTs = a.last_check_in_ts || 0
+    const checkInData = a.check_in || ''
+    return (inTs > 0 || a.last_check_in || checkInData) ? 'P' : '-'
+  }
+
+  const getCheckOutStatus = (a) => {
+    // Return P if check-out exists (either has timestamp, check-out data, or check_out column from upload), otherwise -
+    const outTs = a.last_check_out_ts || 0
+    const checkOutData = a.check_out || ''
+    return (outTs > 0 || a.last_check_out || checkOutData) ? 'P' : '-'
+  }
+
+  const getStatusColor = (letter) => {
+    if (letter === 'P') return 'text-green-600'
+    if (letter === 'A') return 'text-red-600'
+    if (letter === 'L') return 'text-yellow-600'
+    return 'text-gray-400'
+  }
+
   const setAttendanceStatus = (key, status) => {
     setAttendanceOverrides(prev => ({ ...prev, [key]: status }))
   }
@@ -206,8 +312,11 @@ export default function HRTab() {
     setPushResult(null)
     setPushing(true)
     try {
-      const attendance = computeAttendance()
-      const toPush = attendance.filter(a => pushAll || a.manual)
+      // Use attendanceRows if they exist (uploaded directly to Attendance tab), otherwise compute from check-in/check-out
+      const isAttendanceRowsMode = attendanceRows && attendanceRows.length > 0
+      const dataToUse = isAttendanceRowsMode ? attendanceRows : computeAttendance()
+      // If using attendanceRows directly, push all. Otherwise, filter by pushAll or manual flag
+      const toPush = isAttendanceRowsMode ? dataToUse : dataToUse.filter(a => pushAll || a.manual)
       if (!toPush.length) {
         setPushResult({ success: 0, failed: 0, message: 'No changes to push.' })
         setPushing(false)
@@ -268,7 +377,26 @@ export default function HRTab() {
 
         let attendance_json = {}
         if (exist && exist.length && exist[0].attendance_json) attendance_json = { ...exist[0].attendance_json }
-        const mapped = (a.status === 'Present') ? 'P' : 'A'
+        
+        // Map attendance status to P/L/A based on 'type' field or 'status' field
+        let mapped = 'A'
+        const rawStatus = (a.type || a.status || '').toString().trim()
+        const statusType = rawStatus.toUpperCase()
+        // Direct check for single letters to preserve exact input
+        if (statusType === 'P' || statusType === 'L' || statusType === 'A') {
+          mapped = statusType
+        }
+        // Then check for full words
+        else if (statusType.includes('PRESENT')) {
+          mapped = 'P'
+        }
+        else if (statusType.includes('LEAVE')) {
+          mapped = 'L'
+        }
+        else if (statusType.includes('ABSENT')) {
+          mapped = 'A'
+        }
+        
         attendance_json[day] = mapped
 
         // Upsert the attendance row
@@ -294,18 +422,16 @@ export default function HRTab() {
 
   const exportReport = (filterType) => {
     if (filterType === 'attendance') {
-      const attendanceRows = computeAttendance()
-      const ws = XLSX.utils.json_to_sheet(attendanceRows)
+      // If attendance data was uploaded directly, export that. Otherwise, compute from check-in/check-out
+      const dataToExport = attendanceRows && attendanceRows.length > 0 ? attendanceRows : computeAttendance()
+      const ws = XLSX.utils.json_to_sheet(dataToExport)
       const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
       saveAs(new Blob([wbout], { type: 'application/octet-stream' }), `attendance-report-attendance.xlsx`)
       return
     }
 
-    let exportRows = rows
-    if (filterType === 'checkin') exportRows = rows.filter(r => (r.type && /in/i.test(r.type)) || r.check_in)
-    if (filterType === 'checkout') exportRows = rows.filter(r => (r.type && /out/i.test(r.type)) || r.check_out)
-
+    let exportRows = active === 'checkin' ? checkinRows : checkoutRows
     const ws = XLSX.utils.json_to_sheet(exportRows, { header: templateHeaders })
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
@@ -321,29 +447,82 @@ export default function HRTab() {
     const first = wb.SheetNames[0]
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    // Normalize headers to match template
-    const normalized = json.map((r) => ({
-      sr: r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || '',
-      username: r.username || r.Username || r['User Name'] || r.name || r.Name || '',
-      cnic: r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || '',
-      uc_ward: r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || '',
-      type: r.type || r.Type || (r.check_in ? 'Check-In' : r.check_out ? 'Check-Out' : '') || '',
-      datetime: r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || ''
-    }))
-    setRows(normalized)
+    
+    if (active === 'attendance') {
+      // For attendance tab, parse with all attendance columns
+      // Create a smarter column mapper that tries to match columns by keywords
+      const json_keys = json.length > 0 ? Object.keys(json[0]) : []
+      
+      // Find which actual column index matches expected headers
+      const findColumnIndex = (keywords) => {
+        for (let i = 0; i < json_keys.length; i++) {
+          const key = json_keys[i].toLowerCase()
+          for (const kw of keywords) {
+            if (key.includes(kw.toLowerCase())) {
+              return i
+            }
+          }
+        }
+        return -1
+      }
+      
+      const checkInIdx = findColumnIndex(['check-in', 'checkin', 'check in'])
+      const checkOutIdx = findColumnIndex(['check-out', 'checkout', 'check out'])
+      const typeIdx = findColumnIndex(['attendance type', 'attendance_type'])
+      const fatherIdx = findColumnIndex(['father', 'husband'])
+      const designationIdx = findColumnIndex(['designation'])
+      const ucwardIdx = findColumnIndex(['uc', 'ward'])
+      const attendancePointIdx = findColumnIndex(['attendance point'])
+      
+      const getValueByIndex = (row, idx) => {
+        if (idx >= 0 && idx < json_keys.length) {
+          return (row[json_keys[idx]] || '').toString().trim()
+        }
+        return ''
+      }
+      
+      const normalized = json.map((r) => ({
+        sr: r.sr || r.SR || r['SR'] || r['Sr'] || '',
+        username: r.username || r.Username || r.name || r.Name || r['NAME'] || '',
+        father_name: fatherIdx >= 0 ? getValueByIndex(r, fatherIdx) : (r['father_name'] || r['father/husband'] || r['Father/Husband'] || r['FATHER/HUSBAND'] || ''),
+        cnic: r.cnic || r.CNIC || r['CNIC'] || '',
+        designation: designationIdx >= 0 ? getValueByIndex(r, designationIdx) : (r.designation || r.Designation || r['DESIGNATION'] || ''),
+        uc_ward: ucwardIdx >= 0 ? getValueByIndex(r, ucwardIdx) : (r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || r['UC/WARD'] || ''),
+        attendance_point: attendancePointIdx >= 0 ? getValueByIndex(r, attendancePointIdx) : (r['attendance_point'] || r['Attendance Point'] || r['ATTENDANCE POINT'] || ''),
+        check_in: checkInIdx >= 0 ? getValueByIndex(r, checkInIdx) : (r['check-in'] || r['Check-In'] || r['CHECK-IN'] || ''),
+        check_out: checkOutIdx >= 0 ? getValueByIndex(r, checkOutIdx) : (r['check-out'] || r['Check-Out'] || r['CHECK-OUT'] || ''),
+        type: typeIdx >= 0 ? getValueByIndex(r, typeIdx) : (r.type || r.Type || r['ATTENDANCE TYPE'] || '')
+      }))
+      setPreviewRows(normalized.slice(0, 6))
+      setAttendanceRows(normalized)
+    } else {
+      // For check-in/check-out tabs, use original template
+      const normalized = json.map((r) => ({
+        sr: r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || '',
+        username: r.username || r.Username || r['User Name'] || r.name || r.Name || '',
+        cnic: r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || '',
+        uc_ward: r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || '',
+        type: r.type || r.Type || (r.check_in ? 'Check-In' : r.check_out ? 'Check-Out' : '') || '',
+        datetime: r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || ''
+      }))
+      setPreviewRows(normalized.slice(0, 6))
+      setRows(normalized)
+    }
   }
 
   // Initialize the paste grid (spreadsheet-like) with given rows and template column count
-  const initPasteGrid = (rowsCount = 5, cols = templateHeaders.length) => {
-    const grid = Array.from({ length: rowsCount }, () => Array(cols).fill(''))
+  const initPasteGrid = (rowsCount = 5) => {
+    const headers = active === 'attendance' ? attendanceHeaders : templateHeaders
+    const grid = Array.from({ length: rowsCount }, () => Array(headers.length).fill(''))
     setPasteGrid(grid)
     setPasteStart({ r: 0, c: 0 })
   }
 
   const handleGridCellChange = (ri, ci, value) => {
+    const headers = active === 'attendance' ? attendanceHeaders : templateHeaders
     setPasteGrid(prev => {
       const g = prev.map(r => [...r])
-      while (g.length <= ri) g.push(Array(templateHeaders.length).fill(''))
+      while (g.length <= ri) g.push(Array(headers.length).fill(''))
       g[ri][ci] = value
       return g
     })
@@ -417,14 +596,15 @@ export default function HRTab() {
 
   const applyLinesToGrid = (lines, startR = 0, startC = 0) => {
     console.debug('applyLinesToGrid: linesCount=', lines.length, 'start=', startR, startC)
+    const headers = active === 'attendance' ? attendanceHeaders : templateHeaders
     setPasteGrid(prev => {
       const g = prev && prev.length ? prev.map(r => [...r]) : []
       for (let r = 0; r < lines.length; r++) {
         const rowIdx = startR + r
-        if (!g[rowIdx]) g[rowIdx] = Array(templateHeaders.length).fill('')
+        if (!g[rowIdx]) g[rowIdx] = Array(headers.length).fill('')
         for (let c = 0; c < lines[r].length; c++) {
           const colIdx = startC + c
-          if (colIdx < templateHeaders.length) g[rowIdx][colIdx] = lines[r][c]
+          if (colIdx < headers.length) g[rowIdx][colIdx] = lines[r][c]
         }
       }
       // show brief paste notice
@@ -446,12 +626,21 @@ export default function HRTab() {
       hasHeader = false
     }
 
+    const headers = active === 'attendance' ? attendanceHeaders : templateHeaders
     const newRows = []
 
     for (let i = hasHeader ? 1 : 0; i < pasteGrid.length; i++) {
       const row = pasteGrid[i]
       if (!row || row.every(cell => !String(cell).trim())) continue
-      const obj = { sr: '', username: '', cnic: '', uc_ward: '', type: '', datetime: '' }
+      
+      // Create object with appropriate template
+      let obj = {}
+      if (active === 'attendance') {
+        obj = { sr: '', username: '', father_name: '', cnic: '', designation: '', uc_ward: '', attendance_point: '', check_in: '', check_out: '', type: '' }
+      } else {
+        obj = { sr: '', username: '', cnic: '', uc_ward: '', type: '', datetime: '' }
+      }
+      
       if (hasHeader) {
         for (let j = 0; j < row.length; j++) {
           const key = headerKeys[j]
@@ -459,14 +648,20 @@ export default function HRTab() {
           obj[key] = row[j] || ''
         }
       } else {
-        for (let j = 0; j < Math.min(row.length, templateHeaders.length); j++) {
-          obj[templateHeaders[j]] = row[j] || ''
+        for (let j = 0; j < Math.min(row.length, headers.length); j++) {
+          obj[headers[j]] = row[j] || ''
         }
       }
       newRows.push(obj)
     }
 
-    if (newRows.length) setRows(prev => ([...prev, ...newRows]))
+    if (newRows.length) {
+      if (active === 'attendance') {
+        setAttendanceRows(prev => ([...prev, ...newRows]))
+      } else {
+        setRows(prev => ([...prev, ...newRows]))
+      }
+    }
     setPasteGrid([])
     setShowUploadModal(false)
   }
@@ -488,16 +683,67 @@ export default function HRTab() {
     const first = wb.SheetNames[0]
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    const normalized = json.map((r) => ({
-      sr: r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || '',
-      username: r.username || r.Username || r['User Name'] || r.name || r.Name || '',
-      cnic: r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || '',
-      uc_ward: r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || '',
-      type: r.type || r.Type || (r.check_in ? 'Check-In' : r.check_out ? 'Check-Out' : '') || '',
-      datetime: r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || ''
-    }))
-    setPreviewRows(normalized.slice(0, 6))
-    setRows(normalized)
+    
+    if (active === 'attendance') {
+      // For attendance tab, parse with all attendance columns
+      // Create a smarter column mapper that tries to match columns by keywords
+      const json_keys = json.length > 0 ? Object.keys(json[0]) : []
+      
+      // Find which actual column index matches expected headers
+      const findColumnIndex = (keywords) => {
+        for (let i = 0; i < json_keys.length; i++) {
+          const key = json_keys[i].toLowerCase()
+          for (const kw of keywords) {
+            if (key.includes(kw.toLowerCase())) {
+              return i
+            }
+          }
+        }
+        return -1
+      }
+      
+      const checkInIdx = findColumnIndex(['check-in', 'checkin', 'check in'])
+      const checkOutIdx = findColumnIndex(['check-out', 'checkout', 'check out'])
+      const typeIdx = findColumnIndex(['attendance type', 'attendance_type'])
+      const fatherIdx = findColumnIndex(['father', 'husband'])
+      const designationIdx = findColumnIndex(['designation'])
+      const ucwardIdx = findColumnIndex(['uc', 'ward'])
+      const attendancePointIdx = findColumnIndex(['attendance point'])
+      
+      const getValueByIndex = (row, idx) => {
+        if (idx >= 0 && idx < json_keys.length) {
+          return (row[json_keys[idx]] || '').toString().trim()
+        }
+        return ''
+      }
+      
+      const normalized = json.map((r) => ({
+        sr: r.sr || r.SR || r['SR'] || r['Sr'] || '',
+        username: r.username || r.Username || r.name || r.Name || r['NAME'] || '',
+        father_name: fatherIdx >= 0 ? getValueByIndex(r, fatherIdx) : (r['father_name'] || r['father/husband'] || r['Father/Husband'] || r['FATHER/HUSBAND'] || ''),
+        cnic: r.cnic || r.CNIC || r['CNIC'] || '',
+        designation: designationIdx >= 0 ? getValueByIndex(r, designationIdx) : (r.designation || r.Designation || r['DESIGNATION'] || ''),
+        uc_ward: ucwardIdx >= 0 ? getValueByIndex(r, ucwardIdx) : (r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || r['UC/WARD'] || ''),
+        attendance_point: attendancePointIdx >= 0 ? getValueByIndex(r, attendancePointIdx) : (r['attendance_point'] || r['Attendance Point'] || r['ATTENDANCE POINT'] || ''),
+        check_in: checkInIdx >= 0 ? getValueByIndex(r, checkInIdx) : (r['check-in'] || r['Check-In'] || r['CHECK-IN'] || ''),
+        check_out: checkOutIdx >= 0 ? getValueByIndex(r, checkOutIdx) : (r['check-out'] || r['Check-Out'] || r['CHECK-OUT'] || ''),
+        type: typeIdx >= 0 ? getValueByIndex(r, typeIdx) : (r.type || r.Type || r['ATTENDANCE TYPE'] || '')
+      }))
+      setPreviewRows(normalized.slice(0, 6))
+      setAttendanceRows(normalized)
+    } else {
+      // For check-in/check-out tabs, use original template
+      const normalized = json.map((r) => ({
+        sr: r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || '',
+        username: r.username || r.Username || r['User Name'] || r.name || r.Name || '',
+        cnic: r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || '',
+        uc_ward: r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || '',
+        type: r.type || r.Type || (r.check_in ? 'Check-In' : r.check_out ? 'Check-Out' : '') || '',
+        datetime: r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || ''
+      }))
+      setPreviewRows(normalized.slice(0, 6))
+      setRows(normalized)
+    }
   }
 
   useEffect(() => {
@@ -509,6 +755,28 @@ export default function HRTab() {
     return () => window.removeEventListener('keydown', onKey)
   }, [showUploadModal])
 
+  // Fetch worker details for attendance display
+  useEffect(() => {
+    const fetchWorkerDetails = async () => {
+      const attendance = computeAttendance()
+      const workers = {}
+      for (const a of attendance) {
+        if (a.cnic && !workers[a.cnic]) {
+          const { data, error } = await supabase.from('workers').select('father_name, designation, attendance_point').eq('cnic', a.cnic).limit(1)
+          if (!error && data && data.length) {
+            workers[a.cnic] = data[0]
+          } else {
+            workers[a.cnic] = { father_name: '-', designation: '-', attendance_point: '-' }
+          }
+        }
+      }
+      setWorkerData(workers)
+    }
+    if (active === 'attendance') {
+      fetchWorkerDetails()
+    }
+  }, [checkinRows, checkoutRows, active])
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
@@ -519,17 +787,21 @@ export default function HRTab() {
         </div>
 
         <div className="flex items-center space-x-2">
-          {active !== 'attendance' && (
-            <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
-          )}
+          <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
 
-          {active !== 'attendance' && (
-            <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
-          )}
+          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
 
 
-
-          <button onClick={() => setRows([])} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100">Clear Table</button>
+          <button onClick={() => { 
+            if (active === 'checkin') setCheckinRows([]); 
+            else if (active === 'checkout') setCheckoutRows([]); 
+            else if (active === 'attendance') {
+              setAttendanceRows([]);
+              setCheckinRows([]);
+              setCheckoutRows([]);
+              setPushResult(null);
+            }
+          }} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100">Clear Table</button>
 
           <button onClick={() => exportReport(active)} className="px-3 py-1 rounded-md bg-emerald-600 text-white">Export {active === 'checkin' ? 'Check-In' : active === 'checkout' ? 'Check-Out' : 'Attendance'} Report</button>
           {active === 'attendance' && (
@@ -588,7 +860,7 @@ export default function HRTab() {
                     </div>
                   </div>
 
-                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8, templateHeaders.length); setUploadMode('paste') }}>
+                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
                     <div className="flex items-center space-x-3">
                       <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       <div>
@@ -616,7 +888,7 @@ export default function HRTab() {
                       <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
                     </div>
-                    <input type="file" accept=".xlsx, .xls, .csv" onChange={(e) => { handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
+                    <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
                   </label>
                   {selectedFileName && <div className="mt-3 text-xs text-slate-700">Selected: <strong>{selectedFileName}</strong></div>}
                 </div>
@@ -628,18 +900,17 @@ export default function HRTab() {
                       <table className="min-w-full text-xs">
                         <thead className="text-left text-gray-500">
                           <tr>
-                            {templateHeaders.map((h) => <th key={h} className="pr-4">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : 'Date & Time'}</th>)}
+                            {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h) => (
+                              <th key={h} className="pr-4">{getHeaderLabel(h)}</th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
                           {previewRows.map((r, i) => (
                             <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
-                              <td className="pr-4">{r.sr}</td>
-                              <td className="pr-4">{r.username}</td>
-                              <td className="pr-4">{r.cnic}</td>
-                              <td className="pr-4">{r.uc_ward}</td>
-                              <td className="pr-4">{r.type}</td>
-                              <td className="pr-4">{r.datetime}</td>
+                              {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h) => (
+                                <td key={h} className="pr-4">{r[h] || ''}</td>
+                              ))}
                             </tr>
                           ))}
                         </tbody>
@@ -666,8 +937,8 @@ export default function HRTab() {
                     <thead className="bg-gray-100 sticky top-0 shadow-sm">
                       <tr>
                         <th className="px-2 py-1 border text-xs">#</th>
-                        {templateHeaders.map((h, ci) => (
-                          <th key={ci} className="px-2 py-1 border text-xs text-left">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : 'Date & Time'}</th>
+                        {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h, ci) => (
+                          <th key={ci} className="px-2 py-1 border text-xs text-left">{getHeaderLabel(h)}</th>
                         ))}
                       </tr>
                     </thead>
@@ -732,27 +1003,31 @@ export default function HRTab() {
           <table className="min-w-full divide-y divide-gray-100 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">SR</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Username</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Check-In</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Check-Out</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Father/Husband</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">CNIC</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Designation</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">UC/Ward</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Last Check-In</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Last Check-Out</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-slate-600 uppercase">Status</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Attendance Point</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Attendance Type</th>
               </tr>
             </thead>
             <tbody className="bg-white">
               {(() => {
-                const allAttendance = computeAttendance()
+                // If attendance data was uploaded directly, display that. Otherwise, compute from check-in/check-out
+                const dataToDisplay = attendanceRows && attendanceRows.length > 0 ? attendanceRows : computeAttendance()
+                const allAttendance = dataToDisplay
                 const attendance = searchQuery ? allAttendance.filter(a => {
                   const q = searchQuery.toLowerCase().trim()
-                  return String(a.sr).toLowerCase().includes(q) || (a.username || '').toLowerCase().includes(q) || (a.cnic || '').toLowerCase().includes(q)
+                  return String(a.sr || a.username || a.cnic).toLowerCase().includes(q)
                 }) : allAttendance
 
                 if (!attendance.length) {
                   return (
                     <tr>
-                      <td colSpan={7} className="p-6 text-slate-500 text-center">No attendance data. Load check-in/check-out records to compute attendance.</td>
+                      <td colSpan={9} className="p-6 text-slate-500 text-center">No attendance data. Load check-in/check-out records to compute attendance or upload attendance data.</td>
                     </tr>
                   )
                 }
@@ -760,7 +1035,7 @@ export default function HRTab() {
                   <>
                     {pushResult && (
                       <tr>
-                        <td colSpan={7} className="p-3">
+                        <td colSpan={9} className="p-3">
                           <div className="text-sm">
                             <strong>{pushResult.success}</strong> updated, <strong>{pushResult.failed}</strong> failed.
                             {pushResult.message && <span className="ml-2 text-gray-500">{pushResult.message}</span>}
@@ -778,27 +1053,26 @@ export default function HRTab() {
                         </td>
                       </tr>
                     )}
-                    {attendance.map((a, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-4 py-2">{a.sr}</td>
-                        <td className="px-4 py-2">{a.username}</td>
-                        <td className="px-4 py-2">{a.cnic}</td>
-                        <td className="px-4 py-2">{a.uc_ward}</td>
-                        <td className="px-4 py-2">{a.last_check_in || '-'}</td>
-                        <td className="px-4 py-2">{a.last_check_out || '-'}</td>
-                        <td className="px-4 py-2 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <select value={a.status} onChange={(e) => setAttendanceStatus(a._key, e.target.value)} className={`text-sm font-semibold ${a.status === 'Present' ? 'text-emerald-700' : 'text-red-600'}`}>
-                              <option value="Present">Present</option>
-                              <option value="Absent">Absent</option>
-                            </select>
-                            {a.manual && (
-                              <button onClick={() => clearAttendanceOverride(a._key)} className="px-2 py-1 text-xs text-gray-500 hover:underline">Clear</button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {attendance.map((a, i) => {
+                      const worker = workerData[a.cnic] || { father_name: '-', designation: '-', attendance_point: '-' }
+                      const checkInLetter = getCheckInStatus(a)
+                      const checkOutLetter = getCheckOutStatus(a)
+                      const checkInColor = getStatusColor(checkInLetter)
+                      const checkOutColor = getStatusColor(checkOutLetter)
+                      return (
+                        <tr key={i} className="border-t">
+                          <td className={`px-4 py-2 font-semibold ${checkInColor}`}>{checkInLetter}</td>
+                          <td className={`px-4 py-2 font-semibold ${checkOutColor}`}>{checkOutLetter}</td>
+                          <td className="px-4 py-2">{a.username}</td>
+                          <td className="px-4 py-2">{a.father_name || worker.father_name}</td>
+                          <td className="px-4 py-2">{a.cnic}</td>
+                          <td className="px-4 py-2">{a.designation || worker.designation}</td>
+                          <td className="px-4 py-2">{a.uc_ward}</td>
+                          <td className="px-4 py-2">{a.attendance_point || worker.attendance_point}</td>
+                          <td className="px-4 py-2">{a.type || '-'}</td>
+                        </tr>
+                      )
+                    })}
                   </>
                 )
               })()}
