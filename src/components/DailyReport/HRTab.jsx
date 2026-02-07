@@ -43,6 +43,8 @@ export default function HRTab() {
   const [pushResult, setPushResult] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [workerData, setWorkerData] = useState({})
+  const [pushedData, setPushedData] = useState([]) // Store successfully pushed records
+  const [showPushedDataModal, setShowPushedDataModal] = useState(false)
 
   // Get current rows based on active tab
   const rows = active === 'checkin' ? checkinRows : active === 'checkout' ? checkoutRows : []
@@ -349,6 +351,7 @@ export default function HRTab() {
       let success = 0
       let failed = 0
       const failures = []
+      const successfulPushes = [] // Track successfully pushed records
 
       for (const a of toPush) {
         const cnic = (a.cnic || '').trim()
@@ -439,6 +442,18 @@ export default function HRTab() {
         }
 
         console.log(`✅ ${worker.full_name}: ${mapped} for day ${day}`)
+
+        // Store successful push details
+        successfulPushes.push({
+          worker_name: worker.full_name,
+          worker_code: worker.employee_code,
+          cnic: worker.cnic,
+          designation: worker.designation,
+          status: mapped,
+          date: `${month}-${day.padStart(2, '0')}`,
+          attendance_point: worker.attendance_point || a.attendance_point
+        })
+
         success++
       }
 
@@ -448,6 +463,11 @@ export default function HRTab() {
         failures,
         message: success > 0 ? 'Changes will automatically appear in Worker Manager Attendance tab within 30 seconds.' : undefined
       })
+
+      // Store successfully pushed data for viewing
+      if (successfulPushes.length > 0) {
+        setPushedData(successfulPushes)
+      }
     } catch (err) {
       console.error('Push attendance error', err)
       setPushResult({ success: 0, failed: 1, message: 'Unexpected error' })
@@ -850,6 +870,15 @@ export default function HRTab() {
               <button onClick={() => pushAttendanceToWorkerManager()} disabled={pushing} className="px-3 py-1 rounded-md bg-sky-600 text-white">
                 {pushing ? 'Pushing...' : 'Push to Worker Manager'}
               </button>
+
+              {pushedData.length > 0 && (
+                <button
+                  onClick={() => setShowPushedDataModal(true)}
+                  className="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  View Pushed Data ({pushedData.length})
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1149,6 +1178,85 @@ export default function HRTab() {
           </table>
         )}
       </div>
+
+      {/* Pushed Data Modal */}
+      {showPushedDataModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPushedDataModal(false)}>
+          <div className="w-full max-w-5xl bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-indigo-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Pushed Attendance Data</h2>
+                  <p className="text-sm text-indigo-100 mt-1">
+                    {pushedData.length} record{pushedData.length !== 1 ? 's' : ''} successfully pushed to Worker Manager
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowPushedDataModal(false)}
+                  className="px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  ✕ Close
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-auto max-h-[calc(90vh-120px)] p-6">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Worker Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CNIC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Designation</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Attendance Point</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {pushedData.map((record, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-600">{idx + 1}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.worker_name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.worker_code}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.cnic}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{record.designation}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'P' ? 'bg-green-100 text-green-800' :
+                            record.status === 'L' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                          }`}>
+                          {record.status === 'P' ? '✓ Present' :
+                            record.status === 'L' ? '○ Leave' :
+                              '✗ Absent'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.date}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{record.attendance_point || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                💡 Tip: These records are now visible in Worker Manager → Attendance tab
+              </div>
+              <button
+                onClick={() => setShowPushedDataModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
