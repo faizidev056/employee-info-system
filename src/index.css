@@ -32,12 +32,41 @@
     animation: fade-in 0.3s ease-out forwards;
   }
 
+  /* Enhanced animations for login page */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.7; }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+  }
+
   /* Glassy auth pages - gradient orbs */
   .glassy-orb {
     border-radius: 50%;
     filter: blur(80px);
     opacity: 0.4;
     animation: float 8s ease-in-out infinite;
+  }
+
+  /* Form input focus animations */
+  .form-input-focus {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .form-input-focus:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   }
 }
 
