@@ -18,6 +18,7 @@ export default function Attendance({ workers }) {
   const [_loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [lastRefresh, setLastRefresh] = useState(null)
 
   const daysInMonth = useMemo(() => {
     const [year, mon] = month.split('-').map(Number)
@@ -53,6 +54,7 @@ export default function Attendance({ workers }) {
       })
 
       setAttendance(rows)
+      setLastRefresh(new Date())
     } catch (err) {
       console.error('Load attendance error', err)
     } finally {
@@ -63,6 +65,21 @@ export default function Attendance({ workers }) {
   useEffect(() => {
     loadAttendance()
   }, [loadAttendance])
+
+  // Auto-refresh attendance data every 30 seconds when viewing current month
+  useEffect(() => {
+    const now = new Date()
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+    // Only auto-refresh if we're viewing the current month
+    if (month !== curMonth) return
+
+    const intervalId = setInterval(() => {
+      loadAttendance()
+    }, 30000) // Refresh every 30 seconds
+
+    return () => clearInterval(intervalId)
+  }, [month, loadAttendance])
 
   // cycle status for a cell (only editable if month === current month)
   const isEditable = () => {
@@ -87,7 +104,7 @@ export default function Attendance({ workers }) {
     setSaving(true)
     try {
       // Upsert each visible worker record (active + terminated depending on toggles)
-      const toSave = [ ...(showActive ? activeWorkers : []), ...(showTerminated ? terminatedWorkers : []) ]
+      const toSave = [...(showActive ? activeWorkers : []), ...(showTerminated ? terminatedWorkers : [])]
       for (const w of toSave) {
         const payload = {
           worker_id: w.id,
@@ -131,6 +148,21 @@ export default function Attendance({ workers }) {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          {lastRefresh && (
+            <div className="text-xs text-gray-400 mr-2">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+              {(() => {
+                const now = new Date()
+                const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                return month === curMonth ? (
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-400 rounded-full text-[10px]">
+                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    Auto-refresh: ON
+                  </span>
+                ) : null
+              })()}
+            </div>
+          )}
           <button className="px-3 py-2 bg-emerald-500/20 text-emerald-300 rounded" onClick={() => loadAttendance()}>Reload</button>
           <button className="px-3 py-2 bg-cyan-500/20 text-cyan-300 rounded" disabled={!isEditable() || saving} onClick={saveMonth}>{saving ? 'Saving...' : 'Save'}</button>
         </div>

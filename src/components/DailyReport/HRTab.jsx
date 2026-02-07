@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
-import { supabase } from '../../supabaseClient' 
+import { supabase } from '../../supabaseClient'
 
 const templateHeaders = [
   'sr',
@@ -46,7 +46,7 @@ export default function HRTab() {
 
   // Get current rows based on active tab
   const rows = active === 'checkin' ? checkinRows : active === 'checkout' ? checkoutRows : []
-  const setRows = active === 'checkin' ? setCheckinRows : active === 'checkout' ? setCheckoutRows : () => {}
+  const setRows = active === 'checkin' ? setCheckinRows : active === 'checkout' ? setCheckoutRows : () => { }
 
   const updateRowField = (idx, field, value) => {
     const currentRows = active === 'checkin' ? checkinRows : checkoutRows
@@ -152,7 +152,7 @@ export default function HRTab() {
     if (active === 'attendance') {
       headerRow = ['CHECK-IN', 'CHECK-OUT', 'NAME', 'FATHER/HUSBAND', 'CNIC', 'DESIGNATION', 'UC/WARD', 'ATTENDANCE POINT', 'ATTENDANCE TYPE']
     } else {
-      headerRow = ['SR','Username','CNIC','UC/Ward','Type','Date&Time']
+      headerRow = ['SR', 'Username', 'CNIC', 'UC/Ward', 'Type', 'Date&Time']
     }
     const ws = XLSX.utils.aoa_to_sheet([headerRow])
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
@@ -163,14 +163,14 @@ export default function HRTab() {
   const computeAttendance = () => {
     // Aggregate check-in and check-out rows separately and merge them
     const map = new Map()
-    
+
     // Process check-in rows
     checkinRows.forEach((r, idx) => {
       const key = r.username || r.sr || r.cnic || `checkin-${idx}`
-      const existing = map.get(key) || { 
-        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '', 
-        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '', 
-        presentFlag: false, absentFlag: false, manual: false 
+      const existing = map.get(key) || {
+        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '',
+        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '',
+        presentFlag: false, absentFlag: false, manual: false
       }
       const dt = r.datetime || ''
       const type = (r.type || '').toLowerCase()
@@ -203,10 +203,10 @@ export default function HRTab() {
     // Process check-out rows
     checkoutRows.forEach((r, idx) => {
       const key = r.username || r.sr || r.cnic || `checkout-${idx}`
-      const existing = map.get(key) || { 
-        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '', 
-        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '', 
-        presentFlag: false, absentFlag: false, manual: false 
+      const existing = map.get(key) || {
+        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '',
+        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '',
+        presentFlag: false, absentFlag: false, manual: false
       }
       const dt = r.datetime || ''
       const type = (r.type || '').toLowerCase()
@@ -323,11 +323,28 @@ export default function HRTab() {
         return
       }
 
-      const month = (() => {
-        const d = new Date()
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      })()
-      const day = String(new Date().getDate())
+      // Extract month and day from attendance data
+      // Try to find a date from the uploaded data (check_in, check_out, or datetime fields)
+      let dateToUse = new Date()
+
+      // If we have attendance data with timestamps, extract the date from the first row
+      if (toPush.length > 0) {
+        const firstRow = toPush[0]
+        const dateSource = firstRow.check_in || firstRow.check_out || firstRow.datetime || firstRow.last_check_in || firstRow.last_check_out
+
+        if (dateSource) {
+          const parsed = new Date(dateSource)
+          if (!isNaN(parsed.getTime())) {
+            dateToUse = parsed
+            console.log('📅 Using date from uploaded data:', dateToUse.toISOString().split('T')[0])
+          }
+        }
+      }
+
+      const month = `${dateToUse.getFullYear()}-${String(dateToUse.getMonth() + 1).padStart(2, '0')}`
+      const day = String(dateToUse.getDate())
+
+      console.log(`📊 Pushing ${toPush.length} attendance records for ${month}-${day}`)
 
       let success = 0
       let failed = 0
@@ -341,6 +358,7 @@ export default function HRTab() {
         if (cnic) {
           const { data: wdata, error: werr } = await supabase.from('workers').select('*').eq('cnic', cnic).limit(1)
           if (werr) {
+            console.warn(`❌ Worker query error for CNIC ${cnic}:`, werr.message)
             failures.push({ row: a, reason: 'Worker query error' })
             failed++
             continue
@@ -353,6 +371,7 @@ export default function HRTab() {
           const nameLike = `%${a.username}%`
           const { data: wdata, error: werr } = await supabase.from('workers').select('*').ilike('full_name', nameLike).limit(1)
           if (werr) {
+            console.warn(`❌ Worker query error for name ${a.username}:`, werr.message)
             failures.push({ row: a, reason: 'Worker query error' })
             failed++
             continue
@@ -361,6 +380,7 @@ export default function HRTab() {
         }
 
         if (!worker) {
+          console.warn(`❌ No worker found for CNIC: ${cnic || 'N/A'}, Name: ${a.username || 'N/A'}`)
           failures.push({ row: a, reason: 'No matching worker (by CNIC or name)' })
           failed++
           continue
@@ -377,11 +397,13 @@ export default function HRTab() {
 
         let attendance_json = {}
         if (exist && exist.length && exist[0].attendance_json) attendance_json = { ...exist[0].attendance_json }
-        
+
         // Map attendance status to P/L/A based on 'type' field or 'status' field
         let mapped = 'A'
         const rawStatus = (a.type || a.status || '').toString().trim()
         const statusType = rawStatus.toUpperCase()
+
+        console.log(`📝 Processing ${worker.full_name}: status="${rawStatus}"`)
         // Direct check for single letters to preserve exact input
         if (statusType === 'P' || statusType === 'L' || statusType === 'A') {
           mapped = statusType
@@ -396,22 +418,36 @@ export default function HRTab() {
         else if (statusType.includes('ABSENT')) {
           mapped = 'A'
         }
-        
+        // If no recognizable status, check if check_in or check_out exists
+        else if (a.check_in || a.last_check_in) {
+          mapped = 'P'  // If there's a check-in, mark as present
+          console.log(`✅ No type specified, but check-in found, marking as Present`)
+        }
+
+        console.log(`   -> Mapped to: ${mapped}`)
+
         attendance_json[day] = mapped
 
         // Upsert the attendance row
         const payload = { worker_id: worker.id, month, attendance_json }
         const { error: upsertErr } = await supabase.from('attendance_monthly').upsert(payload, { onConflict: ['worker_id', 'month'] })
         if (upsertErr) {
+          console.error(`❌ Upsert failed for ${worker.full_name}:`, upsertErr.message)
           failures.push({ row: a, reason: 'Upsert failed' })
           failed++
           continue
         }
 
+        console.log(`✅ ${worker.full_name}: ${mapped} for day ${day}`)
         success++
       }
 
-      setPushResult({ success, failed, failures })
+      setPushResult({
+        success,
+        failed,
+        failures,
+        message: success > 0 ? 'Changes will automatically appear in Worker Manager Attendance tab within 30 seconds.' : undefined
+      })
     } catch (err) {
       console.error('Push attendance error', err)
       setPushResult({ success: 0, failed: 1, message: 'Unexpected error' })
@@ -447,12 +483,12 @@ export default function HRTab() {
     const first = wb.SheetNames[0]
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    
+
     if (active === 'attendance') {
       // For attendance tab, parse with all attendance columns
       // Create a smarter column mapper that tries to match columns by keywords
       const json_keys = json.length > 0 ? Object.keys(json[0]) : []
-      
+
       // Find which actual column index matches expected headers
       const findColumnIndex = (keywords) => {
         for (let i = 0; i < json_keys.length; i++) {
@@ -465,7 +501,7 @@ export default function HRTab() {
         }
         return -1
       }
-      
+
       const checkInIdx = findColumnIndex(['check-in', 'checkin', 'check in'])
       const checkOutIdx = findColumnIndex(['check-out', 'checkout', 'check out'])
       const typeIdx = findColumnIndex(['attendance type', 'attendance_type'])
@@ -473,14 +509,14 @@ export default function HRTab() {
       const designationIdx = findColumnIndex(['designation'])
       const ucwardIdx = findColumnIndex(['uc', 'ward'])
       const attendancePointIdx = findColumnIndex(['attendance point'])
-      
+
       const getValueByIndex = (row, idx) => {
         if (idx >= 0 && idx < json_keys.length) {
           return (row[json_keys[idx]] || '').toString().trim()
         }
         return ''
       }
-      
+
       const normalized = json.map((r) => ({
         sr: r.sr || r.SR || r['SR'] || r['Sr'] || '',
         username: r.username || r.Username || r.name || r.Name || r['NAME'] || '',
@@ -632,7 +668,7 @@ export default function HRTab() {
     for (let i = hasHeader ? 1 : 0; i < pasteGrid.length; i++) {
       const row = pasteGrid[i]
       if (!row || row.every(cell => !String(cell).trim())) continue
-      
+
       // Create object with appropriate template
       let obj = {}
       if (active === 'attendance') {
@@ -640,7 +676,7 @@ export default function HRTab() {
       } else {
         obj = { sr: '', username: '', cnic: '', uc_ward: '', type: '', datetime: '' }
       }
-      
+
       if (hasHeader) {
         for (let j = 0; j < row.length; j++) {
           const key = headerKeys[j]
@@ -683,12 +719,12 @@ export default function HRTab() {
     const first = wb.SheetNames[0]
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    
+
     if (active === 'attendance') {
       // For attendance tab, parse with all attendance columns
       // Create a smarter column mapper that tries to match columns by keywords
       const json_keys = json.length > 0 ? Object.keys(json[0]) : []
-      
+
       // Find which actual column index matches expected headers
       const findColumnIndex = (keywords) => {
         for (let i = 0; i < json_keys.length; i++) {
@@ -701,7 +737,7 @@ export default function HRTab() {
         }
         return -1
       }
-      
+
       const checkInIdx = findColumnIndex(['check-in', 'checkin', 'check in'])
       const checkOutIdx = findColumnIndex(['check-out', 'checkout', 'check out'])
       const typeIdx = findColumnIndex(['attendance type', 'attendance_type'])
@@ -709,14 +745,14 @@ export default function HRTab() {
       const designationIdx = findColumnIndex(['designation'])
       const ucwardIdx = findColumnIndex(['uc', 'ward'])
       const attendancePointIdx = findColumnIndex(['attendance point'])
-      
+
       const getValueByIndex = (row, idx) => {
         if (idx >= 0 && idx < json_keys.length) {
           return (row[json_keys[idx]] || '').toString().trim()
         }
         return ''
       }
-      
+
       const normalized = json.map((r) => ({
         sr: r.sr || r.SR || r['SR'] || r['Sr'] || '',
         username: r.username || r.Username || r.name || r.Name || r['NAME'] || '',
@@ -792,9 +828,9 @@ export default function HRTab() {
           <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
 
 
-          <button onClick={() => { 
-            if (active === 'checkin') setCheckinRows([]); 
-            else if (active === 'checkout') setCheckoutRows([]); 
+          <button onClick={() => {
+            if (active === 'checkin') setCheckinRows([]);
+            else if (active === 'checkout') setCheckoutRows([]);
             else if (active === 'attendance') {
               setAttendanceRows([]);
               setCheckinRows([]);
@@ -815,7 +851,7 @@ export default function HRTab() {
                 {pushing ? 'Pushing...' : 'Push to Worker Manager'}
               </button>
             </div>
-          )}        
+          )}
         </div>
       </div>
 
@@ -846,13 +882,13 @@ export default function HRTab() {
       {showUploadModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-3xl p-4 bg-white rounded">
-                  {uploadMode === 'choose' && (
+            {uploadMode === 'choose' && (
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Upload Report</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
                     <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div>
                         <div className="font-semibold">Upload Excel / CSV</div>
                         <div className="text-xs text-slate-500">Choose a file to import (XLSX/CSV)</div>
@@ -862,7 +898,7 @@ export default function HRTab() {
 
                   <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
                     <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div>
                         <div className="font-semibold">Paste Manually</div>
                         <div className="text-xs text-slate-500">Open an editable spreadsheet-like grid to paste data</div>
@@ -881,11 +917,11 @@ export default function HRTab() {
               <div className="p-4">
                 <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
                 <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
-                     onDragOver={(e) => e.preventDefault()}
-                     onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
                   <label className="block cursor-pointer">
                     <div className="flex items-center justify-center space-x-3">
-                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
                     </div>
                     <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
@@ -961,11 +997,11 @@ export default function HRTab() {
                           <td colSpan={templateHeaders.length + 1} className="p-4 text-center text-slate-500">Empty grid. Use "Paste from Clipboard" or paste into any cell.</td>
                         </tr>
                       )}
-                {pasteNotice && (
-                  <tr>
-                    <td colSpan={templateHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
-                  </tr>
-                )}
+                      {pasteNotice && (
+                        <tr>
+                          <td colSpan={templateHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -975,7 +1011,7 @@ export default function HRTab() {
                   <button onClick={async () => {
                     try {
                       const txt = await navigator.clipboard.readText()
-                      const fakeEvent = { clipboardData: { getData: () => txt }, preventDefault: () => {} }
+                      const fakeEvent = { clipboardData: { getData: () => txt }, preventDefault: () => { } }
                       handleGridPaste(fakeEvent, pasteStart.r || 0, pasteStart.c || 0)
                     } catch {
                       // ignore
