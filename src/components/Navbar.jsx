@@ -102,6 +102,17 @@ export default function Navbar() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       )
+    },
+    {
+      id: 'vehicle-registration',
+      label: 'Vehicle Reg.',
+      path: '/vehicle-registration',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 10-4 0 2 2 0 004 0z" />
+        </svg>
+      )
     }
   ]
 
@@ -132,11 +143,10 @@ export default function Navbar() {
                 <button
                   key={tab.id}
                   onClick={() => navigate(`/workers?tab=${tab.id}`)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                    currentTab === tab.id
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${currentTab === tab.id
                       ? 'text-white bg-slate-900 shadow-md'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -147,11 +157,10 @@ export default function Navbar() {
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${
-                    location.pathname === item.path
+                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${location.pathname === item.path
                       ? 'text-slate-900 bg-gray-100'
                       : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'}>
                     {item.icon}
@@ -188,7 +197,7 @@ export default function Navbar() {
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
                       {(() => {
                         const parts = (user.name || '').split(' ').filter(Boolean)
-                        return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0,2) : (parts[0][0] + parts[1][0]))).toUpperCase()
+                        return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
                       })()}
                     </div>
                   )}
@@ -252,11 +261,10 @@ export default function Navbar() {
                         navigate(`/workers?tab=${tab.id}`)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        currentTab === tab.id
+                      className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${currentTab === tab.id
                           ? 'bg-gray-50 text-slate-900'
                           : 'text-slate-600 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -270,11 +278,10 @@ export default function Navbar() {
                         navigate(item.path)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        location.pathname === item.path
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${location.pathname === item.path
                           ? 'bg-gray-50 text-slate-900'
                           : 'text-slate-600 hover:bg-gray-50'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center space-x-3">
                         <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400'}>
@@ -303,7 +310,7 @@ export default function Navbar() {
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
                           {(() => {
                             const parts = (user.name || '').split(' ').filter(Boolean)
-                            return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0,2) : (parts[0][0] + parts[1][0]))).toUpperCase()
+                            return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
                           })()}
                         </div>
                       )}

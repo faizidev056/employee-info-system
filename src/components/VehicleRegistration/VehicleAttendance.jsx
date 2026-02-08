@@ -1,0 +1,120 @@
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+
+const VehicleAttendance = () => {
+    // Dummy data for demonstration purposes. In a real app, this would be fetched from the database.
+    const [vehicles] = useState([
+        { id: 1, regId: 'REG-001', vehicleCode: 'V-101', type: 'Compactor', status: 'Present' },
+        { id: 2, regId: 'REG-002', vehicleCode: 'V-102', type: 'Dumper', status: 'Absent' },
+        { id: 3, regId: 'REG-003', vehicleCode: 'V-103', type: 'Water Bowser', status: 'Present' },
+        { id: 4, regId: 'REG-004', vehicleCode: 'V-104', type: 'Tractor/Trolley', status: 'Maintenance' },
+        { id: 5, regId: 'REG-005', vehicleCode: 'V-105', type: 'Loader', status: 'Present' },
+    ]);
+
+    const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+
+    const handleStatusChange = (id, newStatus) => {
+        console.log(`Vehicle ${id} status changed to ${newStatus}`);
+        // Add logic to update attendance in database
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+        >
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 className="text-xl font-semibold text-slate-800">Vehicle Attendance</h2>
+                    <p className="text-sm text-slate-500 mt-1">Mark daily attendance for the fleet</p>
+                </div>
+                <div>
+                    <input
+                        type="date"
+                        value={attendanceDate}
+                        onChange={(e) => setAttendanceDate(e.target.value)}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+                    />
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {vehicles.map((vehicle) => (
+                            <tr key={vehicle.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{vehicle.regId}</td>
+                                <td className="px-6 py-4 text-sm text-slate-600">{vehicle.vehicleCode}</td>
+                                <td className="px-6 py-4 text-sm text-slate-600">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                        {vehicle.type}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vehicle.status === 'Present' ? 'bg-green-100 text-green-800' :
+                                            vehicle.status === 'Absent' ? 'bg-red-100 text-red-800' :
+                                                'bg-amber-100 text-amber-800'
+                                        }`}>
+                                        {vehicle.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <div className="flex justify-center space-x-2">
+                                        <button
+                                            onClick={() => handleStatusChange(vehicle.id, 'Present')}
+                                            className="p-1 rounded-md text-green-600 hover:bg-green-50 transition-colors"
+                                            title="Mark Present"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusChange(vehicle.id, 'Absent')}
+                                            className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                                            title="Mark Absent"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusChange(vehicle.id, 'Maintenance')}
+                                            className="p-1 rounded-md text-amber-600 hover:bg-amber-50 transition-colors"
+                                            title="Mark Maintenance"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Empty State */}
+            {vehicles.length === 0 && (
+                <div className="p-8 text-center text-slate-500">
+                    <p>No vehicles found. Register a vehicle to start tracking attendance.</p>
+                </div>
+            )}
+        </motion.div>
+    );
+};
+
+export default VehicleAttendance;
