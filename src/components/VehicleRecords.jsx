@@ -16,6 +16,44 @@ export default function VehicleRecords() {
   const [editFormData, setEditFormData] = useState({})
 
   const [historyModal, setHistoryModal] = useState({ open: false, vehicleId: null, history: [] })
+  const [selectedIds, setSelectedIds] = useState(new Set())
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id)
+      else s.add(id)
+      return s
+    })
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const transferSelectedToMileage = () => {
+    const selected = vehicles.filter(v => selectedIds.has(v.id))
+    if (!selected || selected.length === 0) {
+      setError('Select at least one vehicle to transfer')
+      setTimeout(() => setError(''), 2000)
+      return
+    }
+
+    const transferData = selected.map(v => ({
+      reg_no: v.reg_no || '',
+      vehicle_type: v.type || v.vehicle_type || '',
+      used_for: v.used_for || ''
+    })).filter(it => it.reg_no)
+
+    if (transferData.length === 0) {
+      setError('Selected vehicles must have Reg No')
+      setTimeout(() => setError(''), 2000)
+      return
+    }
+
+    localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+    setError(`Queued ${transferData.length} vehicle(s) for transfer`) 
+    setTimeout(() => setError(''), 2500)
+    clearSelection()
+  }
 
   useEffect(() => { loadVehicles() }, [])
 
@@ -159,6 +197,9 @@ export default function VehicleRecords() {
 
             <div className="px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg text-purple-700 text-xs font-semibold">{filtered.length} of {vehicles.length}</div>
             {(searchQuery || typeFilter || monthFilter) && (<button onClick={() => { setSearchQuery(''); setTypeFilter(''); setMonthFilter('') }} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium">Clear</button>)}
+            <button onClick={transferSelectedToMileage} disabled={selectedIds.size === 0} className={`px-3 py-1 rounded-md text-sm ${selectedIds.size === 0 ? 'bg-gray-200 text-gray-500' : 'bg-purple-600 text-white'}`}>
+              Transfer to Mileage {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </button>
           </div>
         </div>
 
@@ -166,7 +207,11 @@ export default function VehicleRecords() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
-                <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
+                  <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-6"><input type="checkbox" onChange={(e) => {
+                    if (e.target.checked) setSelectedIds(new Set(filtered.map(v=>v.id)))
+                    else clearSelection()
+                  }} checked={selectedIds.size > 0 && selectedIds.size === filtered.length} /></th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Make/Model</th>
@@ -180,6 +225,7 @@ export default function VehicleRecords() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((v, idx) => (
                 <motion.tr key={v.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 bg-white">
+                  <td className="px-2 py-2"><input type="checkbox" checked={selectedIds.has(v.id)} onChange={() => toggleSelect(v.id)} /></td>
                   <td className="px-3 py-2"><span className="text-slate-400">{idx + 1}</span></td>
                   <td className="px-3 py-2"><div className="text-slate-900 font-mono">{v.reg_id || v.vehicle_code || '-'}</div></td>
                   <td className="px-3 py-2">

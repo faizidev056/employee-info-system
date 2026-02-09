@@ -20,6 +20,7 @@ export default function MileageReport() {
   const [loading, setLoading] = useState(false)
   const [pendingTransfer, setPendingTransfer] = useState(null)
   const [transferApplied, setTransferApplied] = useState(false)
+  const [showTransferReview, setShowTransferReview] = useState(false)
 
   const today = (() => {
     const d = new Date()
@@ -38,6 +39,16 @@ export default function MileageReport() {
       try {
         const parsed = JSON.parse(transferData)
         setPendingTransfer(parsed)
+        // If parent signalled to open review modal, do it and clear the signal
+        try {
+          const flag = localStorage.getItem('openMileageReview')
+          if (flag) {
+            setShowTransferReview(true)
+            localStorage.removeItem('openMileageReview')
+          }
+        } catch (e) {
+          /* ignore */
+        }
       } catch (e) {
         console.error('Error parsing transfer data:', e)
       }
@@ -55,7 +66,7 @@ export default function MileageReport() {
 
       if (error) throw error
 
-      const loadedRows = (data || []).map((r, idx) => ({
+      let loadedRows = (data || []).map((r, idx) => ({
         sr: idx + 1,
         reg_no: r.reg_no || '',
         vehicle_type: r.vehicle_type || '',
@@ -65,6 +76,33 @@ export default function MileageReport() {
         threshold: r.threshold ? String(r.threshold) : '',
         remarks: r.remarks || ''
       }))
+
+      // Enrich rows with vehicle metadata from vehicle_registrations when missing
+      try {
+        const regNosToFetch = [...new Set(loadedRows.filter(r => (!r.vehicle_type || !r.used_for) && r.reg_no).map(r => r.reg_no))]
+        if (regNosToFetch.length > 0) {
+          const { data: meta, error: metaErr } = await supabase
+            .from('vehicle_registrations')
+            .select('reg_no, type, used_for')
+            .in('reg_no', regNosToFetch)
+
+          if (!metaErr && meta && meta.length) {
+            const map = {}
+            meta.forEach(m => { map[m.reg_no] = m })
+            loadedRows = loadedRows.map(r => {
+              const m = map[r.reg_no]
+              if (!m) return r
+              return {
+                ...r,
+                vehicle_type: r.vehicle_type || (m.type || ''),
+                used_for: r.used_for || (m.used_for || '')
+              }
+            })
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to enrich mileage rows with vehicle metadata', e)
+      }
       setRows(loadedRows)
       setSaveResult(null)
     } catch (err) {
@@ -99,20 +137,42 @@ export default function MileageReport() {
 
   const applyTransferData = () => {
     if (!pendingTransfer || pendingTransfer.length === 0) return
+    // Merge transfers into existing rows by reg_no; update vehicle_type/used_for/mileage/ignition_time
+    setRows(prevRows => {
+      const copy = [...prevRows]
+      const byReg = {}
+      copy.forEach((r, i) => { if (r.reg_no) byReg[r.reg_no] = { row: r, idx: i } })
 
-    const newRows = pendingTransfer.map((item, idx) => ({
-      sr: idx + 1,
-      reg_no: '',
-      vehicle_type: '',
-      used_for: '',
-      mileage: item.mileage || '',
-      ignition_time: item.ignition_time || '',
-      threshold: '',
-      remarks: ''
-    }))
+      pendingTransfer.forEach(item => {
+        const reg = item.reg_no || ''
+        if (!reg) return
+        if (byReg[reg]) {
+          const entry = byReg[reg]
+          const updated = {
+            ...entry.row,
+            vehicle_type: item.vehicle_type || entry.row.vehicle_type || '',
+            used_for: item.used_for || entry.row.used_for || '',
+            mileage: item.mileage !== undefined ? (item.mileage || '') : entry.row.mileage,
+            ignition_time: item.ignition_time !== undefined ? (item.ignition_time || '') : entry.row.ignition_time
+          }
+          copy[entry.idx] = updated
+        } else {
+          copy.unshift({
+            sr: 0,
+            reg_no: reg,
+            vehicle_type: item.vehicle_type || '',
+            used_for: item.used_for || '',
+            mileage: item.mileage || '',
+            ignition_time: item.ignition_time || '',
+            threshold: '',
+            remarks: ''
+          })
+        }
+      })
 
-    const all = [...newRows, ...rows].map((r, i) => ({ ...r, sr: i + 1 }))
-    setRows(all)
+      return copy.map((r, i) => ({ ...r, sr: i + 1 }))
+    })
+
     localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
     setTransferApplied(true)
@@ -380,6 +440,7 @@ export default function MileageReport() {
   }
 
   return (
+    <>
     <div className="p-4">
       {/* Pending Transfer Notification */}
       {pendingTransfer && pendingTransfer.length > 0 && (
@@ -392,12 +453,12 @@ export default function MileageReport() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={applyTransferData}
-                className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700 font-medium"
-              >
-                Apply Transfer
-              </button>
+                <button
+                  onClick={() => setShowTransferReview(true)}
+                  className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700 font-medium"
+                >
+                  Accept Transfer
+                </button>
               <button
                 onClick={discardTransferData}
                 className="px-4 py-2 rounded-md bg-amber-100 text-amber-800 text-sm hover:bg-amber-200"
@@ -642,5 +703,49 @@ export default function MileageReport() {
         )}
       </div>
     </div>
+      {/* Transfer Review Modal */}
+      {showTransferReview && pendingTransfer && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-11/12 md:w-2/3 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Review Transfer</h3>
+              <button onClick={() => setShowTransferReview(false)} className="text-slate-500">Close</button>
+            </div>
+
+            <div className="overflow-x-auto mb-4">
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-gray-600">
+                  <tr>
+                    <th className="px-2 py-1">#</th>
+                    <th className="px-2 py-1">Vehicle Code</th>
+                    <th className="px-2 py-1">Vehicle Type</th>
+                    <th className="px-2 py-1">Used For</th>
+                    <th className="px-2 py-1">Mileage</th>
+                    <th className="px-2 py-1">IG Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingTransfer.map((it, i) => (
+                    <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
+                      <td className="px-2 py-1">{i + 1}</td>
+                      <td className="px-2 py-1">{it.reg_no}</td>
+                      <td className="px-2 py-1">{it.vehicle_type || ''}</td>
+                      <td className="px-2 py-1">{it.used_for || ''}</td>
+                      <td className="px-2 py-1">{it.mileage || ''}</td>
+                      <td className="px-2 py-1">{it.ignition_time || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => { setShowTransferReview(false); discardTransferData() }} className="px-3 py-1 rounded bg-gray-50 border text-sm">Dismiss</button>
+              <button onClick={() => { applyTransferData(); setShowTransferReview(false) }} className="px-3 py-1 rounded bg-purple-600 text-white text-sm">Accept & Apply</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

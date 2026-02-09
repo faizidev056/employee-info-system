@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DailyReporting from './Fleet/DailyReporting'
 import MileageReport from './Fleet/MileageReport'
 
@@ -28,9 +28,19 @@ export default function Fleet() {
         >
           Mileage Report
         </button>
+        <button
+          onClick={() => {
+            // signal MileageReport to open the review modal and switch tab
+            try { localStorage.setItem('openMileageReview', '1') } catch (e) {}
+            setActiveFleetTab('mileage-report')
+          }}
+          className="px-3 py-1 rounded-md text-sm bg-amber-100 text-amber-800"
+        >
+          Review Transfer
+        </button>
         {/* Future fleet tabs can be added here */}
       </div>
-
+      
       {activeFleetTab === 'daily-reporting' && <DailyReporting />}
       {activeFleetTab === 'mileage-report' && <MileageReport />}
     </div>
