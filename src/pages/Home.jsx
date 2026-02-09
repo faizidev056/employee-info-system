@@ -36,6 +36,14 @@ const Home = () => {
                             <button onClick={() => navigate('/vehicle-registration')} className="px-4 py-2 rounded-md bg-indigo-600 text-white">Open Vehicle Reg.</button>
                         </div>
                     </div>
+
+                    <div className="p-6 rounded-lg border border-gray-100 shadow-sm">
+                        <h2 className="text-xl font-semibold mb-2">Private HR</h2>
+                        <p className="text-slate-500 mb-4">Private HR module for confidential HR records.</p>
+                        <div className="flex space-x-2">
+                            <button onClick={() => navigate('/private-hr')} className="px-4 py-2 rounded-md bg-rose-600 text-white">Open Private HR</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="mt-6 text-center">

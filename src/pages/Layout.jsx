@@ -1,11 +1,11 @@
 import Navbar from '../components/Navbar';
 import { Outlet } from 'react-router-dom';
-import VehicleRegistrationsPage from './VehicleRegistrationsPage';
+// import VehicleRegistrationsPage from './VehicleRegistrationsPage';
 const Layout = () => {
     return (
         <div>
             <Navbar />
-            <VehicleRegistrationsPage />
+            {/* <VehicleRegistrationsPage /> */}
             <main>
                 <Outlet />
             </main>

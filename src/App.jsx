@@ -7,6 +7,7 @@ import SignUp from './pages/SignUp';
 import WorkerManagerPage from './pages/WorkerManagerPage';
 import DailyReportPage from './pages/DailyReportPage';
 import VehicleRegistrationPage from './pages/VehicleRegistrationPage';
+import PrivateHRPage from './pages/PrivateHRPage';
 import Layout from './pages/Layout';
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
                 <Route path="workers" element={<WorkerManagerPage />} />
                 <Route path="daily-report" element={<DailyReportPage />} />
                 <Route path="vehicle-registration" element={<VehicleRegistrationPage />} />
+                <Route path="private-hr" element={<PrivateHRPage />} />
             </Route>
         </Routes>
     );
