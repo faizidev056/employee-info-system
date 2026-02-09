@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RegistrationForm from './VehicleRegistration/RegistrationForm';
 import VehicleAttendance from './VehicleRegistration/VehicleAttendance';
+import VehicleDirectory from './VehicleDirectory';
+import VehicleRecords from './VehicleRecords';
+import VehicleTerminated from './VehicleTerminated';
 
 export default function VehicleRegistration() {
     const [activeTab, setActiveTab] = useState('registration');
@@ -9,6 +12,9 @@ export default function VehicleRegistration() {
     const tabs = [
         { id: 'registration', label: 'Registration Form', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
         { id: 'attendance', label: 'Attendance', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+        { id: 'directory', label: 'Vehicle Directory', icon: 'M3 13l2-2m0 0l7-7 7 7M13 21V9' },
+        { id: 'records', label: 'Vehicle Records', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+        { id: 'terminated', label: 'Terminated Vehicles', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857' },
         { id: 'dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
     ];
 
@@ -85,6 +91,9 @@ export default function VehicleRegistration() {
                                 )}
                                 {activeTab === 'registration' && <RegistrationForm />}
                                 {activeTab === 'attendance' && <VehicleAttendance />}
+                                                        {activeTab === 'directory' && <VehicleDirectory />}
+                                                        {activeTab === 'records' && <VehicleRecords />}
+                                                        {activeTab === 'terminated' && <VehicleTerminated />}
                             </motion.div>
                         </AnimatePresence>
                     </div>

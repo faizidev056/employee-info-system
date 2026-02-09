@@ -18,6 +18,8 @@ export default function DailyReporting() {
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [selectedRowIndices, setSelectedRowIndices] = useState(new Set())
+  const [transferMessage, setTransferMessage] = useState('')
 
   const today = (() => {
     const d = new Date()
@@ -69,7 +71,7 @@ export default function DailyReporting() {
   const getHeaderLabel = (key) => {
     const labels = {
       sr: 'SR',
-      reg_no: 'REG NO',
+      reg_no: 'VEHICLE CODE',
       town: 'TOWN',
       mileage: 'MILEAGE',
       ignition_time: 'IG TIME',
@@ -321,6 +323,35 @@ export default function DailyReporting() {
     saveAs(new Blob([wbout], { type: 'application/octet-stream' }), `fleet-daily-report-${today}.xlsx`)
   }
 
+  const transferToMileageReport = () => {
+    if (selectedRowIndices.size === 0) {
+      setTransferMessage('⚠️ Please select at least one row to transfer')
+      setTimeout(() => setTransferMessage(''), 3000)
+      return
+    }
+
+    const selectedRows = Array.from(selectedRowIndices).map(idx => rows[idx]).filter(r => r)
+    const transferData = selectedRows.map(row => ({
+      mileage: row.mileage,
+      ignition_time: row.ignition_time
+    }))
+
+    localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+    setSelectedRowIndices(new Set())
+    setTransferMessage('✅ Mileage & IG Time transferred to Mileage Report! Switch tabs to apply.')
+    setTimeout(() => setTransferMessage(''), 4000)
+  }
+
+  const toggleRowSelection = (idx) => {
+    const newSet = new Set(selectedRowIndices)
+    if (newSet.has(idx)) {
+      newSet.delete(idx)
+    } else {
+      newSet.add(idx)
+    }
+    setSelectedRowIndices(newSet)
+  }
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
@@ -337,18 +368,29 @@ export default function DailyReporting() {
 
           <button onClick={exportData} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Export Report</button>
 
+          <button onClick={transferToMileageReport} className="px-3 py-1 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700">
+            Transfer to Mileage ({selectedRowIndices.size})
+          </button>
+
           <button onClick={saveFleetData} disabled={saving} className="px-3 py-1 rounded-md bg-sky-600 text-white text-sm">
             {saving ? 'Saving...' : 'Save Report'}
           </button>
         </div>
       </div>
 
+      {/* Transfer Message */}
+      {transferMessage && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+          {transferMessage}
+        </div>
+      )}
+
       {/* Search bar */}
       <div className="mb-4">
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Reg No or Town"
+          placeholder="Search by Vehicle Code or Town"
           className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full max-w-md focus:ring-1 focus:ring-sky-300"
         />
       </div>
@@ -520,6 +562,19 @@ export default function DailyReporting() {
           <table className="min-w-full divide-y divide-gray-100 text-sm">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={selectedRowIndices.size === rows.length && rows.length > 0}
+                    onChange={() => {
+                      if (selectedRowIndices.size === rows.length) {
+                        setSelectedRowIndices(new Set())
+                      } else {
+                        setSelectedRowIndices(new Set(rows.map((_, i) => i)))
+                      }
+                    }}
+                  />
+                </th>
                 {fleetHeaders.map((h) => (
                   <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{getHeaderLabel(h)}</th>
                 ))}
@@ -533,21 +588,31 @@ export default function DailyReporting() {
                 if (filteredRows.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={fleetHeaders.length} className="p-6 text-slate-500 text-center">No fleet data. Upload a report or add entries manually.</td>
+                      <td colSpan={fleetHeaders.length + 1} className="p-6 text-slate-500 text-center">No fleet data. Upload a report or add entries manually.</td>
                     </tr>
                   )
                 }
 
-                return filteredRows.map((r, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-4 py-2"><input value={r.sr || ''} readOnly className="w-full p-1 text-sm bg-gray-50 border-0" /></td>
-                    <td className="px-4 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(idx, 'reg_no', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                    <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(idx, 'town', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                    <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(idx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                    <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                    <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(idx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                  </tr>
-                ))
+                return filteredRows.map((r, filteredIdx) => {
+                  const actualIdx = rows.indexOf(r)
+                  return (
+                    <tr key={filteredIdx} className={`border-t ${selectedRowIndices.has(actualIdx) ? 'bg-blue-50' : ''}`}>
+                      <td className="px-4 py-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedRowIndices.has(actualIdx)}
+                          onChange={() => toggleRowSelection(actualIdx)}
+                        />
+                      </td>
+                      <td className="px-4 py-2"><input value={r.sr || ''} readOnly className="w-full p-1 text-sm bg-gray-50 border-0" /></td>
+                      <td className="px-4 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(actualIdx, 'reg_no', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                      <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(actualIdx, 'town', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                      <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                      <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                      <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(actualIdx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                    </tr>
+                  )
+                })
               })()}
             </tbody>
           </table>

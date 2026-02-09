@@ -5,6 +5,8 @@ import { supabase } from '../../supabaseClient'
 
 const fleetHeaders = ['sr', 'reg_no', 'town', 'mileage', 'ignition_time', 'fuel_allocated']
 
+// Display label mapping: keep internal key 'reg_no' but show as 'Vehicle Code' in headers
+
 export default function FleetTab() {
   const [rows, setRows] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -69,7 +71,7 @@ export default function FleetTab() {
   const getHeaderLabel = (key) => {
     const labels = {
       sr: 'SR',
-      reg_no: 'REG NO',
+      reg_no: 'VEHICLE CODE',
       town: 'TOWN',
       mileage: 'MILEAGE',
       ignition_time: 'IG TIME',
@@ -79,7 +81,7 @@ export default function FleetTab() {
   }
 
   const downloadTemplate = () => {
-    const headerRow = ['SR', 'Reg No', 'Town', 'Mileage', 'IG Time', 'Fuel Allocated']
+    const headerRow = ['SR', 'Vehicle Code', 'Town', 'Mileage', 'IG Time', 'Fuel Allocated']
     const ws = XLSX.utils.aoa_to_sheet([headerRow])
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
@@ -348,7 +350,7 @@ export default function FleetTab() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Reg No or Town"
+          placeholder="Search by Vehicle Code or Town"
           className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full max-w-md focus:ring-1 focus:ring-sky-300"
         />
       </div>

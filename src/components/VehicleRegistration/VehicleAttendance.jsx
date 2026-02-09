@@ -1,21 +1,100 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { supabase } from '../../supabaseClient';
 
 const VehicleAttendance = () => {
-    // Dummy data for demonstration purposes. In a real app, this would be fetched from the database.
-    const [vehicles] = useState([
-        { id: 1, regId: 'REG-001', vehicleCode: 'V-101', type: 'Compactor', status: 'Present' },
-        { id: 2, regId: 'REG-002', vehicleCode: 'V-102', type: 'Dumper', status: 'Absent' },
-        { id: 3, regId: 'REG-003', vehicleCode: 'V-103', type: 'Water Bowser', status: 'Present' },
-        { id: 4, regId: 'REG-004', vehicleCode: 'V-104', type: 'Tractor/Trolley', status: 'Maintenance' },
-        { id: 5, regId: 'REG-005', vehicleCode: 'V-105', type: 'Loader', status: 'Present' },
-    ]);
-
+    const [vehicles, setVehicles] = useState([]);
+    const [vehicleAttendance, setVehicleAttendance] = useState({});
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
+    const [loading, setLoading] = useState(true);
 
-    const handleStatusChange = (id, newStatus) => {
-        console.log(`Vehicle ${id} status changed to ${newStatus}`);
-        // Add logic to update attendance in database
+    // Load vehicles from database on component mount
+    useEffect(() => {
+        loadVehicles();
+    }, []);
+
+    // Load attendance for selected date when date changes
+    useEffect(() => {
+        loadVehicleAttendance(attendanceDate);
+    }, [attendanceDate]);
+
+    const loadVehicles = async () => {
+        try {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('vehicle_registrations')
+                .select('id, reg_id, vehicle_code, type, status')
+                .eq('status', 'Active')
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Error loading vehicles:', error);
+                return;
+            }
+
+            setVehicles(data || []);
+        } catch (err) {
+            console.error('Unexpected error loading vehicles:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadVehicleAttendance = async (date) => {
+        try {
+            const { data, error } = await supabase
+                .from('vehicle_attendance')
+                .select('vehicle_id, status')
+                .eq('attendance_date', date);
+
+            if (error) {
+                console.error('Error loading attendance:', error);
+                return;
+            }
+
+            // Create a map of vehicle_id -> status
+            const attendanceMap = {};
+            if (data) {
+                data.forEach((record) => {
+                    attendanceMap[record.vehicle_id] = record.status;
+                });
+            }
+            setVehicleAttendance(attendanceMap);
+        } catch (err) {
+            console.error('Unexpected error loading attendance:', err);
+        }
+    };
+
+    const handleStatusChange = async (vehicleId, newStatus) => {
+        try {
+            // Update local state immediately for better UX
+            setVehicleAttendance((prev) => ({
+                ...prev,
+                [vehicleId]: newStatus,
+            }));
+
+            // Upsert attendance record in database
+            const { error } = await supabase
+                .from('vehicle_attendance')
+                .upsert(
+                    {
+                        vehicle_id: vehicleId,
+                        attendance_date: attendanceDate,
+                        status: newStatus,
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'vehicle_id,attendance_date' }
+                );
+
+            if (error) {
+                console.error('Error saving attendance:', error);
+                // Revert local state on error
+                loadVehicleAttendance(attendanceDate);
+            }
+        } catch (err) {
+            console.error('Unexpected error saving attendance:', err);
+            loadVehicleAttendance(attendanceDate);
+        }
     };
 
     return (
@@ -40,75 +119,84 @@ const VehicleAttendance = () => {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Status</th>
-                            <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {vehicles.map((vehicle) => (
-                            <tr key={vehicle.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-6 py-4 text-sm font-medium text-slate-900">{vehicle.regId}</td>
-                                <td className="px-6 py-4 text-sm text-slate-600">{vehicle.vehicleCode}</td>
-                                <td className="px-6 py-4 text-sm text-slate-600">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                                        {vehicle.type}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${vehicle.status === 'Present' ? 'bg-green-100 text-green-800' :
-                                            vehicle.status === 'Absent' ? 'bg-red-100 text-red-800' :
-                                                'bg-amber-100 text-amber-800'
-                                        }`}>
-                                        {vehicle.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                    <div className="flex justify-center space-x-2">
-                                        <button
-                                            onClick={() => handleStatusChange(vehicle.id, 'Present')}
-                                            className="p-1 rounded-md text-green-600 hover:bg-green-50 transition-colors"
-                                            title="Mark Present"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            onClick={() => handleStatusChange(vehicle.id, 'Absent')}
-                                            className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
-                                            title="Mark Absent"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        </button>
-                                        <button
-                                            onClick={() => handleStatusChange(vehicle.id, 'Maintenance')}
-                                            className="p-1 rounded-md text-amber-600 hover:bg-amber-50 transition-colors"
-                                            title="Mark Maintenance"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
+            {loading ? (
+                <div className="p-8 text-center text-slate-500">
+                    <p>Loading vehicles...</p>
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {vehicles.map((vehicle) => {
+                                const status = vehicleAttendance[vehicle.id] || 'Absent';
+                                return (
+                                    <tr key={vehicle.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{vehicle.reg_id}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600">{vehicle.vehicle_code}</td>
+                                        <td className="px-6 py-4 text-sm text-slate-600">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                                {vehicle.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status === 'Present' ? 'bg-green-100 text-green-800' :
+                                                    status === 'Absent' ? 'bg-red-100 text-red-800' :
+                                                        'bg-amber-100 text-amber-800'
+                                                }`}>
+                                                {status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex justify-center space-x-2">
+                                                <button
+                                                    onClick={() => handleStatusChange(vehicle.id, 'Present')}
+                                                    className="p-1 rounded-md text-green-600 hover:bg-green-50 transition-colors"
+                                                    title="Mark Present"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStatusChange(vehicle.id, 'Absent')}
+                                                    className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                                                    title="Mark Absent"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStatusChange(vehicle.id, 'Maintenance')}
+                                                    className="p-1 rounded-md text-amber-600 hover:bg-amber-50 transition-colors"
+                                                    title="Mark Maintenance"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* Empty State */}
-            {vehicles.length === 0 && (
+            {!loading && vehicles.length === 0 && (
                 <div className="p-8 text-center text-slate-500">
                     <p>No vehicles found. Register a vehicle to start tracking attendance.</p>
                 </div>

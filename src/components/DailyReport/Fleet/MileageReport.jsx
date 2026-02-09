@@ -18,6 +18,8 @@ export default function MileageReport() {
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [pendingTransfer, setPendingTransfer] = useState(null)
+  const [transferApplied, setTransferApplied] = useState(false)
 
   const today = (() => {
     const d = new Date()
@@ -27,7 +29,20 @@ export default function MileageReport() {
   // Load today's mileage data on mount
   useEffect(() => {
     loadMileageData()
+    checkForTransfer()
   }, [])
+
+  const checkForTransfer = () => {
+    const transferData = localStorage.getItem('mileageReportTransfer')
+    if (transferData && !transferApplied) {
+      try {
+        const parsed = JSON.parse(transferData)
+        setPendingTransfer(parsed)
+      } catch (e) {
+        console.error('Error parsing transfer data:', e)
+      }
+    }
+  }
 
   const loadMileageData = async () => {
     try {
@@ -71,7 +86,7 @@ export default function MileageReport() {
   const getHeaderLabel = (key) => {
     const labels = {
       sr: 'SR',
-      reg_no: 'REG NO',
+      reg_no: 'VEHICLE CODE',
       vehicle_type: 'VEHICLE TYPE',
       used_for: 'USED FOR',
       mileage: 'MILEAGE',
@@ -82,8 +97,35 @@ export default function MileageReport() {
     return labels[key] || key.toUpperCase()
   }
 
+  const applyTransferData = () => {
+    if (!pendingTransfer || pendingTransfer.length === 0) return
+
+    const newRows = pendingTransfer.map((item, idx) => ({
+      sr: idx + 1,
+      reg_no: '',
+      vehicle_type: '',
+      used_for: '',
+      mileage: item.mileage || '',
+      ignition_time: item.ignition_time || '',
+      threshold: '',
+      remarks: ''
+    }))
+
+    const all = [...newRows, ...rows].map((r, i) => ({ ...r, sr: i + 1 }))
+    setRows(all)
+    localStorage.removeItem('mileageReportTransfer')
+    setPendingTransfer(null)
+    setTransferApplied(true)
+  }
+
+  const discardTransferData = () => {
+    localStorage.removeItem('mileageReportTransfer')
+    setPendingTransfer(null)
+    setTransferApplied(true)
+  }
+
   const downloadTemplate = () => {
-    const headerRow = ['SR', 'Reg No', 'Vehicle Type', 'Used For', 'Mileage', 'IG Time', 'Threshold', 'Remarks']
+    const headerRow = ['SR', 'Vehicle Code', 'Vehicle Type', 'Used For', 'Mileage', 'IG Time', 'Threshold', 'Remarks']
     const ws = XLSX.utils.aoa_to_sheet([headerRow])
     const wb = { Sheets: { data: ws }, SheetNames: ['data'] }
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
@@ -339,6 +381,34 @@ export default function MileageReport() {
 
   return (
     <div className="p-4">
+      {/* Pending Transfer Notification */}
+      {pendingTransfer && pendingTransfer.length > 0 && (
+        <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-md">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-amber-900 text-sm">📊 Data Transfer Available</h3>
+              <p className="text-sm text-amber-800 mt-1">
+                {pendingTransfer.length} row(s) from Daily Report ready to apply (Mileage, IG Time)
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={applyTransferData}
+                className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700 font-medium"
+              >
+                Apply Transfer
+              </button>
+              <button
+                onClick={discardTransferData}
+                className="px-4 py-2 rounded-md bg-amber-100 text-amber-800 text-sm hover:bg-amber-200"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm text-slate-600">
           <strong>Today's Report:</strong> {today}
@@ -364,7 +434,7 @@ export default function MileageReport() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Reg No or Vehicle Type"
+          placeholder="Search by Vehicle Code or Vehicle Type"
           className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full max-w-md focus:ring-1 focus:ring-sky-300"
         />
       </div>
