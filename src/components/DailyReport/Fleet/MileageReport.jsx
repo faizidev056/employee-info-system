@@ -22,6 +22,77 @@ export default function MileageReport() {
   const [pendingVehicleRecords, setPendingVehicleRecords] = useState([])
   const [transferApplied, setTransferApplied] = useState(false)
   const [showTransferReview, setShowTransferReview] = useState(false)
+  // UI tab state (Added for future filters: 'Used For' and 'Threshold')
+  const [activeTab, setActiveTab] = useState('all')
+  const [showUsedForModal, setShowUsedForModal] = useState(false)
+  const [usedForGrid, setUsedForGrid] = useState([])
+  const [showThresholdModal, setShowThresholdModal] = useState(false)
+  const [thresholdGrid, setThresholdGrid] = useState([])
+
+  const openUsedForModal = () => {
+    setActiveTab('used_for')
+    const grid = (rows || []).map((r, i) => ({
+      sr: r.sr || i + 1,
+      vehicle_code: r.vehicle_code || r.reg_no || '',
+      vehicle_type: r.vehicle_type || '',
+      used_for: r.used_for || ''
+    }))
+    setUsedForGrid(grid)
+    setShowUsedForModal(true)
+  }
+
+  const updateUsedForCell = (idx, field, value) => {
+    setUsedForGrid(prev => {
+      const copy = prev.map(r => ({ ...r }))
+      if (copy[idx]) copy[idx][field] = value
+      return copy
+    })
+  }
+
+  const saveUsedForGrid = () => {
+    setRows(prev => {
+      const copy = prev.map((r, i) => {
+        const g = usedForGrid[i]
+        if (!g) return r
+        return { ...r, vehicle_type: g.vehicle_type, used_for: g.used_for }
+      })
+      return copy.map((r, i) => ({ ...r, sr: i + 1 }))
+    })
+    setShowUsedForModal(false)
+    setActiveTab('all')
+  }
+
+  const openThresholdModal = () => {
+    setActiveTab('threshold')
+    const grid = (rows || []).map((r, i) => ({
+      sr: r.sr || i + 1,
+      vehicle_type: r.vehicle_type || '',
+      threshold: r.threshold || ''
+    }))
+    setThresholdGrid(grid)
+    setShowThresholdModal(true)
+  }
+
+  const updateThresholdCell = (idx, field, value) => {
+    setThresholdGrid(prev => {
+      const copy = prev.map(r => ({ ...r }))
+      if (copy[idx]) copy[idx][field] = value
+      return copy
+    })
+  }
+
+  const saveThresholdGrid = () => {
+    setRows(prev => {
+      const copy = prev.map((r, i) => {
+        const g = thresholdGrid[i]
+        if (!g) return r
+        return { ...r, vehicle_type: g.vehicle_type, threshold: g.threshold }
+      })
+      return copy.map((r, i) => ({ ...r, sr: i + 1 }))
+    })
+    setShowThresholdModal(false)
+    setActiveTab('all')
+  }
 
   const today = (() => {
     const d = new Date()
@@ -60,6 +131,29 @@ export default function MileageReport() {
       console.log('✅ Mileage Report data saved to localStorage:', rows)
     }
   }, [rows])
+
+  // Watch activeTab and auto-open modals when tab changes
+  useEffect(() => {
+    if (activeTab === 'used_for') {
+      if (!rows || rows.length === 0) {
+        loadMileageData().then(() => openUsedForModal())
+      } else {
+        openUsedForModal()
+      }
+      return
+    }
+    if (activeTab === 'threshold') {
+      if (!rows || rows.length === 0) {
+        loadMileageData().then(() => openThresholdModal())
+      } else {
+        openThresholdModal()
+      }
+      return
+    }
+    // close any modals when tab is not one of the specialized tabs
+    setShowUsedForModal(false)
+    setShowThresholdModal(false)
+  }, [activeTab])
 
   const checkForTransfer = () => {
     const transferData = localStorage.getItem('mileageReportTransfer')
@@ -564,6 +658,25 @@ export default function MileageReport() {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Tabs (visual only) placed alongside action buttons */}
+          <div className="hidden sm:flex items-center space-x-2 mr-2">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
+              All
+            </button>
+            <button
+              onClick={() => setActiveTab('used_for')}
+              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'used_for' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
+              Used For
+            </button>
+            <button
+              onClick={() => setActiveTab('threshold')}
+              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'threshold' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
+              Threshold
+            </button>
+          </div>
+
           <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white text-sm">Download Template</button>
 
           <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200 text-sm">Upload Report</button>
@@ -574,6 +687,17 @@ export default function MileageReport() {
 
           <button onClick={saveMileageData} disabled={saving} className="px-3 py-1 rounded-md bg-sky-600 text-white text-sm">
             {saving ? 'Saving...' : 'Save Report'}
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs: compact - only show All here per request */}
+      <div className="mb-4">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
+            All
           </button>
         </div>
       </div>
@@ -872,6 +996,85 @@ export default function MileageReport() {
           </div>
         </div>
       )}
+
+      {/* Used For Modal - Top Level */}
+      {showUsedForModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg w-11/12 md:w-3/4 p-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Used For - Grid View</h3>
+              <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
+            </div>
+
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-2 py-2">SR</th>
+                    <th className="px-2 py-2">Vehicle Code</th>
+                    <th className="px-2 py-2">Type of Vehicle</th>
+                    <th className="px-2 py-2">Used For</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usedForGrid.map((r, idx) => (
+                    <tr key={idx} className={`${idx % 2 ? 'bg-gray-50' : ''}`}>
+                      <td className="px-2 py-1">{r.sr || idx + 1}</td>
+                      <td className="px-2 py-1"><input value={r.vehicle_code} onChange={(e) => updateUsedForCell(idx, 'vehicle_code', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                      <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateUsedForCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                      <td className="px-2 py-1"><input value={r.used_for} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="px-3 py-2 bg-gray-50 border rounded">Cancel</button>
+              <button onClick={saveUsedForGrid} className="px-3 py-2 bg-sky-600 text-white rounded">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Threshold Modal - Top Level */}
+      {showThresholdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg w-11/12 md:w-3/4 p-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Threshold - Grid View</h3>
+              <button onClick={() => { setShowThresholdModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
+            </div>
+
+            <div className="overflow-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-2 py-2">SR</th>
+                    <th className="px-2 py-2">Type of Vehicle</th>
+                    <th className="px-2 py-2">Threshold</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {thresholdGrid.map((r, idx) => (
+                    <tr key={idx} className={`${idx % 2 ? 'bg-gray-50' : ''}`}>
+                      <td className="px-2 py-1">{r.sr || idx + 1}</td>
+                      <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateThresholdCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                      <td className="px-2 py-1"><input value={r.threshold} onChange={(e) => updateThresholdCell(idx, 'threshold', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => { setShowThresholdModal(false); setActiveTab('all') }} className="px-3 py-2 bg-gray-50 border rounded">Cancel</button>
+              <button onClick={saveThresholdGrid} className="px-3 py-2 bg-sky-600 text-white rounded">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   )
 }

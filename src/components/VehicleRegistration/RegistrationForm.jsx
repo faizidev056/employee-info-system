@@ -17,7 +17,6 @@ const RegistrationForm = () => {
         ownedByType: 'Contractor',
         ownedBy: '',
         joiningDate: '',
-        usedFor: '',
         status: 'Active'
     });
 
@@ -38,6 +37,7 @@ const RegistrationForm = () => {
         'Mechanical sweeper',
         'Drain cleaner',
         'Water bowser',
+        'Container Repair Vehicle',
         'Other'
     ];
 
@@ -54,6 +54,7 @@ const RegistrationForm = () => {
         'Mechanical sweeper': 'MS',
         'Drain cleaner': 'DC',
         'Water bowser': 'WB',
+        'Container Repair Vehicle': 'RV',
         'Other': 'OT'
     };
 
@@ -168,7 +169,6 @@ const RegistrationForm = () => {
             ownedByType: 'Contractor',
             ownedBy: '',
             joiningDate: '',
-            usedFor: '',
             status: 'Active'
         });
         setLastRegistered(null);
@@ -211,9 +211,8 @@ const RegistrationForm = () => {
                 p_joining_date: formData.joiningDate || null,
                 p_status: formData.status || 'Active',
                 p_sr: null,  // RPC will auto-generate SR based on type_code
-                p_vehicle_code_suffix: formData.vehicleCodeSuffix || null,
-                p_used_for: formData.usedFor || null
-            };
+                p_vehicle_code_suffix: formData.vehicleCodeSuffix || null
+            }; 
 
             const { data: rpcData, error: rpcError } = await supabase.rpc('register_vehicle', rpcParams);
             if (rpcError) throw rpcError;
@@ -438,19 +437,7 @@ const RegistrationForm = () => {
                     />
                 </div>
 
-                {/* Used For */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Used For</label>
-                    <input
-                        type="text"
-                        name="usedFor"
-                        value={formData.usedFor}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
-                        placeholder="e.g. Waste Collection, Road Maintenance"
-                    />
-                    <p className="text-xs text-slate-400">Purpose or use case for this vehicle</p>
-                </div>
+
 
                 {/* Submit Button */}
                 <div className="md:col-span-2 lg:col-span-3 flex justify-end pt-4">

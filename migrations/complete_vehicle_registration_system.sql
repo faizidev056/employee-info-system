@@ -26,8 +26,7 @@ CREATE TABLE IF NOT EXISTS vehicle_registrations (
   owned_by_type TEXT DEFAULT 'Contractor',
   owned_by TEXT,
   joining_date DATE,
-  status TEXT DEFAULT 'Active',
-  used_for VARCHAR(100)
+  status TEXT DEFAULT 'Active'
 );
 
 -- Create indexes for fast queries
@@ -42,6 +41,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_registrations_vehicle_code ON vehi
 -- Output: JSON containing inserted row + generated reg_id + vehicle_code
 -- One transaction: reserve sequence + insert all form data + return results
 
+DROP FUNCTION IF EXISTS public.register_vehicle(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER, TEXT, TEXT, DATE, TEXT, TEXT, TEXT, TEXT);
 DROP FUNCTION IF EXISTS public.register_vehicle(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER, TEXT, TEXT, DATE, TEXT, TEXT);
 
 CREATE OR REPLACE FUNCTION public.register_vehicle(
@@ -56,8 +56,7 @@ CREATE OR REPLACE FUNCTION public.register_vehicle(
   p_joining_date DATE DEFAULT NULL,
   p_status TEXT DEFAULT 'Active',
   p_sr TEXT DEFAULT NULL,
-  p_vehicle_code_suffix TEXT DEFAULT NULL,
-  p_used_for TEXT DEFAULT NULL
+  p_vehicle_code_suffix TEXT DEFAULT NULL
 )
 RETURNS JSON
 LANGUAGE plpgsql AS $$
@@ -115,10 +114,10 @@ BEGIN
   -- Step 6: INSERT the ENTIRE form into vehicle_registrations
   INSERT INTO vehicle_registrations (
     sr, reg_id, reg_no, type, type_code, vehicle_code, 
-    make, model, year, owned_by_type, owned_by, joining_date, status, used_for
+    make, model, year, owned_by_type, owned_by, joining_date, status
   ) VALUES (
     generated_sr, regid, p_reg_no, p_type, p_type_code, vehicle_code,
-    p_make, p_model, p_year, p_owned_by_type, p_owned_by, p_joining_date, p_status, p_used_for
+    p_make, p_model, p_year, p_owned_by_type, p_owned_by, p_joining_date, p_status
   )
   RETURNING * INTO inserted_row;
 
@@ -134,7 +133,7 @@ END;
 $$;
 
 -- 4. Grant execute permission to authenticated users
-GRANT EXECUTE ON FUNCTION public.register_vehicle(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER, TEXT, TEXT, DATE, TEXT, TEXT, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.register_vehicle(TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER, TEXT, TEXT, DATE, TEXT, TEXT, TEXT) TO authenticated;
 
 -- 5. Enable RLS and allow all operations (adjust for your auth model)
 ALTER TABLE vehicle_registrations ENABLE ROW LEVEL SECURITY;
