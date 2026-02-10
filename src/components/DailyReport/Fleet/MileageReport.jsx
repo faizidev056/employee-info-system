@@ -170,7 +170,8 @@ export default function MileageReport() {
 
     Object.keys(updates).forEach(k => {
       const u = updates[k]
-      const idx = copy.findIndex(r => r.reg_no === k || r.vehicle_code === k || r.reg_no === (u.vehicle_code || '') || r.vehicle_code === (u.vehicle_code || ''))
+      const norm = (s) => (s || '').toString().trim().toLowerCase()
+      const idx = copy.findIndex(r => norm(r.reg_no) === norm(k) || norm(r.vehicle_code) === norm(k) || (u.vehicle_code && (norm(r.reg_no) === norm(u.vehicle_code) || norm(r.vehicle_code) === norm(u.vehicle_code))))
       if (idx >= 0) {
         // prefer existing reg_no/vehicle_code if they look like codes; otherwise, accept update
         const regNoToSet = isLikelyCode(copy[idx].reg_no) ? copy[idx].reg_no : (isLikelyCode(u.reg_no) ? u.reg_no : copy[idx].reg_no)
@@ -189,17 +190,37 @@ export default function MileageReport() {
         const finalReg = isLikelyCode(u.reg_no) ? u.reg_no : ''
         const finalCode = isLikelyCode(u.vehicle_code) ? u.vehicle_code : (isLikelyCode(u.reg_no) ? u.reg_no : '')
 
-        copy.push({
-          sr: 0,
-          reg_no: finalReg || '',
-          vehicle_code: finalCode || '',
-          vehicle_type: u.vehicle_type || '',
-          used_for: '',
-          mileage: u.mileage || '',
-          ignition_time: u.ignition_time || '',
-          threshold: '',
-          remarks: ''
-        })
+        // If neither reg nor vehicle code are meaningful, try to find a row by vehicle_type with empty codes to update
+        if (!finalReg && !finalCode) {
+          const idxByType = copy.findIndex(r => (r.vehicle_type || '').toString().trim().toLowerCase() === (u.vehicle_type || '').toString().trim().toLowerCase() && !(r.reg_no || r.vehicle_code))
+          if (idxByType >= 0) {
+            copy[idxByType] = {
+              ...copy[idxByType],
+              vehicle_type: u.vehicle_type || copy[idxByType].vehicle_type || '',
+              mileage: u.mileage || copy[idxByType].mileage || '',
+              ignition_time: u.ignition_time || copy[idxByType].ignition_time || ''
+            }
+            return
+          }
+          // otherwise skip adding a row to avoid blank duplicate
+          console.warn('Skipping pending transfer push with no vehicle code:', u)
+          return
+        }
+
+        const alreadyExists = copy.some(r => norm(r.reg_no) === norm(finalReg) || norm(r.vehicle_code) === norm(finalCode) || (finalReg && (norm(r.reg_no) === norm(finalReg) || norm(r.vehicle_code) === norm(finalReg))))
+        if (!alreadyExists) {
+          copy.push({
+            sr: 0,
+            reg_no: finalReg || '',
+            vehicle_code: finalCode || '',
+            vehicle_type: u.vehicle_type || '',
+            used_for: '',
+            mileage: u.mileage || '',
+            ignition_time: u.ignition_time || '',
+            threshold: '',
+            remarks: ''
+          })
+        }
       }
     })
 
@@ -342,11 +363,12 @@ export default function MileageReport() {
         const suggestion = getSuggestionForType(finalVehicleType)
         if (!finalUsedFor && suggestion) finalUsedFor = suggestion
 
+        const norm = (s) => (s || '').toString().trim().toLowerCase()
         const existingIdx = copy.findIndex(r =>
-          (r.reg_no || '').toString() === regNoCandidate ||
-          (r.vehicle_code || '').toString() === regNoCandidate ||
-          (r.reg_no || '').toString() === vehicleCodeCandidate ||
-          (r.vehicle_code || '').toString() === vehicleCodeCandidate
+          norm(r.reg_no) === norm(regNoCandidate) ||
+          norm(r.vehicle_code) === norm(regNoCandidate) ||
+          norm(r.reg_no) === norm(vehicleCodeCandidate) ||
+          norm(r.vehicle_code) === norm(vehicleCodeCandidate)
         )
 
         if (existingIdx >= 0) {
@@ -367,24 +389,103 @@ export default function MileageReport() {
           const looksLikeCode = (v) => v && (/[A-Za-z\-]/.test(v.toString()) || v.toString().length >= 3)
           const finalRegNo = looksLikeCode(regNoCandidate) ? regNoCandidate : (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : '')
           const finalVehicleCode = looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(regNoCandidate) ? regNoCandidate : '')
-          copy.push({
-            sr: 0,
-            reg_no: finalRegNo,
-            vehicle_code: finalVehicleCode,
-            vehicle_type: finalVehicleType,
-            used_for: finalUsedFor,
-            mileage: '',
-            ignition_time: '',
-            threshold: '',
-            remarks: ''
-          })
+
+          // If no meaningful code present, try to update an existing row that has the same vehicle type and empty codes
+          if (!finalRegNo && !finalVehicleCode) {
+            const candidateIdx = copy.findIndex(r => (r.vehicle_type || '').toString().trim().toLowerCase() === (finalVehicleType || '').toString().trim().toLowerCase() && !(r.reg_no || r.vehicle_code))
+            if (candidateIdx >= 0) {
+              copy[candidateIdx] = {
+                ...copy[candidateIdx],
+                vehicle_type: finalVehicleType || copy[candidateIdx].vehicle_type || '',
+                used_for: finalUsedFor || copy[candidateIdx].used_for || ''
+              }
+            } else {
+              // No code and no matching row by vehicle_type — skip creating a new row to avoid blank duplicates
+              console.warn('Skipping Used For save for row without vehicle code:', g)
+            }
+            return
+          }
+
+          // If there's an existing row with the same vehicle_type but empty codes, update it instead of pushing
+          const candidateIdxByType = copy.findIndex(r => (r.vehicle_type || '').toString().trim().toLowerCase() === (finalVehicleType || '').toString().trim().toLowerCase() && !(r.reg_no || r.vehicle_code))
+          if (candidateIdxByType >= 0) {
+            copy[candidateIdxByType] = {
+              ...copy[candidateIdxByType],
+              reg_no: finalRegNo || copy[candidateIdxByType].reg_no || '',
+              vehicle_code: finalVehicleCode || copy[candidateIdxByType].vehicle_code || '',
+              vehicle_type: finalVehicleType || copy[candidateIdxByType].vehicle_type || '',
+              used_for: finalUsedFor || copy[candidateIdxByType].used_for || ''
+            }
+            return
+          }
+
+          // avoid pushing duplicates if a similar row already exists (case/whitespace-insensitive)
+          const alreadyExists = copy.some(r => norm(r.reg_no) === norm(finalRegNo) || norm(r.vehicle_code) === norm(finalVehicleCode) || (finalRegNo && (norm(r.reg_no) === norm(finalRegNo) || norm(r.vehicle_code) === norm(finalRegNo))))
+          if (!alreadyExists) {
+            copy.push({
+              sr: 0,
+              reg_no: finalRegNo,
+              vehicle_code: finalVehicleCode,
+              vehicle_type: finalVehicleType,
+              used_for: finalUsedFor,
+              mileage: '',
+              ignition_time: '',
+              threshold: '',
+              remarks: ''
+            })
+          }
         }
       })
 
       // After used_for is committed, merge pending daily reporting mileage/IG and any vehicle type hints
       const merged = mergePendingToRows(copy)
 
-      return merged.map((r, i) => ({ ...r, sr: i + 1 }))
+      // Deduplicate and merge rows by reg_no / vehicle_code (case-insensitive). For rows without codes, try to reconcile by vehicle_type.
+      const norm = (s) => (s || '').toString().trim().toLowerCase()
+      const mergeRow = (a, b) => ({
+        reg_no: a.reg_no || b.reg_no || '',
+        vehicle_code: a.vehicle_code || b.vehicle_code || '',
+        vehicle_type: a.vehicle_type || b.vehicle_type || '',
+        used_for: a.used_for || b.used_for || '',
+        mileage: a.mileage || b.mileage || '',
+        ignition_time: a.ignition_time || b.ignition_time || '',
+        threshold: a.threshold || b.threshold || '',
+        remarks: a.remarks || b.remarks || ''
+      })
+
+      const map = new Map()
+      const orphans = []
+
+      merged.forEach(r => {
+        const codeKey = norm(r.reg_no) || norm(r.vehicle_code)
+        if (codeKey) {
+          if (!map.has(codeKey)) map.set(codeKey, { ...r })
+          else map.set(codeKey, mergeRow(map.get(codeKey), r))
+          return
+        }
+
+        // no code: try to find a match by vehicle_type in map
+        const vtype = norm(r.vehicle_type)
+        let foundKey = null
+        for (const [k, v] of map.entries()) {
+          if (norm(v.vehicle_type) === vtype) { foundKey = k; break }
+        }
+        if (foundKey) {
+          map.set(foundKey, mergeRow(map.get(foundKey), r))
+          return
+        }
+
+        // try merge with orphan of same vehicle_type
+        const idx = orphans.findIndex(o => norm(o.vehicle_type) === vtype)
+        if (idx >= 0) {
+          orphans[idx] = mergeRow(orphans[idx], r)
+        } else {
+          orphans.push({ ...r })
+        }
+      })
+
+      const deduped = [...map.values(), ...orphans].map((r, i) => ({ ...r, sr: i + 1 }))
+      return deduped
     })
 
     // Clear staging (keep transfer in localStorage for testing; explicit discard will clear it)
