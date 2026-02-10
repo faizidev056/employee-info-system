@@ -19,6 +19,7 @@ export default function MileageReport() {
   const [saveResult, setSaveResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [pendingTransfer, setPendingTransfer] = useState(null)
+  const [pendingVehicleRecords, setPendingVehicleRecords] = useState([])
   const [transferApplied, setTransferApplied] = useState(false)
   const [showTransferReview, setShowTransferReview] = useState(false)
 
@@ -27,27 +28,61 @@ export default function MileageReport() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
 
-  // Load today's mileage data on mount
+  // Load saved data from localStorage on mount (persist across refreshes),
+  // otherwise load today's data from the server. Also check for any transfers.
   useEffect(() => {
-    loadMileageData()
+    const saved = localStorage.getItem('mileageReportData')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          setRows(parsed.map((r, i) => ({ ...r, sr: i + 1 })))
+          console.log('✅ Loaded mileageReportData from localStorage')
+        } else {
+          // fallback to server load
+          loadMileageData()
+        }
+      } catch (e) {
+        console.warn('Failed to parse mileageReportData, loading from server', e)
+        loadMileageData()
+      }
+    } else {
+      loadMileageData()
+    }
+
     checkForTransfer()
   }, [])
+
+  // Save rows to localStorage for debugging/inspection
+  useEffect(() => {
+    if (rows.length > 0) {
+      localStorage.setItem('mileageReportData', JSON.stringify(rows))
+      console.log('✅ Mileage Report data saved to localStorage:', rows)
+    }
+  }, [rows])
 
   const checkForTransfer = () => {
     const transferData = localStorage.getItem('mileageReportTransfer')
     if (transferData && !transferApplied) {
       try {
         const parsed = JSON.parse(transferData)
-        setPendingTransfer(parsed)
-        // If parent signalled to open review modal, do it and clear the signal
-        try {
-          const flag = localStorage.getItem('openMileageReview')
-          if (flag) {
-            setShowTransferReview(true)
-            localStorage.removeItem('openMileageReview')
-          }
-        } catch (e) {
-          /* ignore */
+        const items = Array.isArray(parsed) ? parsed : [parsed]
+        
+        // Separate transfers by source
+        const dailyReporting = items.filter(i => i.source === 'daily_reporting' || !i.source)
+        const vehicleRecords = items.filter(i => i.source === 'vehicle_records')
+        
+        // Set pending data for review
+        if (dailyReporting.length > 0) {
+          setPendingTransfer(dailyReporting)
+        }
+        if (vehicleRecords.length > 0) {
+          setPendingVehicleRecords(vehicleRecords)
+        }
+        
+        // Show review modal if data exists
+        if (dailyReporting.length > 0 || vehicleRecords.length > 0) {
+          setShowTransferReview(true)
         }
       } catch (e) {
         console.error('Error parsing transfer data:', e)
@@ -136,51 +171,101 @@ export default function MileageReport() {
   }
 
   const applyTransferData = () => {
-    if (!pendingTransfer || pendingTransfer.length === 0) return
-    // Merge transfers into existing rows by reg_no; update vehicle_type/used_for/mileage/ignition_time
-    setRows(prevRows => {
-      const copy = [...prevRows]
-      const byReg = {}
-      copy.forEach((r, i) => { if (r.reg_no) byReg[r.reg_no] = { row: r, idx: i } })
+    if ((!pendingTransfer || pendingTransfer.length === 0) && pendingVehicleRecords.length === 0) return
 
-      pendingTransfer.forEach(item => {
-        const reg = item.reg_no || ''
-        if (!reg) return
-        if (byReg[reg]) {
-          const entry = byReg[reg]
-          const updated = {
-            ...entry.row,
-            vehicle_type: item.vehicle_type || entry.row.vehicle_type || '',
-            used_for: item.used_for || entry.row.used_for || '',
-            mileage: item.mileage !== undefined ? (item.mileage || '') : entry.row.mileage,
-            ignition_time: item.ignition_time !== undefined ? (item.ignition_time || '') : entry.row.ignition_time
+    console.log('🔀 Applying transfers - Before:', rows)
+    console.log('📊 Daily Reporting data:', pendingTransfer)
+    console.log('🚗 Vehicle Records data:', pendingVehicleRecords)
+
+    setRows(prevRows => {
+      let copy = [...prevRows]
+      
+      // Build a consolidated map of all updates keyed by reg_no
+      const updates = {}  // key = reg_no, value = merged data from both sources
+      
+      // Process Daily Reporting transfers
+      if (pendingTransfer && pendingTransfer.length > 0) {
+        pendingTransfer.forEach(item => {
+          const regNo = item.vehicle_code || item.reg_no || ''
+          if (!regNo) return
+          
+          updates[regNo] = updates[regNo] || { reg_no: regNo }
+          updates[regNo].vehicle_code = item.vehicle_code || updates[regNo].vehicle_code || regNo
+          if (item.mileage !== undefined) updates[regNo].mileage = item.mileage || ''
+          if (item.ignition_time !== undefined) updates[regNo].ignition_time = item.ignition_time || ''
+          console.log(`  📊 Queued Daily Reporting for reg_no: ${regNo}`)
+        })
+      }
+      
+      // Process Vehicle Records transfers - merge into same keys
+      if (pendingVehicleRecords.length > 0) {
+        pendingVehicleRecords.forEach(item => {
+          const regNo = item.reg_no || item.vehicle_code || ''
+          if (!regNo) return
+          
+          updates[regNo] = updates[regNo] || { reg_no: regNo }
+          updates[regNo].vehicle_code = item.vehicle_code || updates[regNo].vehicle_code || regNo
+          updates[regNo].vehicle_type = item.vehicle_type || updates[regNo].vehicle_type || ''
+          updates[regNo].used_for = item.used_for || updates[regNo].used_for || ''
+          console.log(`  🚗 Queued Vehicle Records for reg_no: ${regNo}, vehicle_code: ${item.vehicle_code}`)
+        })
+      }
+      
+      // Now apply all updates to existing rows or create new ones
+      Object.keys(updates).forEach(regNo => {
+        const update = updates[regNo]
+        
+        // Try to find existing row by reg_no or vehicle_code
+        const existingIdx = copy.findIndex(r => 
+          r.reg_no === regNo || 
+          r.vehicle_code === regNo ||
+          r.reg_no === update.vehicle_code ||
+          r.vehicle_code === update.vehicle_code
+        )
+        
+        if (existingIdx >= 0) {
+          // Update existing row
+          copy[existingIdx] = {
+            ...copy[existingIdx],
+            reg_no: update.reg_no || copy[existingIdx].reg_no || '',
+            vehicle_code: update.vehicle_code || copy[existingIdx].vehicle_code || '',
+            vehicle_type: update.vehicle_type || copy[existingIdx].vehicle_type || '',
+            used_for: update.used_for || copy[existingIdx].used_for || '',
+            mileage: update.mileage !== undefined ? update.mileage : copy[existingIdx].mileage,
+            ignition_time: update.ignition_time !== undefined ? update.ignition_time : copy[existingIdx].ignition_time
           }
-          copy[entry.idx] = updated
+          console.log(`  ✅ Merged into existing row: reg_no=${regNo}, vehicle_code=${update.vehicle_code}`)
         } else {
-          copy.unshift({
+          // Create new row
+          copy.push({
             sr: 0,
-            reg_no: reg,
-            vehicle_type: item.vehicle_type || '',
-            used_for: item.used_for || '',
-            mileage: item.mileage || '',
-            ignition_time: item.ignition_time || '',
+            reg_no: update.reg_no || '',
+            vehicle_code: update.vehicle_code || '',
+            vehicle_type: update.vehicle_type || '',
+            used_for: update.used_for || '',
+            mileage: update.mileage || '',
+            ignition_time: update.ignition_time || '',
             threshold: '',
             remarks: ''
           })
+          console.log(`  ➕ Created new row: reg_no=${regNo}, vehicle_code=${update.vehicle_code}`)
         }
       })
 
       return copy.map((r, i) => ({ ...r, sr: i + 1 }))
     })
 
+    console.log('🔀 Apply complete - check localStorage["mileageReportData"] for final result')
     localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
+    setPendingVehicleRecords([])
     setTransferApplied(true)
   }
 
   const discardTransferData = () => {
     localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
+    setPendingVehicleRecords([])
     setTransferApplied(true)
   }
 
@@ -442,26 +527,29 @@ export default function MileageReport() {
   return (
     <>
     <div className="p-4">
-      {/* Pending Transfer Notification */}
-      {pendingTransfer && pendingTransfer.length > 0 && (
-        <div className="mb-4 p-4 bg-amber-50 border border-amber-300 rounded-md">
+      {/* Pending Transfer Notification - Dual Source */}
+      {(pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-md">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="font-semibold text-amber-900 text-sm">📊 Data Transfer Available</h3>
-              <p className="text-sm text-amber-800 mt-1">
-                {pendingTransfer.length} row(s) from Daily Report ready to apply (Mileage, IG Time)
-              </p>
+              <h3 className="font-semibold text-blue-900 text-sm">⚡ Data Transfer Ready (Dual Source)</h3>
+              {pendingTransfer && pendingTransfer.length > 0 && (
+                <p className="text-sm text-blue-800 mt-1">📊 Daily Reporting: {pendingTransfer.length} row(s) with Mileage & IG Time</p>
+              )}
+              {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
+                <p className="text-sm text-blue-800">🚗 Vehicle Records: {pendingVehicleRecords.length} row(s) with Type & Usage</p>
+              )}
             </div>
             <div className="flex gap-2">
                 <button
                   onClick={() => setShowTransferReview(true)}
-                  className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700 font-medium"
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 font-medium"
                 >
-                  Accept Transfer
+                  Review & Apply
                 </button>
               <button
                 onClick={discardTransferData}
-                className="px-4 py-2 rounded-md bg-amber-100 text-amber-800 text-sm hover:bg-amber-200"
+                className="px-4 py-2 rounded-md bg-blue-100 text-blue-800 text-sm hover:bg-blue-200"
               >
                 Dismiss
               </button>
@@ -703,45 +791,83 @@ export default function MileageReport() {
         )}
       </div>
     </div>
-      {/* Transfer Review Modal */}
-      {showTransferReview && pendingTransfer && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-11/12 md:w-2/3 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Review Transfer</h3>
+      {/* Transfer Review Modal - Dual Source */}
+      {showTransferReview && (pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-11/12 md:w-4/5 p-6 my-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold">Review Data Transfer (Dual Source)</h3>
               <button onClick={() => setShowTransferReview(false)} className="text-slate-500">Close</button>
             </div>
 
-            <div className="overflow-x-auto mb-4">
-              <table className="min-w-full text-sm">
-                <thead className="text-left text-gray-600">
-                  <tr>
-                    <th className="px-2 py-1">#</th>
-                    <th className="px-2 py-1">Vehicle Code</th>
-                    <th className="px-2 py-1">Vehicle Type</th>
-                    <th className="px-2 py-1">Used For</th>
-                    <th className="px-2 py-1">Mileage</th>
-                    <th className="px-2 py-1">IG Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingTransfer.map((it, i) => (
-                    <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
-                      <td className="px-2 py-1">{i + 1}</td>
-                      <td className="px-2 py-1">{it.reg_no}</td>
-                      <td className="px-2 py-1">{it.vehicle_type || ''}</td>
-                      <td className="px-2 py-1">{it.used_for || ''}</td>
-                      <td className="px-2 py-1">{it.mileage || ''}</td>
-                      <td className="px-2 py-1">{it.ignition_time || ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Daily Reporting Data */}
+            {pendingTransfer && pendingTransfer.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-blue-700 mb-3 pb-2 border-b border-blue-200">📊 Daily Reporting Data (Mileage & IG Time)</h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="text-left text-gray-600 bg-blue-50">
+                      <tr>
+                        <th className="px-2 py-2">#</th>
+                        <th className="px-2 py-2">Vehicle Code</th>
+                        <th className="px-2 py-2">Mileage</th>
+                        <th className="px-2 py-2">IG Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingTransfer.map((it, i) => (
+                        <tr key={i} className={`${i % 2 ? 'bg-blue-50' : ''}`}>
+                          <td className="px-2 py-1">{i + 1}</td>
+                          <td className="px-2 py-1 font-medium">{it.vehicle_code || it.reg_no || '—'}</td>
+                          <td className="px-2 py-1">{it.mileage || '—'}</td>
+                          <td className="px-2 py-1">{it.ignition_time || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Vehicle Records Data */}
+            {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-semibold text-purple-700 mb-3 pb-2 border-b border-purple-200">🚗 Vehicle Records Data (Type & Usage)</h4>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="text-left text-gray-600 bg-purple-50">
+                      <tr>
+                        <th className="px-2 py-2">#</th>
+                        <th className="px-2 py-2">Reg No</th>
+                        <th className="px-2 py-2">Vehicle Code</th>
+                        <th className="px-2 py-2">Vehicle Type</th>
+                        <th className="px-2 py-2">Used For</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingVehicleRecords.map((it, i) => (
+                        <tr key={i} className={`${i % 2 ? 'bg-purple-50' : ''}`}>
+                          <td className="px-2 py-1">{i + 1}</td>
+                          <td className="px-2 py-1 font-medium">{it.reg_no || '—'}</td>
+                          <td className="px-2 py-1">{it.vehicle_code || '—'}</td>
+                          <td className="px-2 py-1">{it.vehicle_type || '—'}</td>
+                          <td className="px-2 py-1">{it.used_for || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Info Note */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 mb-4">
+              <strong>ℹ️ How Reconciliation Works:</strong> Records are merged by Vehicle Code. Daily Reporting creates rows with Mileage & IG Time. Vehicle Records enriches those rows with Type & Usage. If Vehicle Records arrives first, it's stored temporarily until matching Daily Reporting data arrives.
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowTransferReview(false); discardTransferData() }} className="px-3 py-1 rounded bg-gray-50 border text-sm">Dismiss</button>
-              <button onClick={() => { applyTransferData(); setShowTransferReview(false) }} className="px-3 py-1 rounded bg-purple-600 text-white text-sm">Accept & Apply</button>
+              <button onClick={() => { setShowTransferReview(false); setPendingTransfer(null); setPendingVehicleRecords([] ) }} className="px-3 py-2 rounded bg-gray-50 border text-sm">Dismiss</button>
+              <button onClick={() => { applyTransferData(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Accept & Apply</button>
             </div>
           </div>
         </div>

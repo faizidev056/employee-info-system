@@ -28,31 +28,73 @@ export default function VehicleRecords() {
   }
 
   const clearSelection = () => setSelectedIds(new Set())
-
-  const transferSelectedToMileage = () => {
-    const selected = vehicles.filter(v => selectedIds.has(v.id))
-    if (!selected || selected.length === 0) {
+  const transferSelectedToMileage = async () => {
+    const ids = Array.from(selectedIds)
+    if (!ids || ids.length === 0) {
       setError('Select at least one vehicle to transfer')
       setTimeout(() => setError(''), 2000)
       return
     }
 
-    const transferData = selected.map(v => ({
-      reg_no: v.reg_no || '',
-      vehicle_type: v.type || v.vehicle_type || '',
-      used_for: v.used_for || ''
-    })).filter(it => it.reg_no)
+    const resolveField = (obj, keys) => {
+      for (const k of keys) {
+        if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]
+      }
+      return ''
+    }
 
-    if (transferData.length === 0) {
-      setError('Selected vehicles must have Reg No')
-      setTimeout(() => setError(''), 2000)
+    // Build transfer data immediately from local state (instant feedback)
+    const localTransferData = vehicles
+      .filter(v => ids.includes(v.id))
+      .map(v => ({
+        vehicle_code: resolveField(v, ['vehicle_code']) || resolveField(v, ['reg_no']),  // vehicle_code if available, else reg_no
+        reg_no: resolveField(v, ['reg_no']),  // Always include reg_no as matching key since it's always populated
+        vehicle_type: resolveField(v, ['type', 'vehicle_type']),
+        used_for: resolveField(v, ['used_for', 'usedFor', 'purpose']),
+        source: 'vehicle_records'
+      }))
+
+    if (localTransferData.length === 0) {
+      setError('No transferable data found for selected vehicles')
+      setTimeout(() => setError(''), 2500)
       return
     }
 
-    localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
-    setError(`Queued ${transferData.length} vehicle(s) for transfer`) 
+    // Show immediate success notification
+    localStorage.setItem('mileageReportTransfer', JSON.stringify(localTransferData))
+    console.log('Transfer data to be sent:', localTransferData)
+    setError(`✅ Queued ${localTransferData.length} vehicle(s) for transfer`)
     setTimeout(() => setError(''), 2500)
     clearSelection()
+
+    // Optionally enrich with Supabase data in background (non-blocking)
+    try {
+      const resp = await supabase
+        .from('vehicle_registrations')
+        .select('id, type, used_for')
+        .in('id', ids)
+      
+      if (resp.error) {
+        console.warn('Background Supabase enrichment failed:', resp.error)
+      } else if (resp.data && resp.data.length) {
+        // Merge enriched fields with the earlier localTransferData so we keep vehicle_code and source
+        const enrichedData = resp.data.map(d => {
+          const local = vehicles.find(v => v.id === d.id) || {}
+          return {
+            vehicle_code: d.vehicle_code || local.vehicle_code || local.reg_no || '',
+            reg_no: local.reg_no || d.reg_no || '',
+            vehicle_type: resolveField(d, ['type', 'vehicle_type']) || local.type || local.vehicle_type || '',
+            used_for: resolveField(d, ['used_for', 'usedFor', 'purpose']) || local.used_for || local.usedFor || '',
+            source: 'vehicle_records'
+          }
+        })
+        // Replace the queued transfer with the enriched, but keep structure intact
+        localStorage.setItem('mileageReportTransfer', JSON.stringify(enrichedData))
+        console.log('Enriched transfer data:', enrichedData)
+      }
+    } catch (err) {
+      console.warn('Background enrichment error (non-blocking):', err)
+    }
   }
 
   useEffect(() => { loadVehicles() }, [])

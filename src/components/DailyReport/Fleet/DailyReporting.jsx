@@ -332,14 +332,15 @@ export default function DailyReporting() {
 
     const selectedRows = Array.from(selectedRowIndices).map(idx => rows[idx]).filter(r => r)
     const transferData = selectedRows.map(row => ({
-      reg_no: row.reg_no,
+      vehicle_code: row.reg_no,
       mileage: row.mileage,
-      ignition_time: row.ignition_time
+      ignition_time: row.ignition_time,
+      source: 'daily_reporting'
     }))
 
     localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
     setSelectedRowIndices(new Set())
-    setTransferMessage('✅ Vehicle Code, Mileage & IG Time transferred to Mileage Report! Switch tabs to apply.')
+    setTransferMessage('✅ Mileage & IG Time transferred! Switch to Mileage Report to apply.')
     setTimeout(() => setTransferMessage(''), 4000)
   }
 
