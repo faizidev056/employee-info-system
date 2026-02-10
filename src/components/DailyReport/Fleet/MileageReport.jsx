@@ -28,68 +28,463 @@ export default function MileageReport() {
   const [usedForGrid, setUsedForGrid] = useState([])
   const [showThresholdModal, setShowThresholdModal] = useState(false)
   const [thresholdGrid, setThresholdGrid] = useState([])
+  const [hasProposedThreshold, setHasProposedThreshold] = useState(false)
+  const [proposedThresholdGrid, setProposedThresholdGrid] = useState([])
+  // Staging for transfers: Used For proposals (accepted first) — must pass through modal before writing to main table
+  const [hasProposedUsedFor, setHasProposedUsedFor] = useState(false)
+  const [proposedUsedForGrid, setProposedUsedForGrid] = useState([])
+
+  // Auto-detection map for Used For suggestions (keys are lowercase)
+  const USED_FOR_SUGGESTIONS = {
+    'compactor': 'Container-Based Collection',
+    'arm roller': 'Container-Based Collection',
+    'road washer': 'Road Washing',
+    'mechanical sweeper': 'Mechanical Sweeping',
+    'loader': 'Loader Operations',
+    'front end loader': 'Loader Operations',
+    'front-end loader': 'Loader Operations',
+    'loader rickshaw': 'Door-to-Door',
+    'mini tipper': 'Commercial Area',
+    'tractor trolley': 'TCP',
+    'dumper truck': 'TCP',
+    'front-end blade': 'TCP',
+    'container repair vehicle': 'Container Repair'
+  }
+
+  // For types where there are multiple valid 'Used For' options, list them here
+  const USED_FOR_OPTIONS = {
+    'loader rickshaws': ['Door-to-Door', 'Commercial Area'],
+    'tractor trolley': ['TCP', 'Bulk Waste'],
+    'dumper truck': ['TCP', 'Bulk Waste'],
+    'front end loader': ['TCP', 'Bulk Waste'],
+    'front end blade': ['TCP', 'Container Repair']
+  }
+
+  const getSuggestionForType = (t) => {
+    if (!t) return null
+    const key = t.toString().trim().toLowerCase()
+    return USED_FOR_SUGGESTIONS[key] || null
+  }
+
+  const getOptionsForType = (t) => {
+    if (!t) return null
+    const key = t.toString().trim().toLowerCase()
+    return USED_FOR_OPTIONS[key] || null
+  }
+
+  // Threshold defaults and units (string keys are lowercased vehicle_type values)
+  const THRESHOLD_DEFAULTS = {
+    'loader rickshaws': { value: '12', unit: '' },
+    'compactor': { value: '20', unit: '' },
+    'mini tripper': { value: '10', unit: '' },
+    'mechanical washer': { value: '10', unit: '' },
+    'mechanical sweeper': { value: '10', unit: '' },
+    'tractor trolley': { value: '20', unit: '' },
+    'dumper truck': { value: '35', unit: '' },
+    'arm roller': { value: '25', unit: '' },
+    'front end blade': { value: '3', unit: 'hrs' },
+    'front end loader': { value: '3', unit: 'hrs' }
+  }
+
+  const getThresholdForType = (t) => {
+    if (!t) return null
+    const key = t.toString().trim().toLowerCase()
+    return THRESHOLD_DEFAULTS[key] || null
+  }
+
+  // Stage proposed 'Used For' rows from incoming vehicle records transfer (do not write to main table yet)
+  const stageProposedUsedFor = (vehicleRecords) => {
+    if (!vehicleRecords || vehicleRecords.length === 0) return []
+    const staged = []
+    const seen = new Set()
+    vehicleRecords.forEach(item => {
+      const regNo = (item.reg_no || item.vehicle_code || '').toString()
+      if (!regNo || seen.has(regNo)) return
+      seen.add(regNo)
+      const vehicleType = (item.vehicle_type || '').toString()
+      const suggestion = getSuggestionForType(vehicleType)
+      const options = getOptionsForType(vehicleType)
+      let candidate = (item.used_for || '').toString().trim()
+      if (!candidate && suggestion) candidate = suggestion
+      staged.push({
+        reg_no: regNo,
+        vehicle_code: item.vehicle_code || regNo,
+        vehicle_type: vehicleType,
+        used_for: candidate,
+        options,
+        used_for_source: candidate ? 'proposed' : 'none'
+      })
+    })
+    return staged
+  }
+
+  const stageProposedThresholds = (vehicleRecords) => {
+    if (!vehicleRecords || vehicleRecords.length === 0) return []
+    const staged = []
+    const seen = new Set()
+    vehicleRecords.forEach(item => {
+      const regNo = (item.reg_no || item.vehicle_code || '').toString()
+      if (!regNo || seen.has(regNo)) return
+      seen.add(regNo)
+      const vehicleType = (item.vehicle_type || '').toString()
+      const def = getThresholdForType(vehicleType)
+      if (def) {
+        staged.push({ reg_no: regNo, vehicle_code: item.vehicle_code || regNo, vehicle_type: vehicleType, threshold: def.value, unit: def.unit || '' })
+      }
+    })
+    return staged
+  }
+
+  // Merge pending transfers (daily reporting mileage / ignition time) into provided rows array.
+  // This function only applies mileage/ignition data (from pendingTransfer) and vehicle_type when present
+  const mergePendingToRows = (baseRows) => {
+    const copy = [...baseRows]
+    const updates = {}
+
+    if (pendingTransfer && pendingTransfer.length > 0) {
+      pendingTransfer.forEach(item => {
+        const key = (item.vehicle_code || item.reg_no || '').toString()
+        if (!key) return
+        updates[key] = updates[key] || { reg_no: key }
+        if (item.mileage !== undefined) updates[key].mileage = item.mileage || ''
+        if (item.ignition_time !== undefined) updates[key].ignition_time = item.ignition_time || ''
+      })
+    }
+
+    if (pendingVehicleRecords && pendingVehicleRecords.length > 0) {
+      pendingVehicleRecords.forEach(item => {
+        const key = (item.reg_no || item.vehicle_code || '').toString()
+        if (!key) return
+        updates[key] = updates[key] || { reg_no: key }
+        if (item.vehicle_type) updates[key].vehicle_type = item.vehicle_type
+        // Do NOT apply used_for here — must come through Used For modal
+      })
+    }
+
+    Object.keys(updates).forEach(k => {
+      const u = updates[k]
+      const idx = copy.findIndex(r => r.reg_no === k || r.vehicle_code === k || r.reg_no === (u.vehicle_code || '') || r.vehicle_code === (u.vehicle_code || ''))
+      if (idx >= 0) {
+        copy[idx] = {
+          ...copy[idx],
+          vehicle_type: u.vehicle_type || copy[idx].vehicle_type || '',
+          mileage: u.mileage !== undefined ? u.mileage : copy[idx].mileage,
+          ignition_time: u.ignition_time !== undefined ? u.ignition_time : copy[idx].ignition_time
+        }
+      } else {
+        copy.push({
+          sr: 0,
+          reg_no: u.reg_no || '',
+          vehicle_code: u.vehicle_code || u.reg_no || '',
+          vehicle_type: u.vehicle_type || '',
+          used_for: '',
+          mileage: u.mileage || '',
+          ignition_time: u.ignition_time || '',
+          threshold: '',
+          remarks: ''
+        })
+      }
+    })
+
+    return copy.map((r, i) => ({ ...r, sr: i + 1 }))
+  }
 
   const openUsedForModal = () => {
     setActiveTab('used_for')
-    const grid = (rows || []).map((r, i) => ({
-      sr: r.sr || i + 1,
-      vehicle_code: r.vehicle_code || r.reg_no || '',
-      vehicle_type: r.vehicle_type || '',
-      used_for: r.used_for || ''
-    }))
+    const grid = []
+    const seen = new Set()
+
+    // Priority 1: use staged proposals from transfer
+    if (hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0) {
+      proposedUsedForGrid.forEach((p, idx) => {
+        const vehicleType = (p.vehicle_type || '').toString()
+        const suggestion = getSuggestionForType(vehicleType)
+        const options = p.options || getOptionsForType(vehicleType) || (suggestion ? [suggestion] : null)
+        const val = (p.used_for || '').toString().trim()
+        const valid = val.length <= 100
+        const optionValid = options && options.length > 0 ? options.indexOf(val) !== -1 : true
+        const vehicleCode = p.vehicle_code || p.reg_no || ''
+        grid.push({ sr: p.sr || idx + 1, reg_no: p.reg_no || vehicleCode, vehicle_code: vehicleCode, vehicle_type: vehicleType, used_for: val, used_for_source: 'proposed', options, used_for_valid: valid, used_for_option_valid: optionValid })
+        if (vehicleCode) seen.add(vehicleCode)
+      })
+    }
+
+    // Then include existing rows that were not in proposals
+    ;(rows || []).forEach((r, i) => {
+      const vehicleCode = (r.vehicle_code || r.reg_no || '').toString()
+      if (vehicleCode && seen.has(vehicleCode)) return
+      const vehicleType = (r.vehicle_type || '').toString()
+      const suggestion = getSuggestionForType(vehicleType)
+      const options = getOptionsForType(vehicleType) || (suggestion ? [suggestion] : null)
+      const val = (r.used_for || '').toString().trim()
+      const source = val ? 'user' : (suggestion ? 'suggested' : 'none')
+      const displayVal = val || (suggestion || (options && options.length ? options[0] : '')) || ''
+      const valid = displayVal.length <= 100
+      const optionValid = options && options.length > 0 ? options.indexOf(displayVal) !== -1 : true
+      grid.push({ sr: r.sr || i + 1, reg_no: r.reg_no || vehicleCode, vehicle_code: vehicleCode, vehicle_type: vehicleType, used_for: displayVal, used_for_source: source, options, used_for_valid: valid, used_for_option_valid: optionValid })
+      if (vehicleCode) seen.add(vehicleCode)
+    })
+
     setUsedForGrid(grid)
+    setUsedForSaveError('')
     setShowUsedForModal(true)
   }
 
   const updateUsedForCell = (idx, field, value) => {
     setUsedForGrid(prev => {
       const copy = prev.map(r => ({ ...r }))
-      if (copy[idx]) copy[idx][field] = value
+      if (!copy[idx]) return copy
+
+      if (field === 'used_for') {
+        const trimmed = value ? value.toString() : ''
+        // If options exist and there are multiple options, ensure the value is one of them
+        if (copy[idx].options && copy[idx].options.length > 1) {
+          const allowed = copy[idx].options.indexOf(trimmed) !== -1
+          // only set if allowed; otherwise ignore (prevent manual typing)
+          if (!allowed) {
+            // keep previous value unchanged
+            return copy
+          }
+          copy[idx].used_for = trimmed
+          copy[idx].used_for_source = 'user'
+          copy[idx].used_for_valid = trimmed.length <= 100
+          copy[idx].used_for_option_valid = true
+          return copy
+        }
+
+        copy[idx].used_for = trimmed
+        copy[idx].used_for_source = trimmed && trimmed.trim() ? 'user' : 'none'
+        copy[idx].used_for_valid = trimmed.length <= 100
+        copy[idx].used_for_option_valid = true
+        return copy
+      }
+
+      if (field === 'vehicle_type') {
+        copy[idx].vehicle_type = value
+        const suggestion = getSuggestionForType(value)
+        const options = getOptionsForType(value) || (suggestion ? [suggestion] : null)
+        copy[idx].options = options
+        // Only update used_for when it was previously a suggested value (not when user manually edited it)
+        if (copy[idx].used_for_source !== 'user') {
+          if (suggestion) {
+            copy[idx].used_for = suggestion
+            copy[idx].used_for_source = 'suggested'
+            copy[idx].used_for_valid = suggestion.length <= 100
+            copy[idx].used_for_option_valid = true
+          } else if (options && options.length > 0) {
+            const defaultVal = options[0]
+            copy[idx].used_for = defaultVal
+            copy[idx].used_for_source = 'suggested'
+            copy[idx].used_for_valid = defaultVal.length <= 100
+            copy[idx].used_for_option_valid = options.indexOf(defaultVal) !== -1
+          } else {
+            copy[idx].used_for = ''
+            copy[idx].used_for_source = 'none'
+            copy[idx].used_for_valid = true
+            copy[idx].used_for_option_valid = true
+          }
+        }
+        return copy
+      }
+
+      copy[idx][field] = value
       return copy
     })
   }
 
+  const [usedForSaveError, setUsedForSaveError] = useState('')
+
   const saveUsedForGrid = () => {
+    // validation: max 100 chars and option constraints
+    for (let i = 0; i < usedForGrid.length; i++) {
+      const r = usedForGrid[i]
+      const val = (r?.used_for || '').toString().trim()
+      if (val.length > 100) {
+        setUsedForSaveError(`Row ${i + 1}: 'Used For' exceeds 100 characters.`)
+        return
+      }
+      if (r?.options && r.options.length > 1) {
+        // enforce selection from options
+        if (!val || r.options.indexOf(val) === -1) {
+          setUsedForSaveError(`Row ${i + 1}: 'Used For' must be one of the allowed options.`)
+          return
+        }
+      }
+    }
+
     setRows(prev => {
-      const copy = prev.map((r, i) => {
-        const g = usedForGrid[i]
-        if (!g) return r
-        return { ...r, vehicle_type: g.vehicle_type, used_for: g.used_for }
+      const copy = [...prev]
+
+      usedForGrid.forEach(g => {
+        if (!g) return
+        const regNo = (g.reg_no || g.vehicle_code || '').toString()
+        const vehicleCode = g.vehicle_code || g.reg_no || ''
+        const finalVehicleType = (g.vehicle_type || '').toString().trim()
+        let finalUsedFor = (g.used_for || '').toString().trim()
+        const suggestion = getSuggestionForType(finalVehicleType)
+        if (!finalUsedFor && suggestion) finalUsedFor = suggestion
+
+        const existingIdx = copy.findIndex(r =>
+          r.reg_no === regNo ||
+          r.vehicle_code === regNo ||
+          r.reg_no === vehicleCode ||
+          r.vehicle_code === vehicleCode
+        )
+
+        if (existingIdx >= 0) {
+          copy[existingIdx] = {
+            ...copy[existingIdx],
+            reg_no: regNo || copy[existingIdx].reg_no || '',
+            vehicle_code: vehicleCode || copy[existingIdx].vehicle_code || '',
+            vehicle_type: finalVehicleType || copy[existingIdx].vehicle_type || '',
+            used_for: finalUsedFor || copy[existingIdx].used_for || ''
+          }
+        } else {
+          copy.push({
+            sr: 0,
+            reg_no: regNo,
+            vehicle_code: vehicleCode,
+            vehicle_type: finalVehicleType,
+            used_for: finalUsedFor,
+            mileage: '',
+            ignition_time: '',
+            threshold: '',
+            remarks: ''
+          })
+        }
       })
-      return copy.map((r, i) => ({ ...r, sr: i + 1 }))
+
+      // After used_for is committed, merge pending daily reporting mileage/IG and any vehicle type hints
+      const merged = mergePendingToRows(copy)
+
+      return merged.map((r, i) => ({ ...r, sr: i + 1 }))
     })
+
+    // Clear staging
+    setHasProposedUsedFor(false)
+    setProposedUsedForGrid([])
+    localStorage.removeItem('mileageReportTransfer')
+    setPendingTransfer(null)
+    setPendingVehicleRecords([])
+    setTransferApplied(true)
+
+    setUsedForSaveError('')
     setShowUsedForModal(false)
     setActiveTab('all')
   }
 
   const openThresholdModal = () => {
     setActiveTab('threshold')
-    const grid = (rows || []).map((r, i) => ({
-      sr: r.sr || i + 1,
-      vehicle_type: r.vehicle_type || '',
-      threshold: r.threshold || ''
-    }))
+    const grid = []
+
+    // If we have proposed thresholds (from vehicle records), show them as priority
+    if (hasProposedThreshold && proposedThresholdGrid && proposedThresholdGrid.length > 0) {
+      proposedThresholdGrid.forEach((p, idx) => {
+        grid.push({ sr: p.sr || idx + 1, vehicle_type: p.vehicle_type || '', threshold: p.threshold || '', threshold_unit: p.unit || '', threshold_valid: true, is_proposed: true })
+      })
+    }
+
+    // Then include existing rows not in proposals
+    const seenTypes = new Set(grid.map(g => g.vehicle_type))
+    ;(rows || []).forEach((r, i) => {
+      if (seenTypes.has((r.vehicle_type || '').toString())) return
+      const vehicleType = (r.vehicle_type || '').toString()
+      const tDefault = getThresholdForType(vehicleType)
+      if (r.threshold !== undefined && r.threshold !== null && r.threshold !== '') {
+        grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: r.threshold, threshold_unit: (tDefault && tDefault.unit) || '', threshold_valid: true })
+        return
+      }
+      if (tDefault) {
+        grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: tDefault.value, threshold_unit: tDefault.unit, threshold_valid: true })
+        return
+      }
+      grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: '', threshold_unit: '', threshold_valid: true })
+    })
+
     setThresholdGrid(grid)
+    setThresholdSaveError('')
     setShowThresholdModal(true)
   }
 
   const updateThresholdCell = (idx, field, value) => {
     setThresholdGrid(prev => {
       const copy = prev.map(r => ({ ...r }))
-      if (copy[idx]) copy[idx][field] = value
+      if (!copy[idx]) return copy
+
+      if (field === 'threshold') {
+        const trimmed = value === undefined || value === null ? '' : value.toString().trim()
+        // allow empty value
+        if (trimmed === '') {
+          copy[idx].threshold = ''
+          copy[idx].threshold_valid = true
+          return copy
+        }
+        // numeric validation: only numbers allowed
+        const num = Number(trimmed)
+        if (Number.isFinite(num) && num >= 0) {
+          copy[idx].threshold = trimmed
+          copy[idx].threshold_valid = true
+        } else {
+          copy[idx].threshold_valid = false
+        }
+        return copy
+      }
+
+      if (field === 'vehicle_type') {
+        copy[idx].vehicle_type = value
+        const tDefault = getThresholdForType(value)
+        if (!copy[idx].threshold || copy[idx].threshold === '') {
+          if (tDefault) {
+            copy[idx].threshold = tDefault.value
+            copy[idx].threshold_unit = tDefault.unit || ''
+            copy[idx].threshold_valid = true
+          } else {
+            copy[idx].threshold = ''
+            copy[idx].threshold_unit = ''
+            copy[idx].threshold_valid = true
+          }
+        } else {
+          // keep user-entered threshold but update unit if default has a unit
+          if (tDefault && tDefault.unit) copy[idx].threshold_unit = tDefault.unit
+        }
+        return copy
+      }
+
+      copy[idx][field] = value
       return copy
     })
   }
 
+  const [thresholdSaveError, setThresholdSaveError] = useState('')
+
   const saveThresholdGrid = () => {
+    // validate thresholds
+    for (let i = 0; i < thresholdGrid.length; i++) {
+      const g = thresholdGrid[i]
+      const val = (g?.threshold || '').toString().trim()
+      if (val === '') continue // empty allowed
+      const num = Number(val)
+      if (!Number.isFinite(num) || num < 0) {
+        setThresholdSaveError(`Row ${i + 1}: Threshold must be a non-negative number.`)
+        return
+      }
+      // if this type has a unit 'hrs', it's still numeric but we might warn if >24?
+      if (g?.threshold_unit === 'hrs' && num <= 0) {
+        setThresholdSaveError(`Row ${i + 1}: Threshold (hours) must be greater than 0.`)
+        return
+      }
+    }
+
     setRows(prev => {
       const copy = prev.map((r, i) => {
         const g = thresholdGrid[i]
         if (!g) return r
+        // store numeric string or empty
         return { ...r, vehicle_type: g.vehicle_type, threshold: g.threshold }
       })
       return copy.map((r, i) => ({ ...r, sr: i + 1 }))
     })
+    setThresholdSaveError('')
     setShowThresholdModal(false)
     setActiveTab('all')
   }
@@ -122,6 +517,39 @@ export default function MileageReport() {
     }
 
     checkForTransfer()
+  }, [])
+
+  // Listen for direct transfers and stage both Used For and Threshold proposals
+  useEffect(() => {
+    const handler = (e) => {
+      try {
+        const data = e?.detail || null
+        if (!data) return
+        const items = Array.isArray(data) ? data : [data]
+        const vehicleRecords = items.filter(i => i.source === 'vehicle_records' || i.source === undefined)
+        if (vehicleRecords && vehicleRecords.length > 0) {
+          const stagedUsedFor = stageProposedUsedFor(vehicleRecords)
+          if (stagedUsedFor && stagedUsedFor.length > 0) {
+            setProposedUsedForGrid(stagedUsedFor)
+            setHasProposedUsedFor(true)
+            setPendingVehicleRecords(vehicleRecords)
+          }
+          const stagedThresholds = stageProposedThresholds(vehicleRecords)
+          if (stagedThresholds && stagedThresholds.length > 0) {
+            setProposedThresholdGrid(stagedThresholds)
+            setHasProposedThreshold(true)
+          }
+          // Per workflow, open Used For first so user processes it before committing to the mileage table
+          openUsedForModal()
+          setShowTransferReview(true)
+        }
+      } catch (err) {
+        console.warn('mileageTransfer handler error', err)
+      }
+    }
+
+    window.addEventListener('mileageTransfer', handler)
+    return () => window.removeEventListener('mileageTransfer', handler)
   }, [])
 
   // Save rows to localStorage for debugging/inspection
@@ -172,6 +600,11 @@ export default function MileageReport() {
         }
         if (vehicleRecords.length > 0) {
           setPendingVehicleRecords(vehicleRecords)
+          const staged = stageProposedUsedFor(vehicleRecords)
+          if (staged && staged.length > 0) {
+            setProposedUsedForGrid(staged)
+            setHasProposedUsedFor(true)
+          }
         }
         
         // Show review modal if data exists
@@ -265,91 +698,9 @@ export default function MileageReport() {
   }
 
   const applyTransferData = () => {
-    if ((!pendingTransfer || pendingTransfer.length === 0) && pendingVehicleRecords.length === 0) return
-
-    console.log('🔀 Applying transfers - Before:', rows)
-    console.log('📊 Daily Reporting data:', pendingTransfer)
-    console.log('🚗 Vehicle Records data:', pendingVehicleRecords)
-
-    setRows(prevRows => {
-      let copy = [...prevRows]
-      
-      // Build a consolidated map of all updates keyed by reg_no
-      const updates = {}  // key = reg_no, value = merged data from both sources
-      
-      // Process Daily Reporting transfers
-      if (pendingTransfer && pendingTransfer.length > 0) {
-        pendingTransfer.forEach(item => {
-          const regNo = item.vehicle_code || item.reg_no || ''
-          if (!regNo) return
-          
-          updates[regNo] = updates[regNo] || { reg_no: regNo }
-          updates[regNo].vehicle_code = item.vehicle_code || updates[regNo].vehicle_code || regNo
-          if (item.mileage !== undefined) updates[regNo].mileage = item.mileage || ''
-          if (item.ignition_time !== undefined) updates[regNo].ignition_time = item.ignition_time || ''
-          console.log(`  📊 Queued Daily Reporting for reg_no: ${regNo}`)
-        })
-      }
-      
-      // Process Vehicle Records transfers - merge into same keys
-      if (pendingVehicleRecords.length > 0) {
-        pendingVehicleRecords.forEach(item => {
-          const regNo = item.reg_no || item.vehicle_code || ''
-          if (!regNo) return
-          
-          updates[regNo] = updates[regNo] || { reg_no: regNo }
-          updates[regNo].vehicle_code = item.vehicle_code || updates[regNo].vehicle_code || regNo
-          updates[regNo].vehicle_type = item.vehicle_type || updates[regNo].vehicle_type || ''
-          updates[regNo].used_for = item.used_for || updates[regNo].used_for || ''
-          console.log(`  🚗 Queued Vehicle Records for reg_no: ${regNo}, vehicle_code: ${item.vehicle_code}`)
-        })
-      }
-      
-      // Now apply all updates to existing rows or create new ones
-      Object.keys(updates).forEach(regNo => {
-        const update = updates[regNo]
-        
-        // Try to find existing row by reg_no or vehicle_code
-        const existingIdx = copy.findIndex(r => 
-          r.reg_no === regNo || 
-          r.vehicle_code === regNo ||
-          r.reg_no === update.vehicle_code ||
-          r.vehicle_code === update.vehicle_code
-        )
-        
-        if (existingIdx >= 0) {
-          // Update existing row
-          copy[existingIdx] = {
-            ...copy[existingIdx],
-            reg_no: update.reg_no || copy[existingIdx].reg_no || '',
-            vehicle_code: update.vehicle_code || copy[existingIdx].vehicle_code || '',
-            vehicle_type: update.vehicle_type || copy[existingIdx].vehicle_type || '',
-            used_for: update.used_for || copy[existingIdx].used_for || '',
-            mileage: update.mileage !== undefined ? update.mileage : copy[existingIdx].mileage,
-            ignition_time: update.ignition_time !== undefined ? update.ignition_time : copy[existingIdx].ignition_time
-          }
-          console.log(`  ✅ Merged into existing row: reg_no=${regNo}, vehicle_code=${update.vehicle_code}`)
-        } else {
-          // Create new row
-          copy.push({
-            sr: 0,
-            reg_no: update.reg_no || '',
-            vehicle_code: update.vehicle_code || '',
-            vehicle_type: update.vehicle_type || '',
-            used_for: update.used_for || '',
-            mileage: update.mileage || '',
-            ignition_time: update.ignition_time || '',
-            threshold: '',
-            remarks: ''
-          })
-          console.log(`  ➕ Created new row: reg_no=${regNo}, vehicle_code=${update.vehicle_code}`)
-        }
-      })
-
-      return copy.map((r, i) => ({ ...r, sr: i + 1 }))
-    })
-
-    console.log('🔀 Apply complete - check localStorage["mileageReportData"] for final result')
+    // For backward compatibility keep an action that merges pending daily reporting into rows
+    if ((!pendingTransfer || pendingTransfer.length === 0) && (!pendingVehicleRecords || pendingVehicleRecords.length === 0)) return
+    setRows(prev => mergePendingToRows(prev))
     localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
     setPendingVehicleRecords([])
@@ -360,6 +711,8 @@ export default function MileageReport() {
     localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
     setPendingVehicleRecords([])
+    setHasProposedUsedFor(false)
+    setProposedUsedForGrid([])
     setTransferApplied(true)
   }
 
@@ -371,16 +724,7 @@ export default function MileageReport() {
     saveAs(new Blob([wbout], { type: 'application/octet-stream' }), `fleet-mileage-report-template.xlsx`)
   }
 
-  const handleFile = async (e) => {
-    const f = e.target.files[0]
-    if (!f) return
-    setSelectedFileName(f.name)
-    const data = await f.arrayBuffer()
-    const wb = XLSX.read(data)
-    const first = wb.SheetNames[0]
-    const sheet = wb.Sheets[first]
-    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-
+  const normalizeJsonRows = (json) => {
     const json_keys = json.length > 0 ? Object.keys(json[0]) : []
 
     const findColumnIndex = (keywords) => {
@@ -410,7 +754,7 @@ export default function MileageReport() {
       return ''
     }
 
-    const normalized = json.map((r, idx) => ({
+    return json.map((r, idx) => ({
       sr: idx + 1,
       reg_no: regNoIdx >= 0 ? getValueByIndex(r, regNoIdx) : (r.reg_no || r['Reg No'] || r.registration || ''),
       vehicle_type: vehicleTypeIdx >= 0 ? getValueByIndex(r, vehicleTypeIdx) : (r.vehicle_type || r['Vehicle Type'] || ''),
@@ -420,9 +764,25 @@ export default function MileageReport() {
       threshold: thresholdIdx >= 0 ? getValueByIndex(r, thresholdIdx) : (r.threshold || r.Threshold || ''),
       remarks: remarksIdx >= 0 ? getValueByIndex(r, remarksIdx) : (r.remarks || r.Remarks || '')
     }))
+  }
 
+  const processFile = async (file) => {
+    if (!file) return
+    setSelectedFileName(file.name)
+    const data = await file.arrayBuffer()
+    const wb = XLSX.read(data)
+    const first = wb.SheetNames[0]
+    const sheet = wb.Sheets[first]
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+    const normalized = normalizeJsonRows(json)
     setPreviewRows(normalized.slice(0, 6))
     setRows(normalized)
+  }
+
+  const handleFile = async (e) => {
+    const f = e.target.files[0]
+    if (!f) return
+    await processFile(f)
   }
 
   const handleDropFile = async (file) => {
@@ -991,7 +1351,11 @@ export default function MileageReport() {
 
             <div className="flex justify-end gap-2">
               <button onClick={() => { setShowTransferReview(false); setPendingTransfer(null); setPendingVehicleRecords([] ) }} className="px-3 py-2 rounded bg-gray-50 border text-sm">Dismiss</button>
-              <button onClick={() => { applyTransferData(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Accept & Apply</button>
+              {hasProposedUsedFor ? (
+                <button onClick={() => { openUsedForModal(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Process Used For</button>
+              ) : (
+                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); localStorage.removeItem('mileageReportTransfer'); setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
+              )}
             </div>
           </div>
         </div>
@@ -1005,6 +1369,10 @@ export default function MileageReport() {
               <h3 className="text-lg font-semibold">Used For - Grid View</h3>
               <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
             </div>
+
+            {usedForSaveError && (
+              <div className="mb-3 text-sm text-red-700">{usedForSaveError}</div>
+            )}
 
             <div className="overflow-auto">
               <table className="min-w-full text-sm">
@@ -1022,7 +1390,50 @@ export default function MileageReport() {
                       <td className="px-2 py-1">{r.sr || idx + 1}</td>
                       <td className="px-2 py-1"><input value={r.vehicle_code} onChange={(e) => updateUsedForCell(idx, 'vehicle_code', e.target.value)} className="p-1 text-sm border rounded" /></td>
                       <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateUsedForCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
-                      <td className="px-2 py-1"><input value={r.used_for} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                      <td className="px-2 py-1">
+                        {r.options && r.options.length > 1 ? (
+                          <>
+                            <select value={r.used_for || ''} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded w-full">
+                              <option value="">-- Select --</option>
+                              {r.options.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                              ))}
+                            </select>
+                            <div className="text-xs text-slate-400 italic mt-1">Choose one of the options</div>
+                            {r.used_for_option_valid === false && (
+                              <div className="text-xs text-red-600 mt-1">Value must be one of the allowed options</div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <input list={r.options && r.options.length ? `usedfor-list-${idx}` : undefined} value={r.used_for || ''} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded w-full" />
+
+                            {r.options && r.options.length > 0 && (
+                              <datalist id={`usedfor-list-${idx}`}>
+                                {r.options.map((opt) => (
+                                  <option key={opt} value={opt} />
+                                ))}
+                              </datalist>
+                            )}
+
+                            {r.options && r.options.length > 0 && (
+                              <div className="text-xs text-slate-400 italic mt-1">Options: {r.options.join(', ')}</div>
+                            )}
+
+                            {r.used_for_source === 'suggested' && (
+                              <div className="text-xs text-slate-400 italic mt-1">Suggested based on selected vehicle type</div>
+                            )}
+
+                            {r.used_for_source === 'user' && r.options && r.options.length > 0 && r.options.indexOf((r.used_for || '').toString()) === -1 && (
+                              <div className="text-xs text-amber-600 italic mt-1">Custom value (not in options)</div>
+                            )}
+
+                            {r.used_for_valid === false && (
+                              <div className="text-xs text-red-600 mt-1">Max 100 chars</div>
+                            )}
+                          </>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1060,7 +1471,17 @@ export default function MileageReport() {
                     <tr key={idx} className={`${idx % 2 ? 'bg-gray-50' : ''}`}>
                       <td className="px-2 py-1">{r.sr || idx + 1}</td>
                       <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateThresholdCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
-                      <td className="px-2 py-1"><input value={r.threshold} onChange={(e) => updateThresholdCell(idx, 'threshold', e.target.value)} className="p-1 text-sm border rounded" /></td>
+                      <td className="px-2 py-1">
+                        <div className="flex items-center space-x-2">
+                          <input value={r.threshold} onChange={(e) => updateThresholdCell(idx, 'threshold', e.target.value)} type="number" step="any" min="0" className="p-1 text-sm border rounded w-28" />
+                          {r.threshold_unit === 'hrs' && (
+                            <div className="text-xs text-slate-600">hrs</div>
+                          )}
+                        </div>
+                        {!r.threshold_valid && (
+                          <div className="text-xs text-red-600 mt-1">Enter a valid non-negative number</div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
