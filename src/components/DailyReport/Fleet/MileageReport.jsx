@@ -141,6 +141,13 @@ export default function MileageReport() {
     const copy = [...baseRows]
     const updates = {}
 
+    const isLikelyCode = (v) => {
+      if (!v) return false
+      const s = v.toString().trim()
+      // treat as code if contains letters or hyphens (e.g., HND-DT-004) or at least 3 chars
+      return /[A-Za-z\-]/.test(s) || s.length >= 3
+    }
+
     if (pendingTransfer && pendingTransfer.length > 0) {
       pendingTransfer.forEach(item => {
         const key = (item.vehicle_code || item.reg_no || '').toString()
@@ -165,17 +172,27 @@ export default function MileageReport() {
       const u = updates[k]
       const idx = copy.findIndex(r => r.reg_no === k || r.vehicle_code === k || r.reg_no === (u.vehicle_code || '') || r.vehicle_code === (u.vehicle_code || ''))
       if (idx >= 0) {
+        // prefer existing reg_no/vehicle_code if they look like codes; otherwise, accept update
+        const regNoToSet = isLikelyCode(copy[idx].reg_no) ? copy[idx].reg_no : (isLikelyCode(u.reg_no) ? u.reg_no : copy[idx].reg_no)
+        const vehicleCodeToSet = isLikelyCode(copy[idx].vehicle_code) ? copy[idx].vehicle_code : (isLikelyCode(u.vehicle_code) ? u.vehicle_code : (isLikelyCode(u.reg_no) ? u.reg_no : copy[idx].vehicle_code))
+
         copy[idx] = {
           ...copy[idx],
+          reg_no: regNoToSet || copy[idx].reg_no || '',
+          vehicle_code: vehicleCodeToSet || copy[idx].vehicle_code || '',
           vehicle_type: u.vehicle_type || copy[idx].vehicle_type || '',
           mileage: u.mileage !== undefined ? u.mileage : copy[idx].mileage,
           ignition_time: u.ignition_time !== undefined ? u.ignition_time : copy[idx].ignition_time
         }
       } else {
+        // sanitize pushed reg_no/vehicle_code to avoid numeric indexes
+        const finalReg = isLikelyCode(u.reg_no) ? u.reg_no : ''
+        const finalCode = isLikelyCode(u.vehicle_code) ? u.vehicle_code : (isLikelyCode(u.reg_no) ? u.reg_no : '')
+
         copy.push({
           sr: 0,
-          reg_no: u.reg_no || '',
-          vehicle_code: u.vehicle_code || u.reg_no || '',
+          reg_no: finalReg || '',
+          vehicle_code: finalCode || '',
           vehicle_type: u.vehicle_type || '',
           used_for: '',
           mileage: u.mileage || '',
@@ -317,33 +334,43 @@ export default function MileageReport() {
 
       usedForGrid.forEach(g => {
         if (!g) return
-        const regNo = (g.reg_no || g.vehicle_code || '').toString()
-        const vehicleCode = g.vehicle_code || g.reg_no || ''
+        // normalize incoming keys
+        const regNoCandidate = (g.reg_no || g.vehicle_code || '').toString().trim()
+        const vehicleCodeCandidate = (g.vehicle_code || g.reg_no || '').toString().trim()
         const finalVehicleType = (g.vehicle_type || '').toString().trim()
         let finalUsedFor = (g.used_for || '').toString().trim()
         const suggestion = getSuggestionForType(finalVehicleType)
         if (!finalUsedFor && suggestion) finalUsedFor = suggestion
 
         const existingIdx = copy.findIndex(r =>
-          r.reg_no === regNo ||
-          r.vehicle_code === regNo ||
-          r.reg_no === vehicleCode ||
-          r.vehicle_code === vehicleCode
+          (r.reg_no || '').toString() === regNoCandidate ||
+          (r.vehicle_code || '').toString() === regNoCandidate ||
+          (r.reg_no || '').toString() === vehicleCodeCandidate ||
+          (r.vehicle_code || '').toString() === vehicleCodeCandidate
         )
 
         if (existingIdx >= 0) {
+          // sanitize numeric-looking codes to avoid accidentally storing indices
+          const looksLikeCode = (v) => v && (/[A-Za-z\-]/.test(v.toString()) || v.toString().length >= 3)
+          const finalReg = looksLikeCode(regNoCandidate) ? regNoCandidate : (looksLikeCode(copy[existingIdx].reg_no) ? copy[existingIdx].reg_no : (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : copy[existingIdx].reg_no))
+          const finalCode = looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(copy[existingIdx].vehicle_code) ? copy[existingIdx].vehicle_code : (looksLikeCode(regNoCandidate) ? regNoCandidate : copy[existingIdx].vehicle_code))
+
           copy[existingIdx] = {
             ...copy[existingIdx],
-            reg_no: regNo || copy[existingIdx].reg_no || '',
-            vehicle_code: vehicleCode || copy[existingIdx].vehicle_code || '',
+            reg_no: finalReg || copy[existingIdx].reg_no || '',
+            vehicle_code: finalCode || copy[existingIdx].vehicle_code || '',
             vehicle_type: finalVehicleType || copy[existingIdx].vehicle_type || '',
             used_for: finalUsedFor || copy[existingIdx].used_for || ''
           }
         } else {
+          // ensure both reg_no and vehicle_code fields are populated wherever possible (sanitized)
+          const looksLikeCode = (v) => v && (/[A-Za-z\-]/.test(v.toString()) || v.toString().length >= 3)
+          const finalRegNo = looksLikeCode(regNoCandidate) ? regNoCandidate : (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : '')
+          const finalVehicleCode = looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(regNoCandidate) ? regNoCandidate : '')
           copy.push({
             sr: 0,
-            reg_no: regNo,
-            vehicle_code: vehicleCode,
+            reg_no: finalRegNo,
+            vehicle_code: finalVehicleCode,
             vehicle_type: finalVehicleType,
             used_for: finalUsedFor,
             mileage: '',
@@ -547,10 +574,7 @@ export default function MileageReport() {
           }
         }
 
-        // Show review banner/modal (badge-only). User opens Used For manually to accept proposals.
-        if ((dailyReporting && dailyReporting.length > 0) || (vehicleRecords && vehicleRecords.length > 0)) {
-          setShowTransferReview(true)
-        }
+        // Badge-only staging. User opens Used For manually to accept proposals.
       } catch (err) {
         console.warn('mileageTransfer handler error', err)
       }
@@ -615,10 +639,7 @@ export default function MileageReport() {
           }
         }
         
-        // Show review modal if data exists
-        if (dailyReporting.length > 0 || vehicleRecords.length > 0) {
-          setShowTransferReview(true)
-        }
+        // Badge-only staging: users should open the Used For tab to process staged transfers.
       } catch (e) {
         console.error('Error parsing transfer data:', e)
       }
@@ -1077,6 +1098,11 @@ export default function MileageReport() {
           <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200 text-sm">Upload Report</button>
 
           <button onClick={clearTable} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">Clear Table</button>
+
+          {/* Quick action: open Used For modal when staged proposals exist */}
+          {hasProposedUsedFor && (
+            <button onClick={() => openUsedForModal()} className="px-3 py-1 rounded-md bg-purple-600 text-white text-sm">Process Used For</button>
+          )}
 
           <button onClick={exportData} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Export Report</button>
 
