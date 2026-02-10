@@ -360,10 +360,9 @@ export default function MileageReport() {
       return merged.map((r, i) => ({ ...r, sr: i + 1 }))
     })
 
-    // Clear staging
+    // Clear staging (keep transfer in localStorage for testing; explicit discard will clear it)
     setHasProposedUsedFor(false)
     setProposedUsedForGrid([])
-    localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
     setPendingVehicleRecords([])
     setTransferApplied(true)
@@ -526,7 +525,14 @@ export default function MileageReport() {
         const data = e?.detail || null
         if (!data) return
         const items = Array.isArray(data) ? data : [data]
+        const dailyReporting = items.filter(i => i.source === 'daily_reporting' || (i.source === undefined && i.mileage !== undefined))
         const vehicleRecords = items.filter(i => i.source === 'vehicle_records' || i.source === undefined)
+
+        // Stage pending daily reporting mileage/IG immediately (do not auto-apply)
+        if (dailyReporting && dailyReporting.length > 0) {
+          setPendingTransfer(dailyReporting)
+        }
+
         if (vehicleRecords && vehicleRecords.length > 0) {
           const stagedUsedFor = stageProposedUsedFor(vehicleRecords)
           if (stagedUsedFor && stagedUsedFor.length > 0) {
@@ -539,8 +545,10 @@ export default function MileageReport() {
             setProposedThresholdGrid(stagedThresholds)
             setHasProposedThreshold(true)
           }
-          // Per workflow, open Used For first so user processes it before committing to the mileage table
-          openUsedForModal()
+        }
+
+        // Show review banner/modal (badge-only). User opens Used For manually to accept proposals.
+        if ((dailyReporting && dailyReporting.length > 0) || (vehicleRecords && vehicleRecords.length > 0)) {
           setShowTransferReview(true)
         }
       } catch (err) {
@@ -701,7 +709,7 @@ export default function MileageReport() {
     // For backward compatibility keep an action that merges pending daily reporting into rows
     if ((!pendingTransfer || pendingTransfer.length === 0) && (!pendingVehicleRecords || pendingVehicleRecords.length === 0)) return
     setRows(prev => mergePendingToRows(prev))
-    localStorage.removeItem('mileageReportTransfer')
+    // keep mileageReportTransfer in localStorage for testing (explicit discard clears it)
     setPendingTransfer(null)
     setPendingVehicleRecords([])
     setTransferApplied(true)
@@ -714,6 +722,28 @@ export default function MileageReport() {
     setHasProposedUsedFor(false)
     setProposedUsedForGrid([])
     setTransferApplied(true)
+  }
+
+  // Clear the main table and all transfer-related persisted data (testing mode)
+  const clearTable = () => {
+    // Clear table rows
+    setRows([])
+    // Remove persisted table and transfer buffers
+    localStorage.removeItem('mileageReportData')
+    localStorage.removeItem('mileageReportTransfer')
+
+    // Reset any pending/staged transfers
+    setPendingTransfer(null)
+    setPendingVehicleRecords([])
+    setHasProposedUsedFor(false)
+    setProposedUsedForGrid([])
+    setHasProposedThreshold(false)
+    setProposedThresholdGrid([])
+
+    // Reset UI and flags
+    setTransferApplied(false)
+    setShowTransferReview(false)
+    setSaveResult(null)
   }
 
   const downloadTemplate = () => {
@@ -1028,7 +1058,12 @@ export default function MileageReport() {
             <button
               onClick={() => setActiveTab('used_for')}
               className={`px-2 py-1 rounded-md text-sm ${activeTab === 'used_for' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
-              Used For
+              <span className="inline-flex items-center">
+                <span>Used For</span>
+                {hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">{proposedUsedForGrid.length}</span>
+                )}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('threshold')}
@@ -1041,7 +1076,7 @@ export default function MileageReport() {
 
           <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200 text-sm">Upload Report</button>
 
-          <button onClick={() => setRows([])} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">Clear Table</button>
+          <button onClick={clearTable} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">Clear Table</button>
 
           <button onClick={exportData} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Export Report</button>
 
@@ -1354,7 +1389,7 @@ export default function MileageReport() {
               {hasProposedUsedFor ? (
                 <button onClick={() => { openUsedForModal(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Process Used For</button>
               ) : (
-                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); localStorage.removeItem('mileageReportTransfer'); setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
+                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); /* keep mileageReportTransfer in localStorage for testing */ setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
               )}
             </div>
           </div>

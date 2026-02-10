@@ -62,6 +62,8 @@ export default function VehicleRecords() {
 
     // Show immediate success notification
     localStorage.setItem('mileageReportTransfer', JSON.stringify(localTransferData))
+    // Dispatch transfer event for immediate staging (badge-only)
+    window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: localTransferData }))
     console.log('Transfer data to be sent:', localTransferData)
     setError(`✅ Queued ${localTransferData.length} vehicle(s) for transfer`)
     setTimeout(() => setError(''), 2500)
@@ -90,6 +92,8 @@ export default function VehicleRecords() {
         })
         // Replace the queued transfer with the enriched, but keep structure intact
         localStorage.setItem('mileageReportTransfer', JSON.stringify(enrichedData))
+        // Dispatch enriched transfer event to update staged proposals
+        window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: enrichedData }))
         console.log('Enriched transfer data:', enrichedData)
       }
     } catch (err) {

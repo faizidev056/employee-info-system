@@ -339,6 +339,8 @@ export default function DailyReporting() {
     }))
 
     localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+    // Dispatch transfer event for immediate staging (badge-only)
+    window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
     setSelectedRowIndices(new Set())
     setTransferMessage('✅ Mileage & IG Time transferred! Switch to Mileage Report to apply.')
     setTimeout(() => setTransferMessage(''), 4000)
