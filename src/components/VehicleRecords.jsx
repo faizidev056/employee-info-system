@@ -128,7 +128,7 @@ export default function VehicleRecords() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-100 rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-2 bg-purple-50/50 backdrop-blur-sm border border-purple-100/60 rounded-xl shadow-sm">
           <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
@@ -136,19 +136,19 @@ export default function VehicleRecords() {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b bg-gray-50/50">
+      <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg">
+        <div className="p-4 border-b border-white/40 bg-white/30 backdrop-blur-md">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 placeholder-slate-400 text-sm" placeholder="Search by reg id or reg no..." />
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all" placeholder="Search by reg id or reg no..." />
               </div>
             </div>
 
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-700 text-sm">
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all">
               <option value="">All Types</option>
               <option value="Truck">Truck</option>
               <option value="Van">Van</option>
@@ -165,8 +165,8 @@ export default function VehicleRecords() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/50">
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
+              <tr className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
+                <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Make/Model</th>
@@ -179,7 +179,7 @@ export default function VehicleRecords() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((v, idx) => (
-                <motion.tr key={v.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 bg-white">
+                <motion.tr key={v.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="hover:bg-white/40 bg-transparent transition-colors">
                   <td className="px-3 py-2"><span className="text-slate-400">{idx + 1}</span></td>
                   <td className="px-3 py-2"><div className="text-slate-900 font-mono">{v.reg_id || v.vehicle_code || '-'}</div></td>
                   <td className="px-3 py-2">
@@ -239,7 +239,7 @@ export default function VehicleRecords() {
       {/* History Modal */}
       {historyModal.open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-11/12 md:w-1/2 p-6">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-1/2 p-6 border border-white/60 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Status History</h3>
               <button onClick={() => setHistoryModal({ open: false, vehicleId: null, history: [] })} className="text-slate-500">Close</button>

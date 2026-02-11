@@ -33,6 +33,8 @@ export default function MileageReport() {
   // Staging for transfers: Used For proposals (accepted first) — must pass through modal before writing to main table
   const [hasProposedUsedFor, setHasProposedUsedFor] = useState(false)
   const [proposedUsedForGrid, setProposedUsedForGrid] = useState([])
+  const [pushingAttendance, setPushingAttendance] = useState(false)
+  const [attendancePushResult, setAttendancePushResult] = useState(null)
 
   // Auto-detection map for Used For suggestions (keys are lowercase)
   const USED_FOR_SUGGESTIONS = {
@@ -254,7 +256,7 @@ export default function MileageReport() {
           const vehicleCode = v.vehicle_code || v.reg_no || ''
           const source = val ? 'user' : (suggestion ? 'suggested' : 'none')
           const displayVal = val || (suggestion || (options && options.length ? options[0] : '')) || ''
-          
+
           grid.push({
             sr: idx + 1,
             reg_no: v.reg_no || vehicleCode,
@@ -274,7 +276,7 @@ export default function MileageReport() {
     }
 
     // Also include existing mileage report rows that match active vehicles
-    ;(rows || []).forEach((r, i) => {
+    ; (rows || []).forEach((r, i) => {
       const vehicleCode = (r.vehicle_code || r.reg_no || '').toString()
       if (vehicleCode && seen.has(vehicleCode)) return
       const vehicleType = (r.vehicle_type || '').toString()
@@ -561,7 +563,7 @@ export default function MileageReport() {
     }
 
     // Then include existing rows not in proposals
-    ;(rows || []).forEach((r, i) => {
+    ; (rows || []).forEach((r, i) => {
       if (seenTypes.has((r.vehicle_type || '').toString())) return
       const vehicleType = (r.vehicle_type || '').toString()
       const tDefault = getThresholdForType(vehicleType)
@@ -773,11 +775,11 @@ export default function MileageReport() {
       try {
         const parsed = JSON.parse(transferData)
         const items = Array.isArray(parsed) ? parsed : [parsed]
-        
+
         // Separate transfers by source
         const dailyReporting = items.filter(i => i.source === 'daily_reporting' || !i.source)
         const vehicleRecords = items.filter(i => i.source === 'vehicle_records')
-        
+
         // Set pending data for review
         if (dailyReporting.length > 0) {
           setPendingTransfer(dailyReporting)
@@ -790,7 +792,7 @@ export default function MileageReport() {
             setHasProposedUsedFor(true)
           }
         }
-        
+
         // Badge-only staging: users should open the Used For tab to process staged transfers.
       } catch (e) {
         console.error('Error parsing transfer data:', e)
@@ -896,6 +898,96 @@ export default function MileageReport() {
     setHasProposedUsedFor(false)
     setProposedUsedForGrid([])
     setTransferApplied(true)
+  }
+
+  const pushAttendanceData = async () => {
+    if (rows.length === 0) {
+      setAttendancePushResult({
+        success: false,
+        message: 'No mileage data to push',
+        details: 'Please load or enter mileage data first'
+      })
+      return
+    }
+
+    try {
+      setPushingAttendance(true)
+      setAttendancePushResult(null)
+
+      // Get unique vehicle registration numbers from the mileage data
+      const vehicleRegNos = [...new Set(rows.map(r => r.reg_no).filter(Boolean))]
+
+      if (vehicleRegNos.length === 0) {
+        setAttendancePushResult({
+          success: false,
+          message: 'No vehicle codes found',
+          details: 'Mileage data must contain vehicle codes (reg_no)'
+        })
+        return
+      }
+
+      // Fetch vehicle IDs from vehicle_registrations table
+      // Search across multiple fields: reg_no, reg_id, vehicle_code for flexible matching
+      const { data: vehicles, error: vehicleError } = await supabase
+        .from('vehicle_registrations')
+        .select('id, reg_no, reg_id, vehicle_code, type')
+        .or(vehicleRegNos.map(code => `reg_no.eq.${code},reg_id.eq.${code},vehicle_code.eq.${code}`).join(','))
+
+      if (vehicleError) {
+        console.error('Vehicle fetch error:', vehicleError)
+        throw vehicleError
+      }
+
+      if (!vehicles || vehicles.length === 0) {
+        setAttendancePushResult({
+          success: false,
+          message: 'No matching vehicles found',
+          details: `Searched for: ${vehicleRegNos.join(', ')}. Please ensure these vehicles are registered in Vehicle Registration.`
+        })
+        return
+      }
+
+      // Create attendance records for today
+      const attendanceRecords = vehicles.map(vehicle => ({
+        vehicle_id: vehicle.id,
+        attendance_date: today,
+        status: 'Present', // Mark as present since they have mileage data
+        updated_at: new Date().toISOString()
+      }))
+
+      // Upsert attendance records (insert or update if already exists for this date)
+      const { error: attendanceError } = await supabase
+        .from('vehicle_attendance')
+        .upsert(attendanceRecords, {
+          onConflict: 'vehicle_id,attendance_date'
+        })
+
+      if (attendanceError) throw attendanceError
+
+      // Show which vehicles were matched
+      const matchedCodes = vehicles.map(v => v.reg_id || v.reg_no || v.vehicle_code).filter(Boolean)
+
+      setAttendancePushResult({
+        success: true,
+        message: 'Attendance pushed successfully!',
+        details: `${vehicles.length} vehicle(s) marked as present for ${today}: ${matchedCodes.join(', ')}`
+      })
+
+      // Auto-dismiss success message after 5 seconds
+      setTimeout(() => {
+        setAttendancePushResult(null)
+      }, 5000)
+
+    } catch (err) {
+      console.error('Error pushing attendance:', err)
+      setAttendancePushResult({
+        success: false,
+        message: 'Failed to push attendance',
+        details: err.message || 'An unexpected error occurred'
+      })
+    } finally {
+      setPushingAttendance(false)
+    }
   }
 
   // Clear the main table and all transfer-related persisted data (testing mode)
@@ -1184,315 +1276,407 @@ export default function MileageReport() {
 
   return (
     <>
-    <div className="p-4">
-      {/* Pending Transfer Notification - Dual Source */}
-      {(pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
-        <div className="mb-4 p-4 bg-blue-50 border border-blue-300 rounded-md">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-blue-900 text-sm">⚡ Data Transfer Ready (Dual Source)</h3>
-              {pendingTransfer && pendingTransfer.length > 0 && (
-                <p className="text-sm text-blue-800 mt-1">📊 Daily Reporting: {pendingTransfer.length} row(s) with Mileage & IG Time</p>
-              )}
-              {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
-                <p className="text-sm text-blue-800">🚗 Vehicle Records: {pendingVehicleRecords.length} row(s) with Type & Usage</p>
-              )}
-            </div>
-            <div className="flex gap-2">
+      <div className="p-4">
+        {/* Pending Transfer Notification - Dual Source */}
+        {(pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
+          <div className="mb-6 p-4 bg-blue-50/60 backdrop-blur-md border border-blue-200/60 rounded-2xl shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-blue-900 text-sm flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                  ⚡ Data Transfer Ready (Dual Source)
+                </h3>
+                {pendingTransfer && pendingTransfer.length > 0 && (
+                  <p className="text-sm text-blue-800 mt-1 pl-4">📊 Daily Reporting: <strong>{pendingTransfer.length}</strong> row(s) with Mileage & IG Time</p>
+                )}
+                {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
+                  <p className="text-sm text-blue-800 pl-4">🚗 Vehicle Records: <strong>{pendingVehicleRecords.length}</strong> row(s) with Type & Usage</p>
+                )}
+              </div>
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowTransferReview(true)}
-                  className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 font-medium"
+                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm hover:bg-blue-700 font-medium shadow-md shadow-blue-500/20 transition-all"
                 >
                   Review & Apply
                 </button>
+                <button
+                  onClick={discardTransferData}
+                  className="px-4 py-2 rounded-xl bg-white/60 text-blue-800 text-sm hover:bg-white border border-blue-100 backdrop-blur-sm transition-all"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Push Result Notification */}
+        {attendancePushResult && (
+          <div className={`mb-4 p-4 rounded-2xl border backdrop-blur-xl shadow-lg ${attendancePushResult.success
+            ? 'bg-emerald-50/80 border-emerald-200'
+            : 'bg-red-50/80 border-red-200'
+            }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-xl ${attendancePushResult.success
+                  ? 'bg-emerald-100 text-emerald-600'
+                  : 'bg-red-100 text-red-600'
+                  }`}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {attendancePushResult.success ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    )}
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${attendancePushResult.success ? 'text-emerald-800' : 'text-red-800'
+                    }`}>
+                    {attendancePushResult.message}
+                  </p>
+                  {attendancePushResult.details && (
+                    <p className="text-xs text-slate-600 mt-1">{attendancePushResult.details}</p>
+                  )}
+                </div>
+              </div>
               <button
-                onClick={discardTransferData}
-                className="px-4 py-2 rounded-md bg-blue-100 text-blue-800 text-sm hover:bg-blue-200"
+                onClick={() => setAttendancePushResult(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
               >
-                Dismiss
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-slate-600">
-          <strong>Today's Report:</strong> {today}
+        <div className="flex items-center justify-between mb-6 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-sm">
+          <div className="text-sm font-semibold text-slate-700 bg-white/60 px-4 py-2 rounded-xl backdrop-blur-sm border border-slate-100 flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {today}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {/* Tabs (visual only) placed alongside action buttons */}
+            <div className="hidden sm:flex items-center space-x-1 mr-2 bg-slate-100/50 p-1 rounded-xl backdrop-blur-sm">
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                All
+              </button>
+              <button
+                onClick={() => setActiveTab('used_for')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'used_for' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                <span className="inline-flex items-center">
+                  <span>Used For</span>
+                  {hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm">{proposedUsedForGrid.length}</span>
+                  )}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('threshold')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'threshold' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                Threshold
+              </button>
+            </div>
+
+            <button onClick={downloadTemplate} className="px-4 py-2 rounded-xl bg-slate-700/10 text-slate-700 hover:bg-slate-700/20 text-sm font-medium transition-all border border-slate-700/5">Template</button>
+
+            <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm">Upload Report</button>
+
+            <button onClick={clearTable} className="px-4 py-2 rounded-xl bg-rose-50/80 text-rose-600 hover:bg-rose-100 border border-rose-100 text-sm font-medium transition-all backdrop-blur-sm">Clear</button>
+
+            {/* Quick action: open Used For modal when staged proposals exist */}
+            {hasProposedUsedFor && (
+              <button onClick={() => openUsedForModal()} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 text-sm font-medium transition-all">Process Used For</button>
+            )}
+
+            <button onClick={exportData} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all border border-transparent">Export</button>
+
+            <button
+              onClick={pushAttendanceData}
+              disabled={pushingAttendance || rows.length === 0}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {pushingAttendance ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Pushing...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Push Attendance</span>
+                </>
+              )}
+            </button>
+
+            <button onClick={saveMileageData} disabled={saving} className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+              {saving ? 'Saving...' : 'Save Report'}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Tabs (visual only) placed alongside action buttons */}
-          <div className="hidden sm:flex items-center space-x-2 mr-2">
+        {/* Tabs: compact - only show All here per request */}
+        <div className="mb-4">
+          <div className="flex items-center space-x-2">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
+              className={`px-3 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
               All
             </button>
-            <button
-              onClick={() => setActiveTab('used_for')}
-              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'used_for' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
-              <span className="inline-flex items-center">
-                <span>Used For</span>
-                {hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0 && (
-                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-500 text-white text-xs">{proposedUsedForGrid.length}</span>
-                )}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('threshold')}
-              className={`px-2 py-1 rounded-md text-sm ${activeTab === 'threshold' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
-              Threshold
-            </button>
           </div>
-
-          <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white text-sm">Download Template</button>
-
-          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200 text-sm">Upload Report</button>
-
-          <button onClick={clearTable} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">Clear Table</button>
-
-          {/* Quick action: open Used For modal when staged proposals exist */}
-          {hasProposedUsedFor && (
-            <button onClick={() => openUsedForModal()} className="px-3 py-1 rounded-md bg-purple-600 text-white text-sm">Process Used For</button>
-          )}
-
-          <button onClick={exportData} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Export Report</button>
-
-          <button onClick={saveMileageData} disabled={saving} className="px-3 py-1 rounded-md bg-sky-600 text-white text-sm">
-            {saving ? 'Saving...' : 'Save Report'}
-          </button>
         </div>
-      </div>
 
-      {/* Tabs: compact - only show All here per request */}
-      <div className="mb-4">
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-3 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
-            All
-          </button>
-        </div>
-      </div>
-
-      {/* Search bar */}
-      <div className="mb-4">
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Vehicle Code or Vehicle Type"
-          className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full max-w-md focus:ring-1 focus:ring-sky-300"
-        />
-      </div>
-
-      {/* Upload Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-3xl p-4 bg-white rounded">
-            {uploadMode === 'choose' && (
-              <div className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Upload Mileage Report</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
-                    <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <div>
-                        <div className="font-semibold">Upload Excel / CSV</div>
-                        <div className="text-xs text-slate-500">Choose a file to import</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
-                    <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <div>
-                        <div className="font-semibold">Paste Manually</div>
-                        <div className="text-xs text-slate-500">Paste data from spreadsheet</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button onClick={handleCloseUploadModal} className="px-4 py-2 rounded bg-gray-50 border text-sm">Cancel</button>
-                </div>
-              </div>
+        {/* Search bar */}
+        <div className="mb-6 max-w-md">
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by Vehicle Code or Vehicle Type..."
+              className="pl-10 pr-10 py-2.5 rounded-xl bg-white/50 border border-white/60 text-sm w-full text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm backdrop-blur-sm"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             )}
+          </div>
+        </div>
 
-            {uploadMode === 'file' && (
-              <div className="p-4">
-                <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
-                <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
-                     onDragOver={(e) => e.preventDefault()}
-                     onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
-                  <label className="block cursor-pointer">
-                    <div className="flex items-center justify-center space-x-3">
-                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
+            <div className="w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
+              {uploadMode === 'choose' && (
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Upload Mileage Report</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <div>
+                          <div className="font-semibold">Upload Excel / CSV</div>
+                          <div className="text-xs text-slate-500">Choose a file to import</div>
+                        </div>
+                      </div>
                     </div>
-                    <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
-                  </label>
-                  {selectedFileName && <div className="mt-3 text-xs text-slate-700">Selected: <strong>{selectedFileName}</strong></div>}
-                </div>
 
-                {previewRows && previewRows.length > 0 && (
-                  <div className="mt-4 border rounded p-2 bg-white">
-                    <div className="text-sm font-semibold mb-2">Preview (first {previewRows.length} rows)</div>
-                    <div className="overflow-auto max-h-36">
-                      <table className="min-w-full text-xs">
-                        <thead className="text-left text-gray-500">
-                          <tr>
-                            {mileageHeaders.map((h) => (
-                              <th key={h} className="pr-4">{getHeaderLabel(h)}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {previewRows.map((r, i) => (
-                            <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
+                    <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <div>
+                          <div className="font-semibold">Paste Manually</div>
+                          <div className="text-xs text-slate-500">Paste data from spreadsheet</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <button onClick={handleCloseUploadModal} className="px-4 py-2 rounded bg-gray-50 border text-sm">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {uploadMode === 'file' && (
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
+                  <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
+                    <label className="block cursor-pointer">
+                      <div className="flex items-center justify-center space-x-3">
+                        <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
+                      </div>
+                      <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
+                    </label>
+                    {selectedFileName && <div className="mt-3 text-xs text-slate-700">Selected: <strong>{selectedFileName}</strong></div>}
+                  </div>
+
+                  {previewRows && previewRows.length > 0 && (
+                    <div className="mt-4 border rounded p-2 bg-white">
+                      <div className="text-sm font-semibold mb-2">Preview (first {previewRows.length} rows)</div>
+                      <div className="overflow-auto max-h-36">
+                        <table className="min-w-full text-xs">
+                          <thead className="text-left text-gray-500">
+                            <tr>
                               {mileageHeaders.map((h) => (
-                                <td key={h} className="pr-4">{r[h] || ''}</td>
+                                <th key={h} className="pr-4">{getHeaderLabel(h)}</th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {previewRows.map((r, i) => (
+                              <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
+                                {mileageHeaders.map((h) => (
+                                  <td key={h} className="pr-4">{r[h] || ''}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
+                  )}
+
+                  <div className="mt-4 flex justify-end">
+                    <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded bg-gray-50 border text-sm">Close</button>
                   </div>
-                )}
-
-                <div className="mt-4 flex justify-end">
-                  <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded bg-gray-50 border text-sm">Close</button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {uploadMode === 'paste' && (
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Paste Data</h3>
-                  <button onClick={handleCloseUploadModal} className="text-slate-500 hover:text-slate-700">Close ✕</button>
-                </div>
+              {uploadMode === 'paste' && (
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold">Paste Data</h3>
+                    <button onClick={handleCloseUploadModal} className="text-slate-500 hover:text-slate-700">Close ✕</button>
+                  </div>
 
-                <div className="overflow-auto border rounded mb-3 max-h-64">
-                  <table className="min-w-full table-fixed border-collapse text-sm">
-                    <thead className="bg-gray-100 sticky top-0 shadow-sm">
-                      <tr>
-                        <th className="px-2 py-1 border text-xs">#</th>
-                        {mileageHeaders.map((h, ci) => (
-                          <th key={ci} className="px-2 py-1 border text-xs text-left">{getHeaderLabel(h)}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
-                        <tr key={ri} className={`${ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-t`}>
-                          <td className="px-2 py-1 border text-xs">{ri + 1}</td>
-                          {row.map((cell, ci) => (
-                            <td key={ci} className="px-1 py-1 border">
-                              <input value={cell ?? ''}
-                                onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
-                                onFocus={() => setPasteStart({ r: ri, c: ci })}
-                                onPaste={(e) => handleGridPaste(e, ri, ci)}
-                                className="w-full p-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                            </td>
+                  <div className="overflow-auto border rounded mb-3 max-h-64">
+                    <table className="min-w-full table-fixed border-collapse text-sm">
+                      <thead className="bg-gray-100 sticky top-0 shadow-sm">
+                        <tr>
+                          <th className="px-2 py-1 border text-xs">#</th>
+                          {mileageHeaders.map((h, ci) => (
+                            <th key={ci} className="px-2 py-1 border text-xs text-left">{getHeaderLabel(h)}</th>
                           ))}
                         </tr>
-                      )) : (
-                        <tr>
-                          <td colSpan={mileageHeaders.length + 1} className="p-4 text-center text-slate-500">Empty grid. Paste data or use clipboard.</td>
-                        </tr>
-                      )}
-                      {pasteNotice && (
-                        <tr>
-                          <td colSpan={mileageHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
+                          <tr key={ri} className={`${ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-t`}>
+                            <td className="px-2 py-1 border text-xs">{ri + 1}</td>
+                            {row.map((cell, ci) => (
+                              <td key={ci} className="px-1 py-1 border">
+                                <input value={cell ?? ''}
+                                  onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
+                                  onFocus={() => setPasteStart({ r: ri, c: ci })}
+                                  onPaste={(e) => handleGridPaste(e, ri, ci)}
+                                  className="w-full p-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-sky-300" />
+                              </td>
+                            ))}
+                          </tr>
+                        )) : (
+                          <tr>
+                            <td colSpan={mileageHeaders.length + 1} className="p-4 text-center text-slate-500">Empty grid. Paste data or use clipboard.</td>
+                          </tr>
+                        )}
+                        {pasteNotice && (
+                          <tr>
+                            <td colSpan={mileageHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <div className="flex items-center space-x-2 mb-3">
-                  <button onClick={() => initPasteGrid(5)} className="px-2 py-1 rounded bg-gray-50 border text-sm">Reset Grid</button>
-                </div>
+                  <div className="flex items-center space-x-2 mb-3">
+                    <button onClick={() => initPasteGrid(5)} className="px-2 py-1 rounded bg-gray-50 border text-sm">Reset Grid</button>
+                  </div>
 
-                <div className="flex justify-end space-x-2 mt-2">
-                  <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200 text-sm">Cancel</button>
-                  <button onClick={() => { applyPasteGrid(); handleCloseUploadModal() }} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Apply Paste</button>
+                  <div className="flex justify-end space-x-2 mt-2">
+                    <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200 text-sm">Cancel</button>
+                    <button onClick={() => { applyPasteGrid(); handleCloseUploadModal() }} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Apply Paste</button>
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Save Result */}
+        {saveResult && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+            <strong>{saveResult.success}</strong> saved, <strong>{saveResult.failed}</strong> failed.
+            {saveResult.failures && saveResult.failures.length > 0 && (
+              <details className="mt-2 text-xs text-red-600">
+                <summary>View failures</summary>
+                <ul className="mt-2 list-disc list-inside">
+                  {saveResult.failures.map((f, i) => (
+                    <li key={i}><strong>{f.row.reg_no}</strong>: {f.reason}</li>
+                  ))}
+                </ul>
+              </details>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Save Result */}
-      {saveResult && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-          <strong>{saveResult.success}</strong> saved, <strong>{saveResult.failed}</strong> failed.
-          {saveResult.failures && saveResult.failures.length > 0 && (
-            <details className="mt-2 text-xs text-red-600">
-              <summary>View failures</summary>
-              <ul className="mt-2 list-disc list-inside">
-                {saveResult.failures.map((f, i) => (
-                  <li key={i}><strong>{f.row.reg_no}</strong>: {f.reason}</li>
-                ))}
-              </ul>
-            </details>
+        {/* Mileage Table */}
+        <div className="overflow-x-auto border border-white/60 rounded-2xl shadow-lg shadow-indigo-100/10 bg-white/40 backdrop-blur-xl">
+          {loading ? (
+            <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
+              <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Loading mileage data...</span>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-100/50 text-sm">
+              <thead className="bg-gray-50/50 backdrop-blur-sm">
+                <tr>
+                  {mileageHeaders.map((h) => (
+                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{getHeaderLabel(h)}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-transparent divide-y divide-gray-100/50">
+                {(() => {
+                  const q = (searchQuery || '').toLowerCase().trim()
+                  const filteredRows = q ? rows.filter(r => (r.reg_no || '').toLowerCase().includes(q) || (r.vehicle_type || '').toLowerCase().includes(q)) : rows
+
+                  if (filteredRows.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={mileageHeaders.length} className="p-8 text-slate-500 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span>No mileage data available. Upload a report or add entries manually.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  return filteredRows.map((r, idx) => (
+                    <tr key={idx} className="hover:bg-white/40 transition-colors">
+                      <td className="px-3 py-2"><input value={r.sr || ''} readOnly className="w-full p-1.5 text-xs bg-transparent border-0 text-slate-500" /></td>
+                      <td className="px-3 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(idx, 'reg_no', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono font-medium text-slate-700" /></td>
+                      <td className="px-3 py-2"><input value={r.vehicle_type || ''} onChange={(e) => updateRowField(idx, 'vehicle_type', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                      <td className="px-3 py-2"><input value={r.used_for || ''} onChange={(e) => updateRowField(idx, 'used_for', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                      <td className="px-3 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(idx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
+                      <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
+                      <td className="px-3 py-2"><input value={r.threshold || ''} onChange={(e) => updateRowField(idx, 'threshold', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
+                      <td className="px-3 py-2"><input value={r.remarks || ''} onChange={(e) => updateRowField(idx, 'remarks', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                    </tr>
+                  ))
+                })()}
+              </tbody>
+            </table>
           )}
         </div>
-      )}
-
-      {/* Mileage Table */}
-      <div className="overflow-x-auto border border-gray-100 rounded-md">
-        {loading ? (
-          <div className="p-6 text-center text-slate-500">Loading mileage data...</div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                {mileageHeaders.map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{getHeaderLabel(h)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="bg-white">
-              {(() => {
-                const q = (searchQuery || '').toLowerCase().trim()
-                const filteredRows = q ? rows.filter(r => (r.reg_no || '').toLowerCase().includes(q) || (r.vehicle_type || '').toLowerCase().includes(q)) : rows
-
-                if (filteredRows.length === 0) {
-                  return (
-                    <tr>
-                      <td colSpan={mileageHeaders.length} className="p-6 text-slate-500 text-center">No mileage data. Upload a report or add entries manually.</td>
-                    </tr>
-                  )
-                }
-
-                return filteredRows.map((r, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-3 py-2"><input value={r.sr || ''} readOnly className="w-full p-1 text-xs bg-gray-50 border-0" /></td>
-                    <td className="px-3 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(idx, 'reg_no', e.target.value)} className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.vehicle_type || ''} onChange={(e) => updateRowField(idx, 'vehicle_type', e.target.value)} className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.used_for || ''} onChange={(e) => updateRowField(idx, 'used_for', e.target.value)} className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(idx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.threshold || ''} onChange={(e) => updateRowField(idx, 'threshold', e.target.value)} type="number" step="0.01" className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                    <td className="px-3 py-2"><input value={r.remarks || ''} onChange={(e) => updateRowField(idx, 'remarks', e.target.value)} className="w-full p-1 text-xs border border-gray-200 rounded" /></td>
-                  </tr>
-                ))
-              })()}
-            </tbody>
-          </table>
-        )}
       </div>
-    </div>
       {/* Transfer Review Modal - Dual Source */}
       {showTransferReview && (pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl w-11/12 md:w-4/5 p-6 my-8">
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto transition-all">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-4/5 p-6 my-8 shadow-2xl border border-white/60">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold">Review Data Transfer (Dual Source)</h3>
               <button onClick={() => setShowTransferReview(false)} className="text-slate-500">Close</button>
@@ -1564,7 +1748,7 @@ export default function MileageReport() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowTransferReview(false); setPendingTransfer(null); setPendingVehicleRecords([] ) }} className="px-3 py-2 rounded bg-gray-50 border text-sm">Dismiss</button>
+              <button onClick={() => { setShowTransferReview(false); setPendingTransfer(null); setPendingVehicleRecords([]) }} className="px-3 py-2 rounded bg-gray-50 border text-sm">Dismiss</button>
               {hasProposedUsedFor ? (
                 <button onClick={() => { openUsedForModal(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Process Used For</button>
               ) : (
@@ -1577,8 +1761,8 @@ export default function MileageReport() {
 
       {/* Used For Modal - Top Level */}
       {showUsedForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg w-11/12 md:w-3/4 p-4 max-h-[80vh] overflow-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-3/4 p-6 max-h-[80vh] overflow-hidden shadow-2xl border border-white/60 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Used For - Grid View</h3>
               <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
@@ -1664,8 +1848,8 @@ export default function MileageReport() {
 
       {/* Threshold Modal - Top Level */}
       {showThresholdModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg w-11/12 md:w-3/4 p-4 max-h-[80vh] overflow-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
+          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-3/4 p-6 max-h-[80vh] overflow-hidden shadow-2xl border border-white/60 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Threshold - Grid View</h3>
               <button onClick={() => { setShowThresholdModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>

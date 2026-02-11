@@ -641,9 +641,11 @@ export default function WorkerManager() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-slate-900 relative overflow-hidden">
-      {/* Background - Clean White/Off-White */}
-      <div className="absolute inset-0 bg-[#FAFAFA]"></div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white relative overflow-hidden text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* Animated Background Blobs - Matching Login Page */}
+      <div className="fixed top-0 -left-40 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none z-0"></div>
+      <div className="fixed top-40 -right-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
+      <div className="fixed -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000 pointer-events-none z-0"></div>
 
       {/* Main Content Area */}
       <div className="relative z-10 px-4 pb-8 pt-4">
@@ -693,14 +695,14 @@ export default function WorkerManager() {
             </motion.div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 relative z-10">
               {[
                 {
                   icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-                  bg: 'bg-white',
-                  border: 'border-cyan-100',
-                  iconColor: 'text-cyan-600',
-                  iconBg: 'bg-cyan-50',
+                  bg: 'bg-white/60',
+                  border: 'border-white/40',
+                  iconColor: 'text-blue-600',
+                  iconBg: 'bg-blue-50',
                   value: workers.length,
                   title: 'Total Employees',
                   subtitle: 'Active workforce',
@@ -708,8 +710,8 @@ export default function WorkerManager() {
                 },
                 {
                   icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-                  bg: 'bg-white',
-                  border: 'border-emerald-100',
+                  bg: 'bg-white/60',
+                  border: 'border-white/40',
                   iconColor: 'text-emerald-600',
                   iconBg: 'bg-emerald-50',
                   value: workers.filter(w => w.status === 'Active').length,
@@ -719,10 +721,10 @@ export default function WorkerManager() {
                 },
                 {
                   icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
-                  bg: 'bg-white',
-                  border: 'border-blue-100',
-                  iconColor: 'text-blue-600',
-                  iconBg: 'bg-blue-50',
+                  bg: 'bg-white/60',
+                  border: 'border-white/40',
+                  iconColor: 'text-indigo-600',
+                  iconBg: 'bg-indigo-50',
                   value: 6,
                   title: 'UC/Ward Areas',
                   subtitle: 'Coverage zones',
@@ -730,8 +732,8 @@ export default function WorkerManager() {
                 },
                 {
                   icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-                  bg: 'bg-white',
-                  border: 'border-amber-100',
+                  bg: 'bg-white/60',
+                  border: 'border-white/40',
                   iconColor: 'text-amber-600',
                   iconBg: 'bg-amber-50',
                   value: `${workers.reduce((sum, w) => sum + (w.salary || 0), 0).toLocaleString()}`,
@@ -742,22 +744,29 @@ export default function WorkerManager() {
               ].map((card, index) => (
                 <motion.div
                   key={index}
-                  initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: card.delay, duration: 0.4, ease: "backOut" }}
-                  className={`bg-white border rounded-xl p-6 shadow-sm shadow-slate-200/50 hover:shadow-md hover:shadow-slate-200/80 transition-all duration-300 cursor-default group`}
+                  whileHover={{ y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
+                  transition={{ delay: card.delay, duration: 0.5, type: "spring", stiffness: 100 }}
+                  className={`${card.bg} backdrop-blur-xl border ${card.border} rounded-2xl p-6 shadow-lg shadow-indigo-100/10 cursor-default group relative overflow-hidden`}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl ${card.iconBg} ${card.iconColor} group-hover:scale-110 transition-transform duration-300`}>
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                    <svg className={`w-16 h-16 ${card.iconColor}`} fill="currentColor" viewBox="0 0 24 24">
+                      <path d={card.icon} />
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <div className={`p-3.5 rounded-2xl ${card.iconBg} ${card.iconColor} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
                       <svg className={`w-6 h-6`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={card.icon} />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
                       </svg>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-3xl font-bold text-slate-900 mb-1 tracking-tight">{card.value}</p>
+                  <div className="relative z-10">
+                    <p className="text-3xl font-bold text-slate-800 mb-1 tracking-tight">{card.value}</p>
                     <p className="text-slate-600 font-semibold text-sm mb-1">{card.title}</p>
-                    <p className="text-slate-400 text-xs">{card.subtitle}</p>
+                    <p className="text-slate-500 text-xs font-medium">{card.subtitle}</p>
                   </div>
                 </motion.div>
               ))}
@@ -765,82 +774,82 @@ export default function WorkerManager() {
 
             {/* Quick Actions */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm shadow-slate-200/50"
+              className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-8 mb-8 shadow-lg shadow-blue-100/10 relative z-10"
             >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center border border-cyan-100">
-                  <svg className="w-5 h-5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 text-white">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Quick Actions</h3>
-                  <p className="text-slate-500 text-sm">Common tasks and shortcuts</p>
+                  <h3 className="text-xl font-bold text-slate-800">Quick Actions</h3>
+                  <p className="text-slate-500 text-sm font-medium">Common tasks and shortcuts</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <motion.button
-                  whileHover={{ scale: 1.01, y: -1 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('registration')}
-                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-200 hover:border-cyan-200 rounded-xl p-4 transition-all duration-300 text-left shadow-sm hover:shadow-cyan-100"
+                  className="group relative overflow-hidden bg-white/40 hover:bg-white/60 border border-white/60 hover:border-white/80 rounded-2xl p-5 transition-all duration-300 text-left shadow-sm hover:shadow-lg backdrop-blur-md"
                 >
                   <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-white rounded-lg group-hover:scale-105 transition-transform duration-300 border border-gray-100">
-                        <svg className="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-900 font-semibold text-sm mb-1 group-hover:text-cyan-700 transition-colors">Register New Employee</p>
-                      <p className="text-slate-500 text-xs">Add worker to system</p>
+                      <p className="text-slate-800 font-bold text-sm mb-1 group-hover:text-blue-700 transition-colors">Register New Employee</p>
+                      <p className="text-slate-500 text-xs font-medium">Add worker to system</p>
                     </div>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ scale: 1.01, y: -1 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('workers')}
-                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-200 hover:border-blue-200 rounded-xl p-4 transition-all duration-300 text-left shadow-sm hover:shadow-blue-100"
+                  className="group relative overflow-hidden bg-white/40 hover:bg-white/60 border border-white/60 hover:border-white/80 rounded-2xl p-5 transition-all duration-300 text-left shadow-sm hover:shadow-lg backdrop-blur-md"
                 >
                   <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-white rounded-lg group-hover:scale-105 transition-transform duration-300 border border-gray-100">
-                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                         </svg>
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-900 font-semibold text-sm mb-1 group-hover:text-blue-700 transition-colors">View Employee Directory</p>
-                      <p className="text-slate-500 text-xs">Browse all workers</p>
+                      <p className="text-slate-800 font-bold text-sm mb-1 group-hover:text-indigo-700 transition-colors">View Employee Directory</p>
+                      <p className="text-slate-500 text-xs font-medium">Browse all workers</p>
                     </div>
                   </div>
                 </motion.button>
 
                 <motion.button
-                  whileHover={{ scale: 1.01, y: -1 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveTab('hr')}
-                  className="group relative overflow-hidden bg-gray-50 hover:bg-white border border-gray-200 hover:border-purple-200 rounded-xl p-4 transition-all duration-300 text-left shadow-sm hover:shadow-purple-100"
+                  className="group relative overflow-hidden bg-white/40 hover:bg-white/60 border border-white/60 hover:border-white/80 rounded-2xl p-5 transition-all duration-300 text-left shadow-sm hover:shadow-lg backdrop-blur-md"
                 >
                   <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-white rounded-lg group-hover:scale-105 transition-transform duration-300 border border-gray-100">
-                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="p-3 bg-purple-50 text-purple-600 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-900 font-semibold text-sm mb-1 group-hover:text-purple-700 transition-colors">HR Records</p>
-                      <p className="text-slate-500 text-xs">Complete employee data</p>
+                      <p className="text-slate-800 font-bold text-sm mb-1 group-hover:text-purple-700 transition-colors">HR Records</p>
+                      <p className="text-slate-500 text-xs font-medium">Complete employee data</p>
                     </div>
                   </div>
                 </motion.button>
@@ -855,7 +864,7 @@ export default function WorkerManager() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ delay: 0.6 }}
-                  className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm shadow-slate-200/50"
+                  className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl p-6 shadow-lg shadow-indigo-100/10 relative z-10"
                 >
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center border border-green-100">
@@ -915,7 +924,7 @@ export default function WorkerManager() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
-                className="relative bg-white border border-gray-200 rounded-2xl p-8 md:p-12 shadow-xl shadow-slate-200/50 overflow-hidden"
+                className="relative bg-white/40 backdrop-blur-2xl border border-white/60 rounded-3xl p-8 md:p-12 shadow-2xl shadow-blue-100/10 overflow-hidden"
               >
 
                 {/* Header */}
@@ -1014,7 +1023,7 @@ export default function WorkerManager() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50/50 backdrop-blur-sm border border-blue-100/60 rounded-xl shadow-sm"
               >
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -1054,9 +1063,9 @@ export default function WorkerManager() {
                 </motion.button>
               </motion.div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm shadow-slate-200/50">
+              <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-indigo-100/10 relative z-10">
                 {/* Search and Filters Bar */}
-                <div className="p-6 border-b border-gray-200 bg-gray-50/50">
+                <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                       {/* Search Bar */}
@@ -1069,7 +1078,7 @@ export default function WorkerManager() {
                           placeholder="Search by name or CNIC..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-sm shadow-sm"
+                          className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm shadow-sm shadow-blue-500/5"
                         />
                       </div>
 
@@ -1077,7 +1086,7 @@ export default function WorkerManager() {
                       <select
                         value={designationFilter}
                         onChange={(e) => setDesignationFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-sm transition-all cursor-pointer shadow-sm"
+                        className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm shadow-blue-500/5 appearance-none"
                       >
                         <option value="">All Designations</option>
                         <option value="Sanitary Supervisor">Sanitary Supervisor</option>
@@ -1123,7 +1132,7 @@ export default function WorkerManager() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200 text-xs">
+                      <tr className="bg-white/40 border-b border-white/50 text-xs backdrop-blur-sm">
                         <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-48">Employee</th>
                         <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-36">CNIC</th>
                         <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">Code</th>
@@ -1157,7 +1166,7 @@ export default function WorkerManager() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
                             whileHover={{ backgroundColor: '#F9FAFB' }}
-                            className="group transition-colors duration-200 hover:bg-gray-50 bg-white"
+                            className="group transition-colors duration-200 hover:bg-white/40 bg-transparent border-b border-gray-100/50"
                           >
                             <td className="px-3 py-2">
                               <div className="flex items-center gap-3">
@@ -1278,7 +1287,7 @@ export default function WorkerManager() {
               </div>
 
               {/* HR Filters (refreshed styling to blend with UI) */}
-              <div className="p-4 border-b border-gray-200 bg-gray-50/50 rounded-2xl w-full">
+              <div className="p-4 border-b border-white/40 bg-white/30 backdrop-blur-md rounded-2xl w-full">
                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                   {/* Search input */}
                   <div className="flex-1 min-w-0">
@@ -1291,7 +1300,7 @@ export default function WorkerManager() {
                         placeholder="Search by name or CNIC..."
                         value={hrSearchQuery}
                         onChange={(e) => setHrSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all text-sm shadow-sm"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm shadow-sm shadow-blue-500/5"
                       />
                     </div>
                   </div>
@@ -1301,7 +1310,7 @@ export default function WorkerManager() {
                     <select
                       value={hrDesignationFilter}
                       onChange={(e) => setHrDesignationFilter(e.target.value)}
-                      className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-sm transition-all cursor-pointer shadow-sm min-w-[170px]"
+                      className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm shadow-blue-500/5 min-w-[170px] appearance-none"
                     >
                       <option value="">All Designations</option>
                       <option value="Sanitary Supervisor">Sanitary Supervisor</option>
@@ -1334,7 +1343,7 @@ export default function WorkerManager() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring" }}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-100 rounded-xl shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-50/50 backdrop-blur-sm border border-purple-100/60 rounded-xl shadow-sm"
               >
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1377,13 +1386,13 @@ export default function WorkerManager() {
                 </motion.button>
               </motion.div>
             ) : (
-              <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+              <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-purple-100/10 relative z-10">
                 {/* Table */}
                 {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50/50">
+                      <tr className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">#</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-40">Employee</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">CNIC</th>
@@ -1404,7 +1413,7 @@ export default function WorkerManager() {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.02 }}
                           whileHover={{ backgroundColor: '#F9FAFB' }}
-                          className="transition-colors hover:bg-gray-50 bg-white group"
+                          className="transition-colors hover:bg-white/40 bg-transparent group border-b border-gray-100/50"
                         >
                           {/* SR */}
                           <td className="px-3 py-2">
@@ -1580,7 +1589,7 @@ export default function WorkerManager() {
               </div>
             </div>
 
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-rose-100/10 relative z-10">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>

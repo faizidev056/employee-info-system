@@ -27,7 +27,7 @@ export default function MonthPicker({ value, onChange }) {
       <select
         value={currentMonth}
         onChange={(e) => handleMonthChange(parseInt(e.target.value))}
-        className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-sm transition-all duration-200 cursor-pointer hover:bg-gray-50 shadow-sm"
+        className="flex-1 px-3 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all duration-200 cursor-pointer hover:bg-white/80 shadow-sm shadow-blue-500/5 appearance-none"
       >
         {months.map((m, idx) => (
           <option key={m} value={idx} className="bg-white text-slate-900">
@@ -40,7 +40,7 @@ export default function MonthPicker({ value, onChange }) {
       <select
         value={currentYear}
         onChange={(e) => handleYearChange(parseInt(e.target.value))}
-        className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 text-sm transition-all duration-200 cursor-pointer hover:bg-gray-50 w-24 shadow-sm"
+        className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all duration-200 cursor-pointer hover:bg-white/80 w-24 shadow-sm shadow-blue-500/5 appearance-none"
       >
         {yearRange.map((y) => (
           <option key={y} value={y} className="bg-white text-slate-900">

@@ -835,18 +835,17 @@ export default function HRTab() {
 
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex space-x-2">
-          <button onClick={() => setActive('checkin')} className={`px-3 py-1 rounded-md ${active === 'checkin' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-600'}`}>Check-In</button>
-          <button onClick={() => setActive('checkout')} className={`px-3 py-1 rounded-md ${active === 'checkout' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-600'}`}>Check-Out</button>
-          <button onClick={() => setActive('attendance')} className={`px-3 py-1 rounded-md ${active === 'attendance' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-600'}`}>Attendance</button>
+      <div className="flex items-center justify-between mb-6 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-sm">
+        <div className="flex space-x-1 bg-white/60 rounded-xl p-1 border border-white/50">
+          <button onClick={() => setActive('checkin')} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${active === 'checkin' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white/50'}`}>Check-In</button>
+          <button onClick={() => setActive('checkout')} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${active === 'checkout' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white/50'}`}>Check-Out</button>
+          <button onClick={() => setActive('attendance')} className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${active === 'attendance' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white/50'}`}>Attendance</button>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white">Download Template</button>
+        <div className="flex items-center space-x-3 pr-2">
+          <button onClick={downloadTemplate} className="px-4 py-2 rounded-xl bg-slate-700/10 text-slate-700 hover:bg-slate-700/20 text-sm font-medium transition-all border border-slate-700/5">Template</button>
 
-          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200">Upload Report</button>
-
+          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm">Upload Report</button>
 
           <button onClick={() => {
             if (active === 'checkin') setCheckinRows([]);
@@ -857,26 +856,27 @@ export default function HRTab() {
               setCheckoutRows([]);
               setPushResult(null);
             }
-          }} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100">Clear Table</button>
+          }} className="px-4 py-2 rounded-xl bg-rose-50/80 text-rose-600 hover:bg-rose-100 border border-rose-100 text-sm font-medium transition-all backdrop-blur-sm">Clear</button>
 
-          <button onClick={() => exportReport(active)} className="px-3 py-1 rounded-md bg-emerald-600 text-white">Export {active === 'checkin' ? 'Check-In' : active === 'checkout' ? 'Check-Out' : 'Attendance'} Report</button>
+          <button onClick={() => exportReport(active)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all border border-transparent">Export</button>
+
           {active === 'attendance' && (
-            <div className="flex items-center space-x-2">
-              <label className="inline-flex items-center text-sm">
-                <input type="checkbox" checked={pushAll} onChange={(e) => setPushAll(e.target.checked)} className="mr-2" />
+            <div className="flex items-center space-x-3 pl-3 border-l border-slate-200/50">
+              <label className="inline-flex items-center text-sm font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={pushAll} onChange={(e) => setPushAll(e.target.checked)} className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30" />
                 <span>Push all</span>
               </label>
 
-              <button onClick={() => pushAttendanceToWorkerManager()} disabled={pushing} className="px-3 py-1 rounded-md bg-sky-600 text-white">
-                {pushing ? 'Pushing...' : 'Push to Worker Manager'}
+              <button onClick={() => pushAttendanceToWorkerManager()} disabled={pushing} className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed">
+                {pushing ? 'Pushing...' : 'Push Updates'}
               </button>
 
               {pushedData.length > 0 && (
                 <button
                   onClick={() => setShowPushedDataModal(true)}
-                  className="px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 text-sm font-medium transition-all"
                 >
-                  View Pushed Data ({pushedData.length})
+                  History ({pushedData.length})
                 </button>
               )}
             </div>
@@ -889,15 +889,22 @@ export default function HRTab() {
         <div className="flex items-center">
           <div className="flex items-center space-x-4 w-full">
             <div className="w-full max-w-md">
-              <div className="relative">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search SR, Username or CNIC"
-                  className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full focus:ring-1 focus:ring-sky-300"
+                  placeholder="Search SR, Username or CNIC..."
+                  className="pl-10 pr-10 py-2.5 rounded-xl bg-white/50 border border-white/60 text-sm w-full text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm backdrop-blur-sm"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1.5 text-xs text-slate-500 px-2">✕</button>
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 )}
               </div>
             </div>
@@ -909,8 +916,8 @@ export default function HRTab() {
       </div>
 
       {showUploadModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-3xl p-4 bg-white rounded">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
+          <div className="w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
             {uploadMode === 'choose' && (
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Upload Report</h3>
@@ -1063,23 +1070,23 @@ export default function HRTab() {
         <div className="mb-3 text-sm text-slate-500">Tip: Click cells to edit inline. You can upload a file using the <strong>Upload Report</strong> button. The table structure matches the Excel template for easy import.</div>
       )}
 
-      <div className="overflow-x-auto border border-gray-100 rounded-md" onPaste={handleTablePaste}>
+      <div className="overflow-x-auto border border-white/60 rounded-2xl shadow-lg shadow-indigo-100/10 bg-white/40 backdrop-blur-xl" onPaste={handleTablePaste}>
         {active === 'attendance' ? (
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100/50 text-sm">
+            <thead className="bg-gray-50/50 backdrop-blur-sm">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Check-In</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Check-Out</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Name</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Father/Husband</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">CNIC</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Designation</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">UC/Ward</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Attendance Point</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">Attendance Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Check-In</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Check-Out</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Father/Husband</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">CNIC</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Designation</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">UC/Ward</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Attendance Point</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Attendance Type</th>
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody className="bg-transparent divide-y divide-gray-100/50">
               {(() => {
                 // If attendance data was uploaded directly, display that. Otherwise, compute from check-in/check-out
                 const dataToDisplay = attendanceRows && attendanceRows.length > 0 ? attendanceRows : computeAttendance()
@@ -1125,16 +1132,16 @@ export default function HRTab() {
                       const checkInColor = getStatusColor(checkInLetter)
                       const checkOutColor = getStatusColor(checkOutLetter)
                       return (
-                        <tr key={i} className="border-t">
-                          <td className={`px-4 py-2 font-semibold ${checkInColor}`}>{checkInLetter}</td>
-                          <td className={`px-4 py-2 font-semibold ${checkOutColor}`}>{checkOutLetter}</td>
-                          <td className="px-4 py-2">{a.username}</td>
-                          <td className="px-4 py-2">{a.father_name || worker.father_name}</td>
-                          <td className="px-4 py-2">{a.cnic}</td>
-                          <td className="px-4 py-2">{a.designation || worker.designation}</td>
-                          <td className="px-4 py-2">{a.uc_ward}</td>
-                          <td className="px-4 py-2">{a.attendance_point || worker.attendance_point}</td>
-                          <td className="px-4 py-2">{a.type || '-'}</td>
+                        <tr key={i} className="hover:bg-white/40 transition-colors">
+                          <td className={`px-4 py-3 font-semibold ${checkInColor}`}>{checkInLetter}</td>
+                          <td className={`px-4 py-3 font-semibold ${checkOutColor}`}>{checkOutLetter}</td>
+                          <td className="px-4 py-3 text-slate-700">{a.username}</td>
+                          <td className="px-4 py-3 text-slate-600">{a.father_name || worker.father_name}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-slate-500">{a.cnic}</td>
+                          <td className="px-4 py-3 text-slate-600">{a.designation || worker.designation}</td>
+                          <td className="px-4 py-3 text-slate-600">{a.uc_ward}</td>
+                          <td className="px-4 py-3 text-slate-600">{a.attendance_point || worker.attendance_point}</td>
+                          <td className="px-4 py-3 text-slate-600">{a.type || '-'}</td>
                         </tr>
                       )
                     })}
@@ -1144,15 +1151,15 @@ export default function HRTab() {
             </tbody>
           </table>
         ) : (
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100/50 text-sm">
+            <thead className="bg-gray-50/50 backdrop-blur-sm">
               <tr>
                 {templateHeaders.map((h) => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : h === 'datetime' ? 'Date & Time' : h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{h === 'sr' ? 'SR' : h === 'username' ? 'Username' : h === 'cnic' ? 'CNIC' : h === 'uc_ward' ? 'UC/Ward' : h === 'type' ? 'Type' : h === 'datetime' ? 'Date & Time' : h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody className="bg-transparent divide-y divide-gray-100/50">
               {(() => {
                 const q = (searchQuery || '').toLowerCase().trim()
                 const visibleRows = q ? rows.filter(r => String(r.sr || '').toLowerCase().includes(q) || (r.username || '').toLowerCase().includes(q) || (r.cnic || '').toLowerCase().includes(q)) : rows
@@ -1164,13 +1171,13 @@ export default function HRTab() {
                   )
                 }
                 return visibleRows.map((r, idx) => (
-                  <tr key={idx} className="border-t">
-                    <td className="px-4 py-2"><input value={r.sr || ''} onChange={(e) => updateRowField(idx, 'sr', e.target.value)} className="w-full p-1 text-sm bg-transparent" /></td>
-                    <td className="px-4 py-2"><input value={r.username || ''} onChange={(e) => updateRowField(idx, 'username', e.target.value)} className="w-full p-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input value={r.cnic || ''} onChange={(e) => updateRowField(idx, 'cnic', e.target.value)} className="w-full p-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input value={r.uc_ward || ''} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full p-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input value={r.type || ''} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full p-1 text-sm" /></td>
-                    <td className="px-4 py-2"><input value={r.datetime || ''} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full p-1 text-sm" /></td>
+                  <tr key={idx} className="hover:bg-white/40 transition-colors">
+                    <td className="px-4 py-2"><input value={r.sr || ''} onChange={(e) => updateRowField(idx, 'sr', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                    <td className="px-4 py-2"><input value={r.username || ''} onChange={(e) => updateRowField(idx, 'username', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                    <td className="px-4 py-2"><input value={r.cnic || ''} onChange={(e) => updateRowField(idx, 'cnic', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
+                    <td className="px-4 py-2"><input value={r.uc_ward || ''} onChange={(e) => updateRowField(idx, 'uc_ward', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                    <td className="px-4 py-2"><input value={r.type || ''} onChange={(e) => updateRowField(idx, 'type', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                    <td className="px-4 py-2"><input value={r.datetime || ''} onChange={(e) => updateRowField(idx, 'datetime', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
                   </tr>
                 ))
               })()}
@@ -1181,75 +1188,78 @@ export default function HRTab() {
 
       {/* Pushed Data Modal */}
       {showPushedDataModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPushedDataModal(false)}>
-          <div className="w-full max-w-5xl bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all" onClick={() => setShowPushedDataModal(false)}>
+          <div className="w-full max-w-5xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-indigo-500/20 max-h-[90vh] overflow-hidden border border-white/50" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-indigo-700">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-600 to-indigo-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-white">Pushed Attendance Data</h2>
-                  <p className="text-sm text-indigo-100 mt-1">
-                    {pushedData.length} record{pushedData.length !== 1 ? 's' : ''} successfully pushed to Worker Manager
+                  <h2 className="text-xl font-bold text-white tracking-tight">Pushed Attendance Data</h2>
+                  <p className="text-sm text-indigo-100 mt-1 font-medium">
+                    {pushedData.length} record{pushedData.length !== 1 ? 's' : ''} successfully updated
                   </p>
                 </div>
                 <button
                   onClick={() => setShowPushedDataModal(false)}
-                  className="px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all"
                 >
-                  ✕ Close
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             </div>
 
             {/* Modal Body */}
-            <div className="overflow-auto max-h-[calc(90vh-120px)] p-6">
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 bg-gray-50 border-b-2 border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">#</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Worker Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">CNIC</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Designation</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Attendance Point</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {pushedData.map((record, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-gray-600">{idx + 1}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{record.worker_name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.worker_code}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.cnic}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.designation}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === 'P' ? 'bg-green-100 text-green-800' :
-                            record.status === 'L' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                          }`}>
-                          {record.status === 'P' ? '✓ Present' :
-                            record.status === 'L' ? '○ Leave' :
-                              '✗ Absent'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 font-mono">{record.date}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{record.attendance_point || 'N/A'}</td>
+            <div className="overflow-auto max-h-[calc(90vh-120px)] p-6 bg-slate-50/50">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-gray-50/90 backdrop-blur border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">#</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Worker Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">CNIC</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Designation</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Attendance Point</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-50">
+                    {pushedData.map((record, idx) => (
+                      <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
+                        <td className="px-4 py-3 text-sm text-slate-500">{idx + 1}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">{record.worker_name}</td>
+                        <td className="px-4 py-3 text-sm text-slate-500 font-mono text-xs">{record.worker_code}</td>
+                        <td className="px-4 py-3 text-sm text-slate-500 font-mono text-xs">{record.cnic}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{record.designation}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${record.status === 'P' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                            record.status === 'L' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                              'bg-rose-50 text-rose-700 border-rose-100'
+                            }`}>
+                            {record.status === 'P' ? '✓ Present' :
+                              record.status === 'L' ? '○ Leave' :
+                                '✗ Absent'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600 font-mono text-xs hidden sm:table-cell">{record.date}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">{record.attendance_point || 'N/A'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                💡 Tip: These records are now visible in Worker Manager → Attendance tab
+            <div className="px-6 py-4 border-t border-gray-100 bg-white/80 backdrop-blur flex justify-between items-center">
+              <div className="text-sm text-slate-500 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                These records are now live in Worker Manager
               </div>
               <button
                 onClick={() => setShowPushedDataModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                className="px-5 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all font-medium text-sm shadow-sm"
               >
                 Close
               </button>

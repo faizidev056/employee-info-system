@@ -358,25 +358,26 @@ export default function DailyReporting() {
 
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-sm text-slate-600">
-          <strong>Today's Report:</strong> {today}
+      <div className="flex items-center justify-between mb-6 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-sm">
+        <div className="text-sm font-semibold text-slate-700 bg-white/60 px-4 py-2 rounded-xl backdrop-blur-sm border border-slate-100 flex items-center gap-2">
+          <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          {today}
         </div>
 
         <div className="flex items-center space-x-2">
-          <button onClick={downloadTemplate} className="px-3 py-1 rounded-md bg-slate-700 text-white text-sm">Download Template</button>
+          <button onClick={downloadTemplate} className="px-4 py-2 rounded-xl bg-slate-700/10 text-slate-700 hover:bg-slate-700/20 text-sm font-medium transition-all border border-slate-700/5">Template</button>
 
-          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 cursor-pointer border border-gray-200 text-sm">Upload Report</button>
+          <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm">Upload Report</button>
 
-          <button onClick={() => setRows([])} className="px-3 py-1 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">Clear Table</button>
+          <button onClick={() => setRows([])} className="px-4 py-2 rounded-xl bg-rose-50/80 text-rose-600 hover:bg-rose-100 border border-rose-100 text-sm font-medium transition-all backdrop-blur-sm">Clear</button>
 
-          <button onClick={exportData} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Export Report</button>
+          <button onClick={exportData} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all border border-transparent">Export</button>
 
-          <button onClick={transferToMileageReport} className="px-3 py-1 rounded-md bg-purple-600 text-white text-sm hover:bg-purple-700">
-            Transfer to Mileage ({selectedRowIndices.size})
+          <button onClick={transferToMileageReport} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 text-sm font-medium transition-all" disabled={selectedRowIndices.size === 0}>
+            Transfer ({selectedRowIndices.size})
           </button>
 
-          <button onClick={saveFleetData} disabled={saving} className="px-3 py-1 rounded-md bg-sky-600 text-white text-sm">
+          <button onClick={saveFleetData} disabled={saving} className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed">
             {saving ? 'Saving...' : 'Save Report'}
           </button>
         </div>
@@ -390,26 +391,39 @@ export default function DailyReporting() {
       )}
 
       {/* Search bar */}
-      <div className="mb-4">
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by Vehicle Code or Town"
-          className="px-3 py-1.5 rounded-md border border-gray-200 text-sm w-full max-w-md focus:ring-1 focus:ring-sky-300"
-        />
+      {/* Search bar */}
+      <div className="mb-6 max-w-md">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by Vehicle Code or Town..."
+            className="pl-10 pr-10 py-2.5 rounded-xl bg-white/50 border border-white/60 text-sm w-full text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm backdrop-blur-sm"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-3xl p-4 bg-white rounded">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
+          <div className="w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
             {uploadMode === 'choose' && (
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Upload Fleet Report</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
                     <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div>
                         <div className="font-semibold">Upload Excel / CSV</div>
                         <div className="text-xs text-slate-500">Choose a file to import</div>
@@ -419,7 +433,7 @@ export default function DailyReporting() {
 
                   <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
                     <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div>
                         <div className="font-semibold">Paste Manually</div>
                         <div className="text-xs text-slate-500">Paste data from spreadsheet</div>
@@ -438,11 +452,11 @@ export default function DailyReporting() {
               <div className="p-4">
                 <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
                 <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
-                     onDragOver={(e) => e.preventDefault()}
-                     onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
                   <label className="block cursor-pointer">
                     <div className="flex items-center justify-center space-x-3">
-                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                       <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
                     </div>
                     <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
@@ -559,16 +573,23 @@ export default function DailyReporting() {
       )}
 
       {/* Fleet Table */}
-      <div className="overflow-x-auto border border-gray-100 rounded-md">
+      <div className="overflow-x-auto border border-white/60 rounded-2xl shadow-lg shadow-indigo-100/10 bg-white/40 backdrop-blur-xl">
         {loading ? (
-          <div className="p-6 text-center text-slate-500">Loading fleet data...</div>
+          <div className="p-8 text-center text-slate-500 flex flex-col items-center gap-3">
+            <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading fleet data...</span>
+          </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100/50 text-sm">
+            <thead className="bg-gray-50/50 backdrop-blur-sm">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-600">
+                <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
                     checked={selectedRowIndices.size === rows.length && rows.length > 0}
                     onChange={() => {
                       if (selectedRowIndices.size === rows.length) {
@@ -580,11 +601,11 @@ export default function DailyReporting() {
                   />
                 </th>
                 {fleetHeaders.map((h) => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-slate-600 uppercase">{getHeaderLabel(h)}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">{getHeaderLabel(h)}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white">
+            <tbody className="bg-transparent divide-y divide-gray-100/50">
               {(() => {
                 const q = (searchQuery || '').toLowerCase().trim()
                 const filteredRows = q ? rows.filter(r => (r.reg_no || '').toLowerCase().includes(q) || (r.town || '').toLowerCase().includes(q)) : rows
@@ -592,28 +613,35 @@ export default function DailyReporting() {
                 if (filteredRows.length === 0) {
                   return (
                     <tr>
-                      <td colSpan={fleetHeaders.length + 1} className="p-6 text-slate-500 text-center">No fleet data. Upload a report or add entries manually.</td>
+                      <td colSpan={fleetHeaders.length + 1} className="p-8 text-slate-500 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          <span>No fleet data available. Upload a report or add entries manually.</span>
+                        </div>
+                      </td>
                     </tr>
                   )
                 }
 
                 return filteredRows.map((r, filteredIdx) => {
                   const actualIdx = rows.indexOf(r)
+                  const isSelected = selectedRowIndices.has(actualIdx)
                   return (
-                    <tr key={filteredIdx} className={`border-t ${selectedRowIndices.has(actualIdx) ? 'bg-blue-50' : ''}`}>
+                    <tr key={filteredIdx} className={`hover:bg-white/40 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
                       <td className="px-4 py-2">
                         <input
                           type="checkbox"
-                          checked={selectedRowIndices.has(actualIdx)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+                          checked={isSelected}
                           onChange={() => toggleRowSelection(actualIdx)}
                         />
                       </td>
-                      <td className="px-4 py-2"><input value={r.sr || ''} readOnly className="w-full p-1 text-sm bg-gray-50 border-0" /></td>
-                      <td className="px-4 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(actualIdx, 'reg_no', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                      <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(actualIdx, 'town', e.target.value)} className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                      <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                      <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
-                      <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(actualIdx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-1 text-sm border border-gray-200 rounded" /></td>
+                      <td className="px-4 py-2"><input value={r.sr || ''} readOnly className="w-full p-1.5 text-sm bg-transparent border-0 text-slate-500" /></td>
+                      <td className="px-4 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(actualIdx, 'reg_no', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono font-medium text-slate-700" /></td>
+                      <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(actualIdx, 'town', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                      <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
+                      <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
+                      <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(actualIdx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
                     </tr>
                   )
                 })

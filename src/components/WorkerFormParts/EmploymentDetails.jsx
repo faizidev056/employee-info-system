@@ -15,7 +15,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             value={formData.designation}
             onChange={onChange}
             autoComplete={getAutocompleteToken()}
-            className={`w-full px-3 py-2 bg-white border ${errors.designation ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors appearance-none cursor-pointer shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.designation ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer shadow-sm shadow-blue-500/5`}
           >
             <option value="" className="bg-white text-slate-900">Select designation</option>
             <option value="Sanitary Supervisor" className="bg-white text-slate-900">Sanitary Supervisor</option>
@@ -38,7 +38,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             value={formData.employeeCode}
             readOnly
             placeholder="Select designation first"
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed font-mono shadow-sm"
+            className="w-full px-3 py-2.5 bg-gray-50/50 backdrop-blur-sm border border-gray-200/60 rounded-xl text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed font-mono shadow-sm"
           />
           {errors.employeeCode && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.employeeCode}</p>
@@ -55,7 +55,7 @@ export default function EmploymentDetails({ formData, errors, onChange }) {
             value={formData.salary}
             readOnly
             placeholder="Select designation first"
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed shadow-sm"
+            className="w-full px-3 py-2.5 bg-gray-50/50 backdrop-blur-sm border border-gray-200/60 rounded-xl text-slate-500 text-sm placeholder-slate-400 focus:outline-none cursor-not-allowed shadow-sm"
           />
         </div>
       </div>

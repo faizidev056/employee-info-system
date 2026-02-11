@@ -53,7 +53,7 @@ export default function Identification({ formData, errors, onChange }) {
             readOnly
             onFocus={(e) => { e.target.removeAttribute('readonly'); e.target.setAttribute('data-focused', 'true') }}
             onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-            className={`w-full px-3 py-2 bg-white border ${errors.cnic ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors font-mono shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.cnic ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono shadow-sm shadow-blue-500/5`}
           />
           {errors.cnic && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.cnic}</p>

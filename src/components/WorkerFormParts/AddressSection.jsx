@@ -24,7 +24,7 @@ export default function AddressSection({ formData, onChange }) {
           autoComplete={getAutocompleteToken()}
           onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
           onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 resize-none shadow-sm"
+          className="w-full px-4 py-3 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none shadow-sm shadow-blue-500/5"
         ></textarea>
       </div>
     </div>

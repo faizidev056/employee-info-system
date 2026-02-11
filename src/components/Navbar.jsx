@@ -117,21 +117,21 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="bg-[#FAFAFA]/80 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50">
+    <nav className="bg-white/70 backdrop-blur-2xl border-b border-white/60 sticky top-0 z-50 shadow-lg shadow-indigo-100/10 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-sm">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-slate-900 tracking-tight">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
                 EIS
               </h1>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Employee Management</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Employee Management</p>
             </div>
           </div>
 
@@ -143,9 +143,9 @@ export default function Navbar() {
                 <button
                   key={tab.id}
                   onClick={() => navigate(`/workers?tab=${tab.id}`)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${currentTab === tab.id
-                      ? 'text-white bg-slate-900 shadow-md'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-gray-100'
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${currentTab === tab.id
+                    ? 'text-white bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/30'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-sm'
                     }`}
                 >
                   {tab.label}
@@ -157,17 +157,17 @@ export default function Navbar() {
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`relative px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 group ${location.pathname === item.path
-                      ? 'text-slate-900 bg-gray-100'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-gray-50'
+                  className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 group ${location.pathname === item.path
+                    ? 'text-white bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/30'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-sm'
                     }`}
                 >
-                  <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'}>
+                  <span className={location.pathname === item.path ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="bg-slate-100 border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white/90 text-blue-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
                       {item.badge}
                     </span>
                   )}
@@ -178,9 +178,9 @@ export default function Navbar() {
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-3">
-            <div className="flex items-center space-x-2 px-2 py-1 rounded-md bg-white border border-gray-200 shadow-sm">
-              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-medium text-slate-600">Online</span>
+            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-white/60 backdrop-blur-sm border border-white/60 shadow-sm">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-500/50"></div>
+              <span className="text-xs font-semibold text-slate-700">Online</span>
             </div>
             <div className="relative">
               <button
@@ -188,13 +188,13 @@ export default function Navbar() {
                 aria-expanded={userMenuOpen}
                 aria-haspopup="true"
                 title={`${user.name} — ${user.email}`}
-                className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="flex items-center space-x-2 px-2 py-1.5 rounded-xl hover:bg-white/60 transition-all hover:shadow-sm"
               >
-                <div className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
                   {user.avatar_url ? (
                     <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
                       {(() => {
                         const parts = (user.name || '').split(' ').filter(Boolean)
                         return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
@@ -202,19 +202,22 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
+                <svg className={`w-4 h-4 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </button>
 
               <AnimatePresence>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg border border-gray-100 shadow-lg shadow-gray-200/50 p-1">
-                    <div className="px-3 py-2 border-b border-gray-50 mb-1">
-                      <p className="text-sm font-medium text-slate-900">{user.name}</p>
-                      <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-64 bg-white/95 backdrop-blur-2xl rounded-2xl border border-white/60 shadow-2xl shadow-indigo-100/20 p-2 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-white/50 mb-1">
+                      <p className="text-sm font-bold text-slate-900">{user.name}</p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{user.email}</p>
                     </div>
                     <button
                       onClick={handleSignOut}
                       disabled={signingOut}
-                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors mt-1 flex items-center space-x-2"
+                      className="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50/80 rounded-xl transition-all mt-1 flex items-center space-x-2 group"
                     >
                       {signingOut ? (
                         <svg className="w-4 h-4 text-red-600 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -222,8 +225,8 @@ export default function Navbar() {
                           <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                        <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7" />
                         </svg>
                       )}
                       <span>{signingOut ? 'Signing out...' : 'Sign Out'}</span>
@@ -238,10 +241,10 @@ export default function Navbar() {
           <div className="md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-md hover:bg-gray-100 text-slate-600"
+              className="p-2 rounded-xl hover:bg-white/60 text-slate-600 hover:text-slate-900 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
               </svg>
             </button>
           </div>
@@ -250,7 +253,7 @@ export default function Navbar() {
         {/* Mobile Navigation */}
         <AnimatePresence>
           {mobileMenuOpen && (
-            <div className="md:hidden border-t border-gray-100">
+            <div className="md:hidden border-t border-white/40 bg-white/40 backdrop-blur-xl rounded-b-2xl -mx-4 px-4">
               <div className="py-2 space-y-1">
                 {isWorkerManagerRoute ? (
                   // Worker Manager internal tabs (mobile)
@@ -261,9 +264,9 @@ export default function Navbar() {
                         navigate(`/workers?tab=${tab.id}`)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${currentTab === tab.id
-                          ? 'bg-gray-50 text-slate-900'
-                          : 'text-slate-600 hover:bg-gray-50'
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${currentTab === tab.id
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-white/60'
                         }`}
                     >
                       {tab.label}
@@ -278,19 +281,19 @@ export default function Navbar() {
                         navigate(item.path)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${location.pathname === item.path
-                          ? 'bg-gray-50 text-slate-900'
-                          : 'text-slate-600 hover:bg-gray-50'
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${location.pathname === item.path
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-white/60'
                         }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className={location.pathname === item.path ? 'text-slate-900' : 'text-slate-400'}>
+                        <span className={location.pathname === item.path ? 'text-white' : 'text-slate-400'}>
                           {item.icon}
                         </span>
                         <span>{item.label}</span>
                       </div>
                       {item.badge !== undefined && item.badge > 0 && (
-                        <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full font-semibold border border-slate-200">
+                        <span className="bg-white/90 text-blue-600 text-xs px-2 py-0.5 rounded-full font-bold">
                           {item.badge}
                         </span>
                       )}
@@ -300,14 +303,14 @@ export default function Navbar() {
               </div>
 
               {/* Mobile user block */}
-              <div className="border-t border-gray-100 px-4 py-3">
+              <div className="border-t border-white/40 px-4 py-3 mt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center border border-gray-200 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
                       {user.avatar_url ? (
                         <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold">
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
                           {(() => {
                             const parts = (user.name || '').split(' ').filter(Boolean)
                             return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
@@ -316,12 +319,12 @@ export default function Navbar() {
                       )}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                      <div className="text-sm font-semibold text-slate-900">{user.name}</div>
                       <div className="text-xs text-slate-500 truncate">{user.email}</div>
                     </div>
                   </div>
                   <div>
-                    <button onClick={handleSignOut} disabled={signingOut} className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded">
+                    <button onClick={handleSignOut} disabled={signingOut} className="px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all">
                       {signingOut ? (
                         <svg className="w-4 h-4 text-red-600 animate-spin" viewBox="0 0 24 24" fill="none">
                           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />

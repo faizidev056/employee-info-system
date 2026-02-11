@@ -17,7 +17,7 @@ export default function LocationAssignment({ formData, errors, onChange, ucWardO
           value={formData.ucWard}
           onChange={onChange}
           autoComplete={getAutocompleteToken()}
-          className={`w-full px-3 py-2 bg-white border ${errors.ucWard ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors appearance-none cursor-pointer shadow-sm`}
+          className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.ucWard ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer shadow-sm shadow-blue-500/5`}
         >
           <option value="" className="bg-white text-slate-900">Select UC/Ward</option>
           {ucWardOptions.map(uc => (
@@ -36,7 +36,7 @@ export default function LocationAssignment({ formData, errors, onChange, ucWardO
               value={formData.attendancePoint}
               onChange={onChange}
               autoComplete={getAutocompleteToken()}
-              className={`w-full px-3 py-2 bg-white border ${errors.attendancePoint ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors appearance-none cursor-pointer shadow-sm`}
+              className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.attendancePoint ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer shadow-sm shadow-blue-500/5`}
             >
               <option value="" className="bg-white text-slate-900">Select attendance point</option>
               {ucWardOptions.find(uc => uc.id === parseInt(formData.ucWard))?.attendancePoints.map(point => (

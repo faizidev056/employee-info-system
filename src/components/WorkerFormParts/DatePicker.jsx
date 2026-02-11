@@ -162,11 +162,11 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
           whileHover={{ scale: 1.15 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => handleDateSelect(day)}
-          className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all ${isSelected
-              ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
-              : isToday
-                ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold'
-                : 'text-slate-600 hover:bg-gray-100 hover:text-slate-900'
+          className={`h-9 w-9 rounded-lg text-sm font-semibold transition-all shadow-sm ${isSelected
+            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-500/30 ring-2 ring-blue-500/20'
+            : isToday
+              ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold'
+              : 'text-slate-600 hover:bg-gray-50 hover:text-slate-900 hover:scale-110 active:scale-95'
             }`}
         >
           {day}
@@ -213,7 +213,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl shadow-slate-200/50 p-5"
+            className="absolute z-50 mt-2 w-80 bg-white/90 backdrop-blur-xl border border-white/50 rounded-2xl shadow-2xl shadow-indigo-100/20 p-5 ring-1 ring-black/5"
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">

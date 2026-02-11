@@ -19,14 +19,19 @@ export default function VehicleRegistration() {
     ];
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
+        <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white overflow-hidden font-sans text-slate-900 relative">
+            {/* Animated Background Blobs */}
+            <div className="fixed top-0 -left-40 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none z-0"></div>
+            <div className="fixed top-40 -right-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
+            <div className="fixed -bottom-8 left-20 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000 pointer-events-none z-0"></div>
+
             {/* Sidebar / Vertical Tabs */}
-            <div className="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col z-20 shadow-sm relative">
-                <div className="p-6 border-b border-gray-100/50">
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            <div className="w-64 bg-white/40 backdrop-blur-xl border-r border-white/60 flex-shrink-0 flex flex-col z-20 shadow-lg relative">
+                <div className="p-6 border-b border-white/40">
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                         Vehicle Manager
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1 font-medium">Fleet Registration & Tracking</p>
+                    <p className="text-xs text-slate-500 mt-1 font-medium">Fleet Registration & Tracking</p>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
@@ -35,8 +40,8 @@ export default function VehicleRegistration() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${activeTab === tab.id
-                                ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/30'
+                                : 'text-slate-600 hover:bg-white/50 hover:text-slate-900'
                                 }`}
                         >
                             <svg className={`w-5 h-5 flex-shrink-0 transition-colors ${activeTab === tab.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,7 +52,7 @@ export default function VehicleRegistration() {
                             {activeTab === tab.id && (
                                 <motion.div
                                     layoutId="activeTabIndicator"
-                                    className="absolute inset-0 bg-slate-900 rounded-xl -z-0"
+                                    className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl -z-0"
                                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                                 />
                             )}
@@ -57,9 +62,9 @@ export default function VehicleRegistration() {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col relative overflow-hidden bg-slate-50/50">
+            <div className="flex-1 flex flex-col relative overflow-hidden">
                 {/* Header Bar */}
-                <div className="h-16 bg-white/80 backdrop-blur-sm border-b border-gray-100 flex items-center justify-between px-8 z-10 sticky top-0">
+                <div className="h-16 bg-white/40 backdrop-blur-xl border-b border-white/50 flex items-center justify-between px-8 z-10 sticky top-0 shadow-sm">
                     <div>
                         <h2 className="text-lg font-semibold text-slate-800">
                             {tabs.find(t => t.id === activeTab)?.label}
@@ -79,9 +84,9 @@ export default function VehicleRegistration() {
                                 transition={{ duration: 0.2 }}
                             >
                                 {activeTab === 'dashboard' && (
-                                    <div className="text-center py-20">
-                                        <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                            <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-12 text-center shadow-lg">
+                                        <div className="w-24 h-24 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                            <svg className="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                                             </svg>
                                         </div>
@@ -91,9 +96,9 @@ export default function VehicleRegistration() {
                                 )}
                                 {activeTab === 'registration' && <RegistrationForm />}
                                 {activeTab === 'attendance' && <VehicleAttendance />}
-                                                        {activeTab === 'directory' && <VehicleDirectory />}
-                                                        {activeTab === 'records' && <VehicleRecords />}
-                                                        {activeTab === 'terminated' && <VehicleTerminated />}
+                                {activeTab === 'directory' && <VehicleDirectory />}
+                                {activeTab === 'records' && <VehicleRecords />}
+                                {activeTab === 'terminated' && <VehicleTerminated />}
                             </motion.div>
                         </AnimatePresence>
                     </div>

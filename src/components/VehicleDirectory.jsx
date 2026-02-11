@@ -78,7 +78,7 @@ export default function VehicleDirectory() {
           </div>
         </div>
       ) : vehicles.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center shadow-sm">
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-12 text-center shadow-lg">
           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
             <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13l2-2m0 0l7-7 7 7M13 21V9" />
@@ -88,8 +88,8 @@ export default function VehicleDirectory() {
           <p className="text-slate-500 mb-8">Add vehicles via the registration form to populate this directory.</p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-6 border-b border-gray-200 bg-gray-50/50">
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg">
+          <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <div className="relative flex-1">
@@ -101,14 +101,14 @@ export default function VehicleDirectory() {
                     placeholder="Search by name, plate, or code..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none text-sm shadow-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all"
                   />
                 </div>
 
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-slate-700 text-sm"
+                  className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 >
                   <option value="">All Types</option>
                   <option value="Truck">Truck</option>
@@ -132,7 +132,7 @@ export default function VehicleDirectory() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs">
+                <tr className="bg-white/40 border-b border-white/50 text-xs backdrop-blur-sm">
                   <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider"># / SR</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
                   <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No / Plate</th>
@@ -145,7 +145,7 @@ export default function VehicleDirectory() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((v, idx) => (
-                  <motion.tr key={v.id || idx} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="group hover:bg-gray-50 bg-white">
+                  <motion.tr key={v.id || idx} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="group hover:bg-white/40 bg-transparent transition-colors">
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-semibold text-sm">{idx + 1}</div>

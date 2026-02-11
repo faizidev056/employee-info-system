@@ -29,7 +29,7 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             readOnly
             onFocus={(e) => { e.target.removeAttribute('readonly'); e.target.setAttribute('data-focused', 'true') }}
             onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-            className={`w-full px-3 py-2 bg-white border ${errors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.fullName ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm shadow-blue-500/5`}
           />
           {errors.fullName && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.fullName}</p>
@@ -50,7 +50,7 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             readOnly
             onFocus={(e) => { e.target.removeAttribute('readonly'); e.target.setAttribute('data-focused', 'true') }}
             onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-            className={`w-full px-3 py-2 bg-white border ${errors.fatherName ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.fatherName ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm shadow-blue-500/5`}
           />
           {errors.fatherName && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.fatherName}</p>
@@ -84,7 +84,7 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             value={formData.religion}
             onChange={onChange}
             autoComplete="off"
-            className={`w-full px-3 py-2 bg-white border ${errors.religion ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors appearance-none cursor-pointer shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.religion ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer shadow-sm shadow-blue-500/5`}
           >
             <option value="" className="bg-white text-slate-900">Select religion</option>
             <option value="Islam" className="bg-white text-slate-900">Islam</option>
@@ -108,7 +108,7 @@ export default function PersonalInfo({ formData, errors, onChange }) {
             autoComplete={getAutocompleteToken()}
             onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
             onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-            className={`w-full px-3 py-2 bg-white border ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-lg text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-colors shadow-sm`}
+            className={`w-full px-3 py-2.5 bg-white/50 backdrop-blur-sm border ${errors.phoneNumber ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-950 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm shadow-blue-500/5`}
           />
           {errors.phoneNumber && (
             <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.phoneNumber}</p>

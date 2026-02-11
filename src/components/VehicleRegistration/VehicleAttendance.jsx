@@ -102,9 +102,9 @@ const VehicleAttendance = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+            className="bg-white/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/60 overflow-hidden"
         >
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div>
                     <h2 className="text-xl font-semibold text-slate-800">Vehicle Attendance</h2>
                     <p className="text-sm text-slate-500 mt-1">Mark daily attendance for the fleet</p>
@@ -114,7 +114,7 @@ const VehicleAttendance = () => {
                         type="date"
                         value={attendanceDate}
                         onChange={(e) => setAttendanceDate(e.target.value)}
-                        className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+                        className="px-4 py-2 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-sm transition-all"
                     />
                 </div>
             </div>
@@ -127,7 +127,7 @@ const VehicleAttendance = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
+                            <tr className="bg-white/40 border-b border-white/50 backdrop-blur-sm">
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
@@ -135,22 +135,22 @@ const VehicleAttendance = () => {
                                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-gray-100/50">
                             {vehicles.map((vehicle) => {
                                 const status = vehicleAttendance[vehicle.id] || 'Absent';
                                 return (
-                                    <tr key={vehicle.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <tr key={vehicle.id} className="hover:bg-white/40 transition-colors bg-transparent">
                                         <td className="px-6 py-4 text-sm font-medium text-slate-900">{vehicle.reg_id}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600">{vehicle.vehicle_code}</td>
                                         <td className="px-6 py-4 text-sm text-slate-600">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100/80 text-slate-800 backdrop-blur-sm">
                                                 {vehicle.type}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status === 'Present' ? 'bg-green-100 text-green-800' :
-                                                    status === 'Absent' ? 'bg-red-100 text-red-800' :
-                                                        'bg-amber-100 text-amber-800'
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status === 'Present' ? 'bg-green-100/80 text-green-800 border border-green-200' :
+                                                status === 'Absent' ? 'bg-red-100/80 text-red-800 border border-red-200' :
+                                                    'bg-amber-100/80 text-amber-800 border border-amber-200'
                                                 }`}>
                                                 {status}
                                             </span>
@@ -159,7 +159,7 @@ const VehicleAttendance = () => {
                                             <div className="flex justify-center space-x-2">
                                                 <button
                                                     onClick={() => handleStatusChange(vehicle.id, 'Present')}
-                                                    className="p-1 rounded-md text-green-600 hover:bg-green-50 transition-colors"
+                                                    className="p-1.5 rounded-xl text-green-600 hover:bg-green-50/80 transition-all backdrop-blur-sm"
                                                     title="Mark Present"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ const VehicleAttendance = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusChange(vehicle.id, 'Absent')}
-                                                    className="p-1 rounded-md text-red-600 hover:bg-red-50 transition-colors"
+                                                    className="p-1.5 rounded-xl text-red-600 hover:bg-red-50/80 transition-all backdrop-blur-sm"
                                                     title="Mark Absent"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +177,7 @@ const VehicleAttendance = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handleStatusChange(vehicle.id, 'Maintenance')}
-                                                    className="p-1 rounded-md text-amber-600 hover:bg-amber-50 transition-colors"
+                                                    className="p-1.5 rounded-xl text-amber-600 hover:bg-amber-50/80 transition-all backdrop-blur-sm"
                                                     title="Mark Maintenance"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -16,8 +16,7 @@ export default function VehicleInfo({ formData, errors, onChange }) {
           placeholder="Enter vehicle code (e.g., VEH-2026-001)"
           autoComplete={getAutocompleteToken()}
           onFocus={(e) => { e.target.setAttribute('data-focused', 'true') }}
-          onBlur={(e) => { e.target.removeAttribute('data-focused') }}
-          className={`w-full px-4 py-3 bg-white border ${errors.vehicleCode ? 'border-red-500' : 'border-gray-300'} rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all duration-300 shadow-sm`}
+          className={`w-full px-4 py-3 bg-white/50 backdrop-blur-sm border ${errors.vehicleCode ? 'border-red-500' : 'border-white/60'} rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 shadow-sm shadow-blue-500/5`}
         />
         {errors.vehicleCode && (
           <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><span>⚠</span> {errors.vehicleCode}</p>
