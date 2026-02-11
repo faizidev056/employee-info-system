@@ -16,90 +16,6 @@ export default function VehicleRecords() {
   const [editFormData, setEditFormData] = useState({})
 
   const [historyModal, setHistoryModal] = useState({ open: false, vehicleId: null, history: [] })
-  const [selectedIds, setSelectedIds] = useState(new Set())
-
-  const toggleSelect = (id) => {
-    setSelectedIds(prev => {
-      const s = new Set(prev)
-      if (s.has(id)) s.delete(id)
-      else s.add(id)
-      return s
-    })
-  }
-
-  const clearSelection = () => setSelectedIds(new Set())
-  const transferSelectedToMileage = async () => {
-    const ids = Array.from(selectedIds)
-    if (!ids || ids.length === 0) {
-      setError('Select at least one vehicle to transfer')
-      setTimeout(() => setError(''), 2000)
-      return
-    }
-
-    const resolveField = (obj, keys) => {
-      for (const k of keys) {
-        if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]
-      }
-      return ''
-    }
-
-    // Build transfer data immediately from local state (instant feedback)
-    const localTransferData = vehicles
-      .filter(v => ids.includes(v.id))
-      .map(v => ({
-        vehicle_code: resolveField(v, ['vehicle_code']) || resolveField(v, ['reg_no']),  // vehicle_code if available, else reg_no
-        reg_no: resolveField(v, ['reg_no']),  // Always include reg_no as matching key since it's always populated
-        vehicle_type: resolveField(v, ['type', 'vehicle_type']),
-        used_for: resolveField(v, ['used_for', 'usedFor', 'purpose']),
-        source: 'vehicle_records'
-      }))
-
-    if (localTransferData.length === 0) {
-      setError('No transferable data found for selected vehicles')
-      setTimeout(() => setError(''), 2500)
-      return
-    }
-
-    // Show immediate success notification
-    localStorage.setItem('mileageReportTransfer', JSON.stringify(localTransferData))
-    // Dispatch transfer event for immediate staging (badge-only)
-    window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: localTransferData }))
-    console.log('Transfer data to be sent:', localTransferData)
-    setError(`✅ Queued ${localTransferData.length} vehicle(s) for transfer`)
-    setTimeout(() => setError(''), 2500)
-    clearSelection()
-
-    // Optionally enrich with Supabase data in background (non-blocking)
-    try {
-      const resp = await supabase
-        .from('vehicle_registrations')
-        .select('id, type, used_for')
-        .in('id', ids)
-      
-      if (resp.error) {
-        console.warn('Background Supabase enrichment failed:', resp.error)
-      } else if (resp.data && resp.data.length) {
-        // Merge enriched fields with the earlier localTransferData so we keep vehicle_code and source
-        const enrichedData = resp.data.map(d => {
-          const local = vehicles.find(v => v.id === d.id) || {}
-          return {
-            vehicle_code: d.vehicle_code || local.vehicle_code || local.reg_no || '',
-            reg_no: local.reg_no || d.reg_no || '',
-            vehicle_type: resolveField(d, ['type', 'vehicle_type']) || local.type || local.vehicle_type || '',
-            used_for: resolveField(d, ['used_for', 'usedFor', 'purpose']) || local.used_for || local.usedFor || '',
-            source: 'vehicle_records'
-          }
-        })
-        // Replace the queued transfer with the enriched, but keep structure intact
-        localStorage.setItem('mileageReportTransfer', JSON.stringify(enrichedData))
-        // Dispatch enriched transfer event to update staged proposals
-        window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: enrichedData }))
-        console.log('Enriched transfer data:', enrichedData)
-      }
-    } catch (err) {
-      console.warn('Background enrichment error (non-blocking):', err)
-    }
-  }
 
   useEffect(() => { loadVehicles() }, [])
 
@@ -243,9 +159,6 @@ export default function VehicleRecords() {
 
             <div className="px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg text-purple-700 text-xs font-semibold">{filtered.length} of {vehicles.length}</div>
             {(searchQuery || typeFilter || monthFilter) && (<button onClick={() => { setSearchQuery(''); setTypeFilter(''); setMonthFilter('') }} className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium">Clear</button>)}
-            <button onClick={transferSelectedToMileage} disabled={selectedIds.size === 0} className={`px-3 py-1 rounded-md text-sm ${selectedIds.size === 0 ? 'bg-gray-200 text-gray-500' : 'bg-purple-600 text-white'}`}>
-              Transfer to Mileage {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-            </button>
           </div>
         </div>
 
@@ -253,10 +166,6 @@ export default function VehicleRecords() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50/50">
-                  <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-6"><input type="checkbox" onChange={(e) => {
-                    if (e.target.checked) setSelectedIds(new Set(filtered.map(v=>v.id)))
-                    else clearSelection()
-                  }} checked={selectedIds.size > 0 && selectedIds.size === filtered.length} /></th>
                   <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
@@ -271,7 +180,6 @@ export default function VehicleRecords() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((v, idx) => (
                 <motion.tr key={v.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="hover:bg-gray-50 bg-white">
-                  <td className="px-2 py-2"><input type="checkbox" checked={selectedIds.has(v.id)} onChange={() => toggleSelect(v.id)} /></td>
                   <td className="px-3 py-2"><span className="text-slate-400">{idx + 1}</span></td>
                   <td className="px-3 py-2"><div className="text-slate-900 font-mono">{v.reg_id || v.vehicle_code || '-'}</div></td>
                   <td className="px-3 py-2">

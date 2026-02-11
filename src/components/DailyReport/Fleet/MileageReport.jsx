@@ -227,27 +227,53 @@ export default function MileageReport() {
     return copy.map((r, i) => ({ ...r, sr: i + 1 }))
   }
 
-  const openUsedForModal = () => {
+  const openUsedForModal = async () => {
     setActiveTab('used_for')
     const grid = []
     const seen = new Set()
 
-    // Priority 1: use staged proposals from transfer
-    if (hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0) {
-      proposedUsedForGrid.forEach((p, idx) => {
-        const vehicleType = (p.vehicle_type || '').toString()
-        const suggestion = getSuggestionForType(vehicleType)
-        const options = p.options || getOptionsForType(vehicleType) || (suggestion ? [suggestion] : null)
-        const val = (p.used_for || '').toString().trim()
-        const valid = val.length <= 100
-        const optionValid = options && options.length > 0 ? options.indexOf(val) !== -1 : true
-        const vehicleCode = p.vehicle_code || p.reg_no || ''
-        grid.push({ sr: p.sr || idx + 1, reg_no: p.reg_no || vehicleCode, vehicle_code: vehicleCode, vehicle_type: vehicleType, used_for: val, used_for_source: 'proposed', options, used_for_valid: valid, used_for_option_valid: optionValid })
-        if (vehicleCode) seen.add(vehicleCode)
-      })
+    try {
+      // Fetch active vehicles from database
+      const { data: activeVehicles, error } = await supabase
+        .from('vehicle_registrations')
+        .select('*')
+        .eq('status', 'Active')
+        .order('reg_no', { ascending: true })
+
+      if (error) {
+        console.warn('Error fetching active vehicles:', error)
+      } else if (activeVehicles && activeVehicles.length > 0) {
+        // Process fetched active vehicles
+        activeVehicles.forEach((v, idx) => {
+          const vehicleType = (v.type || '').toString()
+          const suggestion = getSuggestionForType(vehicleType)
+          const options = getOptionsForType(vehicleType) || (suggestion ? [suggestion] : null)
+          const val = (v.used_for || '').toString().trim()
+          const valid = val.length <= 100
+          const optionValid = options && options.length > 0 ? options.indexOf(val) !== -1 : true
+          const vehicleCode = v.vehicle_code || v.reg_no || ''
+          const source = val ? 'user' : (suggestion ? 'suggested' : 'none')
+          const displayVal = val || (suggestion || (options && options.length ? options[0] : '')) || ''
+          
+          grid.push({
+            sr: idx + 1,
+            reg_no: v.reg_no || vehicleCode,
+            vehicle_code: vehicleCode,
+            vehicle_type: vehicleType,
+            used_for: displayVal,
+            used_for_source: source,
+            options,
+            used_for_valid: displayVal.length <= 100,
+            used_for_option_valid: options && options.length > 0 ? options.indexOf(displayVal) !== -1 : true
+          })
+          if (vehicleCode) seen.add(vehicleCode)
+        })
+      }
+    } catch (err) {
+      console.error('Error opening used for modal:', err)
     }
 
-    // Then include existing rows that were not in proposals
+    // Also include existing mileage report rows that match active vehicles
     ;(rows || []).forEach((r, i) => {
       const vehicleCode = (r.vehicle_code || r.reg_no || '').toString()
       if (vehicleCode && seen.has(vehicleCode)) return
@@ -259,7 +285,7 @@ export default function MileageReport() {
       const displayVal = val || (suggestion || (options && options.length ? options[0] : '')) || ''
       const valid = displayVal.length <= 100
       const optionValid = options && options.length > 0 ? options.indexOf(displayVal) !== -1 : true
-      grid.push({ sr: r.sr || i + 1, reg_no: r.reg_no || vehicleCode, vehicle_code: vehicleCode, vehicle_type: vehicleType, used_for: displayVal, used_for_source: source, options, used_for_valid: valid, used_for_option_valid: optionValid })
+      grid.push({ sr: grid.length + 1, reg_no: r.reg_no || vehicleCode, vehicle_code: vehicleCode, vehicle_type: vehicleType, used_for: displayVal, used_for_source: source, options, used_for_valid: valid, used_for_option_valid: optionValid })
       if (vehicleCode) seen.add(vehicleCode)
     })
 
@@ -493,6 +519,8 @@ export default function MileageReport() {
     setProposedUsedForGrid([])
     setPendingTransfer(null)
     setPendingVehicleRecords([])
+    // Remove persisted transfer since proposals were accepted
+    localStorage.removeItem('mileageReportTransfer')
     setTransferApplied(true)
 
     setUsedForSaveError('')
@@ -500,32 +528,55 @@ export default function MileageReport() {
     setActiveTab('all')
   }
 
-  const openThresholdModal = () => {
+  const openThresholdModal = async () => {
     setActiveTab('threshold')
     const grid = []
+    const seenTypes = new Set()
 
-    // If we have proposed thresholds (from vehicle records), show them as priority
-    if (hasProposedThreshold && proposedThresholdGrid && proposedThresholdGrid.length > 0) {
-      proposedThresholdGrid.forEach((p, idx) => {
-        grid.push({ sr: p.sr || idx + 1, vehicle_type: p.vehicle_type || '', threshold: p.threshold || '', threshold_unit: p.unit || '', threshold_valid: true, is_proposed: true })
-      })
+    try {
+      // Fetch active vehicles from database
+      const { data: activeVehicles, error } = await supabase
+        .from('vehicle_registrations')
+        .select('type')
+        .eq('status', 'Active')
+        .order('type', { ascending: true })
+
+      if (error) {
+        console.warn('Error fetching active vehicles for threshold:', error)
+      } else if (activeVehicles && activeVehicles.length > 0) {
+        // Get unique vehicle types from active vehicles
+        const uniqueTypes = [...new Set(activeVehicles.map(v => v.type).filter(Boolean))]
+        uniqueTypes.forEach((vehicleType, idx) => {
+          const tDefault = getThresholdForType(vehicleType)
+          if (tDefault) {
+            grid.push({ sr: idx + 1, vehicle_type: vehicleType, threshold: tDefault.value, threshold_unit: tDefault.unit, threshold_valid: true })
+          } else {
+            grid.push({ sr: idx + 1, vehicle_type: vehicleType, threshold: '', threshold_unit: '', threshold_valid: true })
+          }
+          seenTypes.add(vehicleType)
+        })
+      }
+    } catch (err) {
+      console.error('Error opening threshold modal:', err)
     }
 
     // Then include existing rows not in proposals
-    const seenTypes = new Set(grid.map(g => g.vehicle_type))
     ;(rows || []).forEach((r, i) => {
       if (seenTypes.has((r.vehicle_type || '').toString())) return
       const vehicleType = (r.vehicle_type || '').toString()
       const tDefault = getThresholdForType(vehicleType)
       if (r.threshold !== undefined && r.threshold !== null && r.threshold !== '') {
-        grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: r.threshold, threshold_unit: (tDefault && tDefault.unit) || '', threshold_valid: true })
+        grid.push({ sr: grid.length + 1, vehicle_type: vehicleType, threshold: r.threshold, threshold_unit: (tDefault && tDefault.unit) || '', threshold_valid: true })
+        seenTypes.add(vehicleType)
         return
       }
       if (tDefault) {
-        grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: tDefault.value, threshold_unit: tDefault.unit, threshold_valid: true })
+        grid.push({ sr: grid.length + 1, vehicle_type: vehicleType, threshold: tDefault.value, threshold_unit: tDefault.unit, threshold_valid: true })
+        seenTypes.add(vehicleType)
         return
       }
-      grid.push({ sr: r.sr || i + 1, vehicle_type: vehicleType, threshold: '', threshold_unit: '', threshold_valid: true })
+      grid.push({ sr: grid.length + 1, vehicle_type: vehicleType, threshold: '', threshold_unit: '', threshold_valid: true })
+      seenTypes.add(vehicleType)
     })
 
     setThresholdGrid(grid)
@@ -831,7 +882,8 @@ export default function MileageReport() {
     // For backward compatibility keep an action that merges pending daily reporting into rows
     if ((!pendingTransfer || pendingTransfer.length === 0) && (!pendingVehicleRecords || pendingVehicleRecords.length === 0)) return
     setRows(prev => mergePendingToRows(prev))
-    // keep mileageReportTransfer in localStorage for testing (explicit discard clears it)
+    // Remove persisted transfer now that it's been applied so it won't re-stage on reload
+    localStorage.removeItem('mileageReportTransfer')
     setPendingTransfer(null)
     setPendingVehicleRecords([])
     setTransferApplied(true)
@@ -1516,7 +1568,7 @@ export default function MileageReport() {
               {hasProposedUsedFor ? (
                 <button onClick={() => { openUsedForModal(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Process Used For</button>
               ) : (
-                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); /* keep mileageReportTransfer in localStorage for testing */ setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
+                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); localStorage.removeItem('mileageReportTransfer'); setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
               )}
             </div>
           </div>
