@@ -41,38 +41,38 @@ const Login = () => {
             <div className="relative z-10 w-full max-w-md animate-fade-in">
                 {/* Card Container */}
                 <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-sm hover:shadow-3xl transition-shadow duration-500">
-                    
+
                     {/* Top Blue Gradient Section */}
                     <div className="h-28 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 relative overflow-hidden shadow-lg">
                         <div className="absolute inset-0 opacity-10">
                             <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
                                 <defs>
                                     <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                                        <circle cx="20" cy="20" r="1" fill="white" opacity="0.5"/>
+                                        <circle cx="20" cy="20" r="1" fill="white" opacity="0.5" />
                                     </pattern>
                                 </defs>
-                                <rect width="400" height="100" fill="url(#dots)"/>
+                                <rect width="400" height="100" fill="url(#dots)" />
                             </svg>
                         </div>
                     </div>
 
                     {/* Content Section */}
                     <div className="px-8 py-10">
-                        
+
                         {/* Logo and Title */}
-                        <div className="text-center mb-10 animate-fade-in" style={{animationDelay: '0.1s'}}>
-                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50 mb-4 transform -mt-16 border-4 border-white shadow-2xl hover:scale-105 transition-transform duration-300">
+                        <div className="text-center mb-10 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50 mb-4 transform -mt-16 border-4 border-white shadow-2xl hover:scale-105 transition-transform duration-300 hover:shadow-3xl hover:rotate-6">
                                 <svg className="w-12 h-12 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
                                 </svg>
                             </div>
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Welcome Back</h1>
-                            <p className="text-gray-500 text-sm font-medium leading-relaxed">Access your workspace and get productive</p>
+                            <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Welcome Back</h1>
+                            <p className="text-gray-500 text-sm font-medium leading-relaxed">Sign in to access your dashboard and continue your work</p>
                         </div>
 
                         {/* Form */}
-                        <form onSubmit={handleLogin} className="space-y-5 animate-fade-in" style={{animationDelay: '0.2s'}}>
-                            
+                        <form onSubmit={handleLogin} className="space-y-5 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+
                             {/* Email Input */}
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -160,7 +160,7 @@ const Login = () => {
                                 type="submit"
                                 disabled={loading}
                                 className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-300/50 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center gap-2 group relative overflow-hidden"
-                                style={{backgroundSize: '200% 200%'}}
+                                style={{ backgroundSize: '200% 200%' }}
                             >
                                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                                 <div className="relative flex items-center justify-center gap-2">
@@ -220,7 +220,7 @@ const Login = () => {
                 </div>
 
                 {/* Trust Badge */}
-                <div className="mt-8 text-center animate-fade-in" style={{animationDelay: '0.4s'}}>
+                <div className="mt-8 text-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
                     <p className="text-gray-500 text-xs font-semibold flex items-center justify-center gap-2 uppercase tracking-wide">
                         <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -241,6 +241,10 @@ const Login = () => {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
+                @keyframes pulse-subtle {
+                    0%, 100% { box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -2px rgba(59, 130, 246, 0.15); }
+                    50% { box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.3), 0 10px 10px -5px rgba(59, 130, 246, 0.2); }
+                }
                 .animate-blob {
                     animation: blob 7s infinite;
                 }
@@ -256,6 +260,9 @@ const Login = () => {
                 }
                 .shadow-3xl {
                     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+                }
+                button[type="submit"]:not(:disabled):hover {
+                    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
                 }
             `}</style>
         </div>

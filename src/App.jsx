@@ -4,6 +4,8 @@ import { supabase } from './supabaseClient';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import WorkerManagerPage from './pages/WorkerManagerPage';
 import DailyReportPage from './pages/DailyReportPage';
 import VehicleRegistrationPage from './pages/VehicleRegistrationPage';
@@ -38,6 +40,8 @@ function App() {
         <Routes>
             <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
             <Route path="/signup" element={!session ? <SignUp /> : <Navigate to="/" />} />
+            <Route path="/forgot-password" element={!session ? <ForgotPassword /> : <Navigate to="/" />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
                 <Route index element={<Home />} />
                 <Route path="workers" element={<WorkerManagerPage />} />

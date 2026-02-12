@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
-const SignUp = () => {
-    const [email, setEmail] = useState('');
+const ResetPassword = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +11,7 @@ const SignUp = () => {
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    const handleSignUp = async (e) => {
+    const handleResetPassword = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
@@ -30,19 +29,12 @@ const SignUp = () => {
         }
 
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    emailRedirectTo: 'https://suthra-punjab-management.netlify.app/'
-                }
-            });
+            const { error } = await supabase.auth.updateUser({ password });
+
             if (error) {
                 setError(error.message);
-            } else if (data?.session) {
-                navigate('/');
             } else {
-                alert('Check your email for the confirmation link!');
+                alert('Password updated successfully!');
                 navigate('/login');
             }
         } catch (error) {
@@ -85,34 +77,17 @@ const SignUp = () => {
                         <div className="text-center mb-10 animate-fade-in" style={{ animationDelay: '0.1s' }}>
                             <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50 mb-4 transform -mt-16 border-4 border-white shadow-2xl hover:scale-105 transition-transform duration-300">
                                 <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Create Account</h1>
-                            <p className="text-gray-500 text-sm font-medium leading-relaxed">Join us and start your journey today</p>
+                            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Reset Password</h1>
+                            <p className="text-gray-500 text-sm font-medium leading-relaxed">Enter your new password below</p>
                         </div>
 
                         {/* Form */}
-                        <form onSubmit={handleSignUp} className="space-y-5 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                        <form onSubmit={handleResetPassword} className="space-y-5 animate-fade-in" style={{ animationDelay: '0.2s' }}>
 
-                            {/* Email Input */}
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <svg className="w-5 h-5 text-blue-400 group-focus-within:text-blue-600 group-focus-within:scale-110 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    placeholder="Email address"
-                                    className="w-full pl-12 pr-4 py-3.5 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-3 focus:ring-blue-200/50 transition-all duration-300 font-medium shadow-sm hover:shadow-md"
-                                />
-                            </div>
-
-                            {/* Password Input */}
+                            {/* New Password Input */}
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <svg className="w-5 h-5 text-blue-400 group-focus-within:text-blue-600 group-focus-within:scale-110 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +99,7 @@ const SignUp = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    placeholder="Password"
+                                    placeholder="New Password"
                                     className="w-full pl-12 pr-12 py-3.5 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-3 focus:ring-blue-200/50 transition-all duration-300 font-medium shadow-sm hover:shadow-md"
                                 />
                                 <button
@@ -157,7 +132,7 @@ const SignUp = () => {
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     required
-                                    placeholder="Confirm password"
+                                    placeholder="Confirm Password"
                                     className="w-full pl-12 pr-12 py-3.5 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-3 focus:ring-blue-200/50 transition-all duration-300 font-medium shadow-sm hover:shadow-md"
                                 />
                                 <button
@@ -190,7 +165,7 @@ const SignUp = () => {
                                 </div>
                             )}
 
-                            {/* Sign Up Button */}
+                            {/* Reset Password Button */}
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -205,52 +180,38 @@ const SignUp = () => {
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            <span>Creating account...</span>
+                                            <span>Updating...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <span className="font-semibold">Create Account</span>
+                                            <span className="font-semibold">Update Password</span>
                                             <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </>
                                     )}
                                 </div>
                             </button>
 
-                            {/* Divider */}
-                            <div className="relative my-7">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t-2 border-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
-                                </div>
-                                <div className="relative flex justify-center text-xs">
-                                    <span className="px-4 text-gray-400 font-semibold bg-white uppercase tracking-widest">or</span>
-                                </div>
-                            </div>
-
-                            {/* Secondary Actions */}
-                            <div className="space-y-3">
-                                {/* Sign In Button */}
-                                <Link
-                                    to="/login"
-                                    className="block w-full py-3.5 border-2 border-blue-500 text-blue-600 font-bold rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 focus:outline-none focus:ring-4 focus:ring-blue-200/50 transition-all duration-300 text-center hover:border-blue-600 hover:shadow-md group"
-                                >
-                                    <div className="flex items-center justify-center gap-2">
-                                        <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                            {/* Password Requirements */}
+                            <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
+                                <p className="text-xs font-semibold text-blue-900 mb-2">Password must:</p>
+                                <ul className="text-xs text-blue-700 space-y-1">
+                                    <li className="flex items-center gap-2">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                         </svg>
-                                        Already Have an Account
-                                    </div>
-                                </Link>
+                                        Be at least 6 characters long
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Match the confirmation password
+                                    </li>
+                                </ul>
                             </div>
                         </form>
-
-                        {/* Footer */}
-                        <div className="mt-8 pt-6 border-t border-gray-100">
-                            <p className="text-center text-xs text-gray-500 font-medium">
-                                By signing up, you agree to our <Link to="#" className="text-blue-600 hover:underline">Terms of Service</Link> and <Link to="#" className="text-blue-600 hover:underline">Privacy Policy</Link>
-                            </p>
-                        </div>
                     </div>
                 </div>
 
@@ -297,4 +258,4 @@ const SignUp = () => {
     );
 };
 
-export default SignUp;
+export default ResetPassword;
