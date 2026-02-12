@@ -123,21 +123,11 @@ const Login = () => {
                                 </button>
                             </div>
 
-                            {/* Remember Me & Forgot Password */}
-                            <div className="flex items-center justify-between text-sm mt-6">
-                                <label className="flex items-center cursor-pointer group">
-                                    <div className="relative">
-                                        <input type="checkbox" className="sr-only" />
-                                        <div className="w-5 h-5 rounded border-2 border-gray-300 group-hover:border-blue-400 transition-colors"></div>
-                                        <svg className="w-3 h-3 text-blue-600 absolute top-1 left-1 hidden group-hover:block transition-all" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <span className="ml-3 text-gray-600 font-medium group-hover:text-blue-600 transition-colors">Remember for 30 days</span>
-                                </label>
-                                <Link to="/forgot-password" className="text-blue-600 font-semibold hover:text-blue-700 transition-all hover:gap-1 flex items-center gap-1">
+                            {/* Forgot Password Link */}
+                            <div className="flex justify-end text-sm mt-6">
+                                <Link to="/forgot-password" className="text-blue-600 font-semibold hover:text-blue-700 transition-all hover:gap-1 flex items-center gap-1 group">
                                     Forgot password?
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>
                                 </Link>
