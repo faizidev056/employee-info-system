@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { ResponsiveContainer, RadialBarChart, RadialBar, Tooltip, Cell, PieChart, Pie } from 'recharts'
 
-const RoundChart = ({ title, value, subtext, data, type = 'radial', darkMode = false }) => {
+const RoundChart = memo(({ title, value, subtext, data, type = 'radial', darkMode = false }) => {
     return (
-        <div className={`backdrop-blur-xl border rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col items-center justify-between h-[280px] transition-colors duration-300 ${darkMode
-                ? 'bg-slate-800/50 border-slate-700/50 shadow-black/20'
-                : 'bg-white border-slate-200 shadow-slate-200/50'
+        <div className={`backdrop-blur-xl border rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col items-center justify-between h-[280px] transition-colors duration-300 will-change-transform ${darkMode
+            ? 'bg-slate-800/50 border-slate-700/50 shadow-black/20'
+            : 'bg-white border-slate-200 shadow-slate-200/50'
             }`}>
             <h3 className={`font-medium text-lg w-full text-left z-10 ${darkMode ? 'text-slate-200' : 'text-slate-700'
                 }`}>{title}</h3>
@@ -29,6 +29,7 @@ const RoundChart = ({ title, value, subtext, data, type = 'radial', darkMode = f
                                 clockWise
                                 dataKey="value"
                                 cornerRadius={10}
+                                isAnimationActive={false}
                             />
                         </RadialBarChart>
                     </ResponsiveContainer>
@@ -44,6 +45,7 @@ const RoundChart = ({ title, value, subtext, data, type = 'radial', darkMode = f
                                 paddingAngle={5}
                                 dataKey="value"
                                 stroke="none"
+                                isAnimationActive={false}
                             >
                                 {data.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -73,6 +75,6 @@ const RoundChart = ({ title, value, subtext, data, type = 'radial', darkMode = f
             </div>
         </div>
     )
-}
+})
 
 export default RoundChart

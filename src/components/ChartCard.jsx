@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo } from 'react'
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts'
 
 const sample = [
@@ -10,9 +10,9 @@ const sample = [
   { month: 'Jun', value: 520 }
 ]
 
-export default function ChartCard({ title = 'Chart', data = sample, color = '#38bdf8' }) {
+const ChartCard = memo(({ title = 'Chart', data = sample, color = '#38bdf8' }) => {
   return (
-    <div className="bg-white/5 p-4 rounded-lg border border-white/6">
+    <div className="bg-white/5 p-4 rounded-lg border border-white/6 transition-all duration-300 will-change-transform">
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-gray-300">{title}</div>
         <div className="text-xs text-gray-400">Monthly</div>
@@ -31,10 +31,19 @@ export default function ChartCard({ title = 'Chart', data = sample, color = '#38
               contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', fontSize: '12px' }}
               itemStyle={{ color: '#fff' }}
             />
-            <Area type="monotone" dataKey="value" stroke={color} fill={`url(#g-${title})`} strokeWidth={2} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              fill={`url(#g-${title})`}
+              strokeWidth={2}
+              isAnimationActive={false}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
   )
-}
+})
+
+export default ChartCard

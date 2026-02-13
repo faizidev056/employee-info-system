@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../supabaseClient'
@@ -23,6 +23,7 @@ export default function WorkerManager() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [activeDropdown, setActiveDropdown] = useState(null)
   // Dark mode state: default false (White) as requested
   const [darkMode, setDarkMode] = useState(false)
 
@@ -68,6 +69,10 @@ export default function WorkerManager() {
   const [searchQuery, setSearchQuery] = useState('')
   const [designationFilter, setDesignationFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
+
+  // Terminated filter state
+  const [terminatedSearchQuery, setTerminatedSearchQuery] = useState('')
+
 
   const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
@@ -210,6 +215,19 @@ export default function WorkerManager() {
 
     return matchesSearch && matchesDesignation && matchesMonth()
   })
+
+  // Terminated employees filter logic
+  const terminatedFilteredWorkers = useMemo(() => {
+    const q = (terminatedSearchQuery || '').toLowerCase().trim()
+    const terminated = workers.filter(w => w.status === 'Terminated')
+    if (!q) return terminated
+    return terminated.filter(w =>
+      (w.full_name || '').toLowerCase().includes(q) ||
+      (w.cnic || '').includes(q) ||
+      (w.employee_code || '').toLowerCase().includes(q)
+    )
+  }, [workers, terminatedSearchQuery])
+
 
   // Designation to Code and Salary mapping
   const designationSalary = {
@@ -386,22 +404,6 @@ export default function WorkerManager() {
     return { isValid: Object.keys(newErrors).length === 0, errors: newErrors }
   }
 
-  // Quick DB connectivity test
-  const checkDb = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      const { data, error } = await supabase.from('workers').select('id').limit(1)
-      if (error) throw error
-      setSuccess(`DB reachable — found ${data?.length || 0} row(s)`)
-      setTimeout(() => setSuccess(''), 4000)
-    } catch (err) {
-      console.error('DB check error:', err)
-      setError(err.message || 'DB check failed')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -713,9 +715,9 @@ export default function WorkerManager() {
 
 
   // Calculate stats for dashboard
-  const totalEmployees = workers.length
-  const activeEmployees = workers.filter(w => w.status === 'Active').length
-  const totalSalary = workers.reduce((acc, w) => acc + (w.status === 'Active' ? (w.salary || 0) : 0), 0)
+  const totalEmployees = useMemo(() => workers.length, [workers])
+  const activeEmployees = useMemo(() => workers.filter(w => w.status === 'Active').length, [workers])
+  const totalSalary = useMemo(() => workers.reduce((acc, w) => acc + (w.status === 'Active' ? (w.salary || 0) : 0), 0), [workers])
 
   const formatSalary = (num) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
@@ -725,7 +727,7 @@ export default function WorkerManager() {
 
 
   return (
-    <div className={`flex h-screen font-sans selection:bg-sky-500/20 selection:text-sky-300 overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#0B1120] text-slate-200' : 'bg-[#F8FAFC] text-slate-800'
+    <div className={`flex h-screen font-sans selection:bg-sky-500/20 selection:text-sky-300 overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#111827] text-slate-200' : 'bg-[#F8FAFC] text-slate-800'
       }`}>
       <SidebarDashboard activeTab={activeTab} onTabChange={handleTabChange} darkMode={darkMode} />
 
@@ -942,21 +944,12 @@ export default function WorkerManager() {
                         <p className="text-slate-500 text-sm mt-1">Fill in the details to register a new worker</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                      <span className="text-slate-500">All systems operational</span>
-                    </div>
                   </div>
 
                   {/* Form */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <h2 className="text-lg font-medium text-slate-900">Registration Form</h2>
-                      <button
-                        type="button"
-                        onClick={checkDb}
-                        className="text-xs bg-gray-50 hover:bg-gray-100 text-slate-600 px-3 py-1 rounded-md border border-gray-200 transition-colors"
-                      >Test DB</button>
                       {!supabaseConfigured && (
                         <p className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY</p>
                       )}
@@ -1009,16 +1002,17 @@ export default function WorkerManager() {
                 className="mb-8 flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-colors ${darkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'}`}>
+                    <svg className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Employee Directory</h2>
-                    <p className="text-slate-500 text-sm">View and manage all registered workers - Read Only</p>
+                    <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Employee Directory</h2>
+                    <p className={`text-sm transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>View and manage all registered workers - Read Only</p>
                   </div>
                 </div>
+
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -1031,6 +1025,8 @@ export default function WorkerManager() {
                   <span className="text-blue-700 text-sm font-medium">View Only</span>
                 </motion.div>
               </motion.div>
+
+
 
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -1063,24 +1059,32 @@ export default function WorkerManager() {
                   </motion.button>
                 </motion.div>
               ) : (
-                <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-indigo-100/10 relative z-10">
+                <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-indigo-100/10'}`}>
+
                   {/* Search and Filters Bar */}
                   <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md">
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                         {/* Search Bar */}
-                        <div className="relative flex-1">
-                          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          <input
-                            type="text"
-                            placeholder="Search by name or CNIC..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm shadow-sm shadow-blue-500/5"
-                          />
+                        <div className="relative max-w-md flex-1 group">
+                          {/* Glowing Border Wrapper */}
+                          <div className={`absolute -inset-[1px] bg-gradient-to-r from-blue-500/40 via-indigo-500/40 to-blue-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
+                          <div className="relative">
+                            <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                              type="text"
+                              placeholder="Search directory..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50' : 'bg-white/80 border-blue-100 text-slate-900 focus:border-blue-400/50 shadow-blue-500/5'}`}
+                            />
+                          </div>
                         </div>
+
+
+
 
                         {/* Designation Filter */}
                         <select
@@ -1132,17 +1136,15 @@ export default function WorkerManager() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-white/40 border-b border-white/50 text-xs backdrop-blur-sm">
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-12">Sr.</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-48">Employee</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-36">CNIC</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">Code</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-32">Designation</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">Phone</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell w-24">Religion</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell w-24">DOB</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">Joined</th>
-                          <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell w-28">Salary</th>
+                        <tr className={`border-b text-xs backdrop-blur-sm transition-colors ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white/40 border-white/50'}`}>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-12 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sr.</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-48 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Name / Father Name</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-36 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>CNIC</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider hidden sm:table-cell w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>DOB / Age</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Phone</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider hidden sm:table-cell w-24 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Religion</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Designation</th>
+                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Joined</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1165,41 +1167,23 @@ export default function WorkerManager() {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: index * 0.05 }}
-                              whileHover={{ backgroundColor: '#F9FAFB' }}
-                              className="group transition-colors duration-200 hover:bg-white/40 bg-transparent border-b border-gray-100/50"
+                              whileHover={{ backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(249, 250, 251, 1)' }}
+                              className={`group transition-colors duration-200 bg-transparent border-b ${darkMode ? 'border-white/5 hover:bg-white/5' : 'border-gray-100/50 hover:bg-white/40'}`}
                             >
                               <td className="px-3 py-2 text-slate-500 text-xs font-mono">
                                 {String(index + 1).padStart(2, '0')}
                               </td>
                               <td className="px-3 py-2">
                                 <div className="min-w-0">
-                                  <div className="text-slate-900 text-sm font-medium truncate">{worker.full_name}</div>
-                                  <div className="text-slate-500 text-xs truncate">{worker.father_name}</div>
+                                  <div className={`text-sm font-medium truncate ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>{worker.full_name}</div>
+                                  <div className={`text-xs truncate ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{worker.father_name}</div>
                                 </div>
                               </td>
 
-                              {/* CNIC */}
                               <td className="px-3 py-2">
-                                <p className="text-slate-900 text-sm font-mono truncate">{worker.cnic || 'N/A'}</p>
+                                <p className={`text-sm font-mono truncate ${darkMode ? 'text-slate-300' : 'text-slate-900'}`}>{worker.cnic || 'N/A'}</p>
                               </td>
 
-                              {/* Employee Code */}
-                              <td className="px-3 py-2">
-                                <p className="text-slate-900 text-sm font-mono font-semibold truncate">{worker.employee_code || 'N/A'}</p>
-                              </td>
-
-                              <td className="px-3 py-2">
-                                <div className="text-slate-900 text-sm">{worker.designation}</div>
-                                {worker.vehicle_code && (
-                                  <div className="text-slate-500 text-xs truncate">Vehicle: {worker.vehicle_code}</div>
-                                )}
-                              </td>
-                              <td className="px-3 py-2">
-                                <div className="text-slate-600 text-sm truncate">{worker.phone_number}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-slate-600 text-sm">{worker.religion || 'N/A'}</div>
-                              </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-slate-600 text-sm">
                                   {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : 'N/A'}
@@ -1208,14 +1192,26 @@ export default function WorkerManager() {
                                   Age: {worker.date_of_birth ? Math.floor((new Date() - new Date(worker.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25)) : 'N/A'}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-slate-900 text-sm font-semibold">
-                                  {worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}
-                                </div>
+
+                              <td className="px-3 py-2">
+                                <div className="text-slate-600 text-sm truncate">{worker.phone_number}</div>
                               </td>
 
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-slate-900 text-sm font-semibold">{worker.salary?.toLocaleString()}</div>
+                                <div className="text-slate-600 text-sm">{worker.religion || 'N/A'}</div>
+                              </td>
+
+                              <td className="px-3 py-2">
+                                <div className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-900'}`}>{worker.designation}</div>
+                                {worker.vehicle_code && (
+                                  <div className="text-slate-500 text-xs truncate">Vehicle: {worker.vehicle_code}</div>
+                                )}
+                              </td>
+
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className={`text-sm font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-900'}`}>
+                                  {worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}
+                                </div>
                               </td>
                             </motion.tr>
                           ))
@@ -1223,33 +1219,11 @@ export default function WorkerManager() {
                       </tbody>
                     </table>
                   </div>
-
-                  {/* Summary Stats */}
-                  <div className="bg-gray-50 border-t border-gray-200 px-6 py-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                      <div className="text-center">
-                        <p className="text-slate-500 text-xs font-medium mb-1 uppercase tracking-wide">Total Workers</p>
-                        <p className="text-2xl font-bold text-slate-900">{workers.length}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-slate-500 text-xs font-medium mb-1 uppercase tracking-wide">Active</p>
-                        <p className="text-2xl font-bold text-emerald-600">{filteredWorkers.filter(w => w.status === 'Active').length}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-slate-500 text-xs font-medium mb-1 uppercase tracking-wide">{monthFilter ? 'Filtered' : 'Total'} Payroll</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {(filteredWorkers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
-                        </p>
-                        {monthFilter && (
-                          <p className="text-slate-400 text-xs mt-1">({filteredWorkers.length} employee{filteredWorkers.length !== 1 ? 's' : ''})</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </motion.div>
           )}
+
 
           {/* HR Records Tab */}
           {activeTab === 'hr' && (
@@ -1263,346 +1237,386 @@ export default function WorkerManager() {
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
-                className="mb-8 flex items-center justify-between"
+                className="mb-8 flex flex-col gap-6"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center border border-purple-100">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">HR Records</h2>
-                    <p className="text-slate-500 text-sm">Complete employee records and documentation - Customizable</p>
-                  </div>
-                </div>
-
-                {/* HR Filters (refreshed styling to blend with UI) */}
-                <div className="p-4 border-b border-white/40 bg-white/30 backdrop-blur-md rounded-2xl w-full">
-                  <div className="flex flex-col md:flex-row md:items-center gap-3">
-                    {/* Search input */}
-                    <div className="flex-1 min-w-0">
-                      <div className="relative">
-                        <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input
-                          type="text"
-                          placeholder="Search by name or CNIC..."
-                          value={hrSearchQuery}
-                          onChange={(e) => setHrSearchQuery(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm shadow-sm shadow-blue-500/5"
-                        />
-                      </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center border border-indigo-100">
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
                     </div>
-
-                    {/* Controls: Designation, Month/Year, Count, Clear */}
-                    <div className="flex items-center gap-3">
-                      <select
-                        value={hrDesignationFilter}
-                        onChange={(e) => setHrDesignationFilter(e.target.value)}
-                        className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm shadow-blue-500/5 min-w-[170px] appearance-none"
-                      >
-                        <option value="">All Designations</option>
-                        <option value="Sanitary Supervisor">Sanitary Supervisor</option>
-                        <option value="Helper">Helper</option>
-                        <option value="Sanitary Worker">Sanitary Worker</option>
-                        <option value="Driver">Driver</option>
-                      </select>
-
-                      <MonthPicker
-                        value={hrMonthFilter}
-                        onChange={(e) => setHrMonthFilter(e.target.value)}
-                      />
-
-                      <div className="px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg text-purple-700 text-xs font-semibold">
-                        {hrFilteredWorkers.length} of {workers.length}
-                      </div>
-
-                      {(hrSearchQuery || hrDesignationFilter || hrMonthFilter) && (
-                        <button
-                          onClick={() => { setHrSearchQuery(''); setHrDesignationFilter(''); setHrMonthFilter('') }}
-                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium transition-colors"
-                        >
-                          Clear
-                        </button>
-                      )}
+                    <div>
+                      <h2 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>HR Records</h2>
+                      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Complete employee records and documentation - Customizable</p>
                     </div>
                   </div>
-                </div>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-50/50 backdrop-blur-sm border border-purple-100/60 rounded-xl shadow-sm"
-                >
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span className="text-purple-700 text-sm font-medium">Editable Records</span>
-                </motion.div>
-
-              </motion.div>
-
-
-
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-                    <p className="text-gray-400">Loading records...</p>
-                  </div>
-                </div>
-              ) : workers.length === 0 ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="bg-white border border-gray-200 rounded-3xl p-12 text-center shadow-sm shadow-slate-200/50"
-                >
-                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
-                    <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2">No HR Records Available</h3>
-                  <p className="text-slate-500 mb-8 text-lg">Register employees to access their complete HR documentation here</p>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleTabChange('registration')}
-                    className="px-8 py-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all duration-300 shadow-lg shadow-purple-200"
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                    className={`flex items-center gap-2 px-4 py-2 border rounded-xl shadow-sm backdrop-blur-sm transition-colors ${darkMode ? 'bg-white/10 border-white/20' : 'bg-indigo-50/50 border-indigo-100/60'}`}
                   >
-                    Register Employee
-                  </motion.button>
-                </motion.div>
-              ) : (
-                <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-purple-100/10 relative z-10">
-                  {/* Table */}
-                  {/* Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">#</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-40">Employee</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">CNIC</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">DOB</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Phone</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Code</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-32">CNIC Dates</th>
-                          <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Joined</th>
-                          <th className="px-3 py-2 text-center font-semibold text-slate-500 uppercase tracking-wider w-28">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {hrFilteredWorkers.map((worker, index) => (
-                          <motion.tr
-                            key={worker.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.02 }}
-                            whileHover={{ backgroundColor: '#F9FAFB' }}
-                            className="transition-colors hover:bg-white/40 bg-transparent group border-b border-gray-100/50"
+                    <svg className={`w-5 h-5 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span className={`text-sm font-medium ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Editable Records</span>
+                  </motion.div>
+                </div>
+
+                {/* Summary Statistics - Moved under header */}
+                <div className={`p-6 rounded-3xl border transition-all duration-300 ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200/60 shadow-sm'}`}>
+                  <h3 className={`text-sm font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Summary Statistics</h3>
+                  <div className="flex flex-wrap gap-12 md:gap-24">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Workers</p>
+                      <h4 className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{totalEmployees}</h4>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active</p>
+                      <h4 className={`text-2xl font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`}>{activeEmployees}</h4>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Payroll</p>
+                      <h4 className={`text-2xl font-black ${darkMode ? 'text-sky-500' : 'text-sky-600'}`}>{formatSalary(totalSalary)}</h4>
+                    </div>
+                  </div>
+                </div>
+
+                {/* HR Table Card */}
+                <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-purple-100/10'}`}>
+
+                  {/* HR Filters (integrated into card header for alignment) */}
+                  <div className={`p-6 border-b backdrop-blur-md transition-colors ${darkMode ? 'border-white/10' : 'border-white/40'}`}>
+                    <div className="flex flex-col md:flex-row md:items-center gap-3">
+                      {/* Search input with glowing border */}
+                      <div className="max-w-md flex-1 group relative">
+                        <div className={`absolute -inset-[1px] bg-gradient-to-r from-purple-500/40 via-blue-500/40 to-purple-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
+                        <div className="relative">
+                          <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          <input
+                            type="text"
+                            placeholder="Search records..."
+                            value={hrSearchQuery}
+                            onChange={(e) => setHrSearchQuery(e.target.value)}
+                            className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-purple-500/50' : 'bg-white/80 border-purple-100 text-slate-900 focus:border-purple-400/50 shadow-blue-500/5'}`}
+                          />
+                        </div>
+                      </div>
+
+
+                      {/* Controls: Designation, Month/Year, Count, Clear */}
+                      <div className="flex items-center gap-3">
+                        <select
+                          value={hrDesignationFilter}
+                          onChange={(e) => setHrDesignationFilter(e.target.value)}
+                          className={`px-4 py-2.5 backdrop-blur-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm min-w-[170px] appearance-none ${darkMode ? 'bg-white/5 border-white/10 text-slate-200' : 'bg-white/50 border-white/60 text-slate-700 shadow-blue-500/5'}`}
+                        >
+                          <option value="">All Designations</option>
+                          <option value="Sanitary Supervisor">Sanitary Supervisor</option>
+                          <option value="Helper">Helper</option>
+                          <option value="Sanitary Worker">Sanitary Worker</option>
+                          <option value="Driver">Driver</option>
+                        </select>
+
+                        <MonthPicker
+                          value={hrMonthFilter}
+                          onChange={(e) => setHrMonthFilter(e.target.value)}
+                        />
+
+                        <div className={`px-3 py-1.5 border rounded-lg text-xs font-semibold transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-purple-50 border-purple-100 text-purple-700'}`}>
+                          {hrFilteredWorkers.length} of {workers.length}
+                        </div>
+
+                        {(hrSearchQuery || hrDesignationFilter || hrMonthFilter) && (
+                          <button
+                            onClick={() => { setHrSearchQuery(''); setHrDesignationFilter(''); setHrMonthFilter('') }}
+                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium transition-colors"
                           >
-                            {/* SR */}
-                            <td className="px-3 py-2">
-                              <span className="text-slate-400 font-medium">{index + 1}</span>
-                            </td>
-
-                            {/* Employee (Name + Father's Name) */}
-                            <td className="px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="text-slate-900 font-medium truncate" title={worker.full_name}>{worker.full_name}</p>
-                                <p className="text-slate-400 text-[10px] truncate" title={worker.father_name}>{worker.father_name}</p>
-                              </div>
-                            </td>
-
-                            {/* CNIC */}
-                            <td className="px-3 py-2">
-                              <p className="text-slate-600 font-mono truncate">{worker.cnic || '-'}</p>
-                            </td>
-
-                            {/* DOB */}
-                            <td className="px-3 py-2">
-                              <p className="text-slate-600 truncate">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
-                            </td>
-
-                            {/* Phone */}
-                            <td className="px-3 py-2">
-                              <p className="text-slate-600 truncate">{worker.phone_number}</p>
-                            </td>
-
-                            {/* Designation */}
-                            <td className="px-3 py-2">
-                              <div className="min-w-0">
-                                <p className="text-slate-700 font-medium truncate" title={worker.designation}>{worker.designation}</p>
-                                {worker.vehicle_code && (
-                                  <p className="text-slate-400 text-[10px] truncate" title={worker.vehicle_code}>{worker.vehicle_code}</p>
-                                )}
-                              </div>
-                            </td>
-
-                            {/* Employee Code */}
-                            <td className="px-3 py-2">
-                              <p className="text-slate-900 font-mono font-semibold truncate">{worker.employee_code || '-'}</p>
-                            </td>
-
-                            {/* CNIC Issue & Expiry Dates */}
-                            <td className="px-3 py-2">
-                              <div className="flex flex-col gap-0.5">
-                                <p className="text-slate-500 text-[10px] truncate leading-tight">
-                                  <span className="text-slate-400 mr-1">Iss:</span>
-                                  {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}
-                                </p>
-                                <p className="text-slate-500 text-[10px] truncate leading-tight">
-                                  <span className="text-slate-400 mr-1">Exp:</span>
-                                  {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}
-                                </p>
-                              </div>
-                            </td>
-
-                            {/* Joining Date */}
-                            <td className="px-3 py-2">
-                              <p className="text-slate-900 font-medium truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
-                            </td>
-
-                            {/* Status with Actions Dropdown and History */}
-                            <td className="px-3 py-2 text-center w-28">
-                              <div className="flex items-center justify-center gap-2">
-                                {/* Status Button with Dropdown */}
-                                <div className="relative group">
-                                  <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className={`px-3 py-1 text-xs font-semibold rounded-full transition-all duration-200 border ${worker.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' :
-                                      worker.status === 'Inactive' ? 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100' :
-                                        worker.status === 'On Leave' ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' :
-                                          'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100'
-                                      }`}
-                                  >
-                                    {worker.status}
-                                  </motion.button>
-
-                                  {/* Dropdown Menu */}
-                                  <div className="absolute right-0 mt-1 hidden group-hover:block bg-white border border-gray-200 rounded-xl shadow-xl z-20 min-w-[140px] overflow-hidden text-left">
-                                    {worker.status === 'Active' && (
-                                      <button
-                                        onClick={() => handleTerminateClick(worker.id)}
-                                        className="block w-full text-left px-4 py-2.5 text-rose-600 hover:bg-rose-50 transition-colors text-sm font-medium"
-                                      >
-                                        Terminate
-                                      </button>
-                                    )}
-                                    {worker.status === 'Terminated' && (
-                                      <button
-                                        onClick={() => handleStatusUpdate(worker.id, 'Active')}
-                                        className="block w-full text-left px-4 py-2.5 text-emerald-600 hover:bg-emerald-50 transition-colors text-sm font-medium"
-                                      >
-                                        Reactivate
-                                      </button>
-                                    )}
-                                    {worker.status === 'Inactive' && (
-                                      <button
-                                        onClick={() => handleStatusUpdate(worker.id, 'Active')}
-                                        className="block w-full text-left px-4 py-2.5 text-emerald-600 hover:bg-emerald-50 transition-colors text-sm font-medium"
-                                      >
-                                        Activate
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => handleViewHistory(worker.id)}
-                                      className="block w-full text-left px-4 py-2.5 text-purple-600 hover:bg-purple-50 transition-colors text-sm font-medium border-t border-gray-100"
-                                    >
-                                      History
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Three Dots Menu for Edit */}
-                                <motion.button
-                                  onClick={() => handleEditWorker(worker)}
-                                  whileHover={{ scale: 1.1 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                                  title="Edit employee"
-                                >
-                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                                  </svg>
-                                </motion.button>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Summary Stats */}
-                  <div className="bg-gray-50 border-t border-gray-200 px-6 py-4">
-                    <h3 className="text-slate-900 font-semibold mb-4 text-sm">Summary Statistics</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-slate-500 text-xs mb-1 uppercase tracking-wide">Total Workers</p>
-                        <p className="text-slate-900 text-xl font-bold">{workers.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-xs mb-1 uppercase tracking-wide">Active</p>
-                        <p className="text-emerald-600 text-xl font-bold">{workers.filter(w => w.status === 'Active').length}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500 text-xs mb-1 uppercase tracking-wide">Total Payroll</p>
-                        <p className="text-blue-600 text-xl font-bold">
-                          {(workers.reduce((sum, w) => sum + (w.salary || 0), 0) / 1000).toFixed(0)}K
-                        </p>
-                      </div>
 
+
+
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+                        <p className="text-gray-400">Loading records...</p>
+                      </div>
                     </div>
-                  </div >
-                </div >
-              )
-              }
-            </motion.div >
+                  ) : workers.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="bg-white border border-gray-200 rounded-3xl p-12 text-center shadow-sm shadow-slate-200/50"
+                    >
+                      <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
+                        <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 mb-2">No HR Records Available</h3>
+                      <p className="text-slate-500 mb-8 text-lg">Register employees to access their complete HR documentation here</p>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleTabChange('registration')}
+                        className={`px-8 py-4 font-semibold rounded-xl transition-all duration-300 shadow-lg ${darkMode ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200'}`}
+                      >
+                        Register Employee
+                      </motion.button>
+                    </motion.div>
+                  ) : (
+                    <div className="overflow-x-auto">
+
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-36">Employee</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">CNIC</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">DOB</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Phone</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Religion</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Code</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">CNIC Dates</th>
+                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Joined</th>
+                            <th className="px-2 py-2 text-center font-semibold text-slate-500 uppercase tracking-wider w-28">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {hrFilteredWorkers.map((worker, index) => (
+                            <motion.tr
+                              key={worker.id}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.02 }}
+                              whileHover={{ backgroundColor: '#F9FAFB' }}
+                              className="transition-colors hover:bg-white/40 bg-transparent group border-b border-gray-100/50"
+                            >
+                              <td className="px-2 py-2">
+                                <span className="text-slate-400 font-medium">{index + 1}</span>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <div className="min-w-0">
+                                  <p className="text-slate-900 font-medium truncate" title={worker.full_name}>{worker.full_name}</p>
+                                  <p className="text-slate-400 text-[10px] truncate" title={worker.father_name}>{worker.father_name}</p>
+                                </div>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-600 font-mono text-[11px] truncate">{worker.cnic || '-'}</p>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-600 text-[11px] truncate">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-600 text-[11px] truncate">{worker.phone_number}</p>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-600 text-[11px] truncate">{worker.religion || '-'}</p>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <div className="min-w-0">
+                                  <p className="text-slate-700 text-[11px] font-medium truncate" title={worker.designation}>{worker.designation}</p>
+                                  {worker.vehicle_code && (
+                                    <p className="text-slate-400 text-[10px] truncate" title={worker.vehicle_code}>{worker.vehicle_code}</p>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-900 font-mono text-[11px] font-semibold truncate">{worker.employee_code || '-'}</p>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <div className="flex flex-col gap-0.5">
+                                  <p className="text-slate-500 text-[10px] truncate leading-tight">
+                                    <span className="text-slate-400 mr-1">Iss:</span>
+                                    {worker.cnic_issue_date ? new Date(worker.cnic_issue_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}
+                                  </p>
+                                  <p className="text-slate-500 text-[10px] truncate leading-tight">
+                                    <span className="text-slate-400 mr-1">Exp:</span>
+                                    {worker.cnic_expiry_date ? new Date(worker.cnic_expiry_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}
+                                  </p>
+                                </div>
+                              </td>
+
+                              <td className="px-2 py-2">
+                                <p className="text-slate-900 text-[11px] font-medium truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
+                              </td>
+
+                              <td className="px-2 py-2 text-center w-28">
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="relative">
+                                    <motion.button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveDropdown(activeDropdown === worker.id ? null : worker.id);
+                                      }}
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      className={`w-20 py-1 text-[10px] font-semibold rounded-full transition-all duration-200 border text-center flex items-center justify-center ${worker.status === 'Active' ? (darkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100') :
+                                        worker.status === 'Inactive' ? (darkMode ? 'bg-slate-500/10 text-slate-400 border-slate-500/20 hover:bg-slate-500/20' : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100') :
+                                          worker.status === 'On Leave' ? (darkMode ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20' : 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100') :
+                                            (darkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20' : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100')
+                                        }`}
+                                    >
+                                      {worker.status}
+                                    </motion.button>
+
+                                    {/* Dropdown Menu */}
+                                    <AnimatePresence>
+                                      {activeDropdown === worker.id && (
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                          transition={{ duration: 0.1 }}
+                                          className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 min-w-[140px] overflow-hidden text-left origin-top-right"
+                                        >
+                                          {worker.status === 'Active' && (
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleTerminateClick(worker.id); setActiveDropdown(null); }}
+                                              className="block w-full text-left px-4 py-2.5 text-rose-600 hover:bg-rose-50 transition-colors text-sm font-medium"
+                                            >
+                                              Terminate
+                                            </button>
+                                          )}
+                                          {worker.status === 'Terminated' && (
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(worker.id, 'Active'); setActiveDropdown(null); }}
+                                              className="block w-full text-left px-4 py-2.5 text-emerald-600 hover:bg-emerald-50 transition-colors text-sm font-medium"
+                                            >
+                                              Reactivate
+                                            </button>
+                                          )}
+                                          {worker.status === 'Inactive' && (
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleStatusUpdate(worker.id, 'Active'); setActiveDropdown(null); }}
+                                              className="block w-full text-left px-4 py-2.5 text-emerald-600 hover:bg-emerald-50 transition-colors text-sm font-medium"
+                                            >
+                                              Activate
+                                            </button>
+                                          )}
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleViewHistory(worker.id); setActiveDropdown(null); }}
+                                            className="block w-full text-left px-4 py-2.5 text-purple-600 hover:bg-purple-50 transition-colors text-sm font-medium border-t border-gray-100"
+                                          >
+                                            History
+                                          </button>
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
+
+                                  {/* Three Dots Menu for Edit */}
+                                  <motion.button
+                                    onClick={() => handleEditWorker(worker)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                                    title="Edit employee"
+                                  >
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                                    </svg>
+                                  </motion.button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
           )}
+
+
 
           {/* Terminated Employees Tab */}
           {activeTab === 'terminated' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="max-w-7xl mx-auto">
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-rose-600 tracking-tight">Terminated Employees</h2>
-                  <p className="text-slate-500 text-sm">Read-only listing of terminated employees for auditing and reporting</p>
-                </div>
-                <div className="px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-lg text-rose-700 text-xs font-semibold">
-                  {workers.filter(w => w.status === 'Terminated').length} terminated
+              <div className="mb-8 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-colors ${darkMode ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
+                    <svg className={`w-6 h-6 ${darkMode ? 'text-rose-400' : 'text-rose-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-rose-600'}`}>Terminated Employees</h2>
+                    <p className={`text-sm transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Read-only listing of terminated employees for auditing and reporting</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl overflow-hidden shadow-xl shadow-rose-100/10 relative z-10">
+              <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-rose-100/10'}`}>
+                {/* Search Bar - Integrated into card header for alignment */}
+                <div className={`p-6 border-b backdrop-blur-md transition-colors ${darkMode ? 'border-white/10' : 'border-white/40'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="relative max-w-md flex-1 group">
+                      {/* Glowing Border Wrapper */}
+                      <div className={`absolute -inset-[1px] bg-gradient-to-r from-rose-500/40 via-orange-500/40 to-rose-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
+                      <div className="relative">
+                        <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search terminated..."
+                          value={terminatedSearchQuery}
+                          onChange={(e) => setTerminatedSearchQuery(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-rose-500/50' : 'bg-white/80 border-rose-100 text-slate-900 focus:border-rose-400/50 shadow-rose-500/5'}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className={`px-3 py-1.5 border rounded-lg text-xs font-semibold transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
+                      {terminatedFilteredWorkers.length} terminated
+                    </div>
+                  </div>
+                </div>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50/50">
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">#</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-40">Employee</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">Sr.</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-40">Name / Father Name</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">CNIC</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Code</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">DOB / Age</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Phone</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16 hidden sm:table-cell">Religion</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">DOB</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
                         <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Joined</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Terminated</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24 hidden md:table-cell">UC / Ward</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Terminated Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {workers.filter(w => w.status === 'Terminated').map((worker, idx) => (
+                      {terminatedFilteredWorkers.map((worker, idx) => (
+
                         <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-3 py-2">
-                            <span className="text-slate-400 font-medium">{idx + 1}</span>
+                            <span className="text-slate-500 font-mono text-xs">{idx + 1}</span>
                           </td>
                           <td className="px-3 py-2">
                             <div className="min-w-0">
@@ -1614,10 +1628,12 @@ export default function WorkerManager() {
                             <p className="text-slate-600 font-mono truncate">{worker.cnic}</p>
                           </td>
                           <td className="px-3 py-2">
-                            <p className="text-slate-900 font-semibold font-mono truncate">{worker.employee_code}</p>
-                          </td>
-                          <td className="px-3 py-2">
-                            <p className="text-slate-700 truncate" title={worker.designation}>{worker.designation}</p>
+                            <div className="text-slate-600 truncate text-xs">
+                              {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : '-'}
+                            </div>
+                            <div className="text-slate-400 text-[10px]">
+                              Age: {worker.date_of_birth ? Math.floor((new Date() - new Date(worker.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25)) : '-'}
+                            </div>
                           </td>
                           <td className="px-3 py-2">
                             <p className="text-slate-600 truncate">{worker.phone_number}</p>
@@ -1626,7 +1642,7 @@ export default function WorkerManager() {
                             <p className="text-slate-600 truncate">{worker.religion || '-'}</p>
                           </td>
                           <td className="px-3 py-2">
-                            <p className="text-slate-600 truncate">{worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
+                            <p className="text-slate-700 truncate" title={worker.designation}>{worker.designation}</p>
                           </td>
                           <td className="px-3 py-2">
                             <p className="text-slate-600 truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
@@ -1634,12 +1650,10 @@ export default function WorkerManager() {
                           <td className="px-3 py-2">
                             <p className="text-rose-600 font-medium truncate">{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : 'Unknown'}</p>
                           </td>
-                          <td className="px-3 py-2 hidden md:table-cell">
-                            <p className="text-slate-600 truncate">{worker.uc_ward_name || '-'}</p>
-                          </td>
                         </tr>
                       ))}
-                      {workers.filter(w => w.status === 'Terminated').length === 0 && (
+                      {terminatedFilteredWorkers.length === 0 && (
+
                         <tr>
                           <td className="px-6 py-12 text-center text-slate-400 font-medium" colSpan={11}>
                             No terminated employees found
@@ -1658,12 +1672,12 @@ export default function WorkerManager() {
             activeTab === 'attendance' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="max-w-7xl mx-auto">
                 <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Overall Attendance</h2>
+                  <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Overall Attendance</h2>
                   <p className="text-slate-500 text-sm mt-1">Monthly attendance sheets — click a cell to toggle (P/A/L) for the current month. Past months are read-only.</p>
                 </div>
 
                 <div>
-                  <Attendance workers={workers} />
+                  <Attendance workers={workers} darkMode={darkMode} />
                 </div>
               </motion.div>
             )
