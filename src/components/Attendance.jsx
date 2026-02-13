@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../supabaseClient'
-import MonthPicker from './MonthPicker'
+import MonthPicker from './WorkerFormParts/MonthPicker'
 
 const STATUS_LABEL = {
   'P': 'Present',
