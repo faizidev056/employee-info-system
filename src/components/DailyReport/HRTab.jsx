@@ -309,7 +309,7 @@ export default function HRTab() {
     })
   }
 
-  // Push attendance changes (manual or all) to Worker Manager attendance_monthly
+  // Push attendance changes (manual or all) to Suthra Punjab HR attendance_monthly
   const pushAttendanceToWorkerManager = async () => {
     setPushResult(null)
     setPushing(true)
@@ -461,7 +461,7 @@ export default function HRTab() {
         success,
         failed,
         failures,
-        message: success > 0 ? 'Changes will automatically appear in Worker Manager Attendance tab within 30 seconds.' : undefined
+        message: success > 0 ? 'Changes will automatically appear in Suthra Punjab HR Attendance tab within 30 seconds.' : undefined
       })
 
       // Store successfully pushed data for viewing
@@ -1255,7 +1255,7 @@ export default function HRTab() {
             <div className="px-6 py-4 border-t border-gray-100 bg-white/80 backdrop-blur flex justify-between items-center">
               <div className="text-sm text-slate-500 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                These records are now live in Worker Manager
+                These records are now live in Suthra Punjab HR
               </div>
               <button
                 onClick={() => setShowPushedDataModal(false)}

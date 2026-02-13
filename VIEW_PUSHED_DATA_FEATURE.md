@@ -4,7 +4,7 @@
 Added a **"View Pushed Data"** button in the Daily Report → HR → Attendance tab that displays all successfully pushed attendance records in a beautiful modal dialog.
 
 ## Location
-The button appears next to the "Push to Worker Manager" button, but **only after you've successfully pushed data**.
+The button appears next to the "Push to Suthra Punjab HR" button, but **only after you've successfully pushed data**.
 
 ## Features
 
@@ -63,20 +63,20 @@ Each row shows:
 ## Usage Example
 
 1. **Upload Excel** with attendance data for February 7th
-2. **Click "Push to Worker Manager"**
+2. **Click "Push to Suthra Punjab HR"**
 3. **Wait for success message**
 4. **Click "View Pushed Data (15)"** button
 5. **See detailed table** with all 15 pushed records
 6. **Verify** the data is correct
-7. **Go to Worker Manager → Attendance** to confirm it's there
+7. **Go to Suthra Punjab HR → Attendance** to confirm it's there
 
 ## Benefits
 
 ✅ **Verification** - Instantly see what data was successfully pushed
-✅ **Audit Trail** - Keep track of what was sent to Worker Manager
+✅ **Audit Trail** - Keep track of what was sent to Suthra Punjab HR
 ✅ **Debugging** - Easily identify which workers' data was pushed
-✅ **Confidence** - Visual confirmation before checking Worker Manager
-✅ **Speed** - No need to go to Worker Manager just to verify
+✅ **Confidence** - Visual confirmation before checking Suthra Punjab HR
+✅ **Speed** - No need to go to Suthra Punjab HR just to verify
 
 ## Design Details
 
@@ -94,6 +94,6 @@ Each row shows:
 - Refresh the page
 - Clear the table
 
-💡 **Quick Check**: Use this before going to Worker Manager to verify attendance was pushed correctly
+💡 **Quick Check**: Use this before going to Suthra Punjab HR to verify attendance was pushed correctly
 
 💡 **Export Reference**: You can use this as a reference for which date the attendance was marked

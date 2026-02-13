@@ -15,6 +15,14 @@ export default function Navbar() {
   const [signingOut, setSigningOut] = useState(false)
   const [user, setUser] = useState({ name: 'Admin User', email: 'admin@eis.com', avatar_url: null })
 
+  // Live clock for navbar
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
   useEffect(() => {
     let mounted = true
     const loadUser = async () => {
@@ -60,7 +68,7 @@ export default function Navbar() {
     }
   }
 
-  // Worker Manager internal tabs
+  // Suthra Punjab HR internal tabs
   const workerManagerTabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'registration', label: 'New Registration' },
@@ -85,7 +93,7 @@ export default function Navbar() {
     },
     {
       id: 'workers',
-      label: 'Worker Manager',
+      label: 'Suthra Punjab HR',
       path: '/workers?tab=dashboard',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,24 +129,31 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
-                EIS
-              </h1>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Employee Management</p>
-            </div>
+          <div className="flex items-center space-x-4">
+            <button
+              type="button"
+              onClick={() => { navigate('/'); setMobileMenuOpen(false); setUserMenuOpen(false); }}
+              className="flex items-center focus:outline-none"
+              aria-label="Go to dashboard"
+              title="Go to dashboard"
+            >
+              <div className="h-12 w-[120px] md:w-[160px] flex items-center justify-start cursor-pointer">
+                <img
+                  src="/Zakwan-Builders-Logo-300x147.png"
+                  alt="Zakwan Builders logo"
+                  className="h-8 md:h-10 w-auto object-contain"
+                  loading="lazy"
+                  role="img"
+                  aria-hidden="false"
+                />
+              </div>
+            </button>
           </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             {isWorkerManagerRoute ? (
-              // Worker Manager internal tabs
+              // Suthra Punjab HR internal tabs
               workerManagerTabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -182,6 +197,8 @@ export default function Navbar() {
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-500/50"></div>
               <span className="text-xs font-semibold text-slate-700">Online</span>
             </div>
+
+            <div className="text-xs font-mono text-slate-600 px-2" aria-live="polite">{timeString}</div>
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -256,7 +273,7 @@ export default function Navbar() {
             <div className="md:hidden border-t border-white/40 bg-white/40 backdrop-blur-xl rounded-b-2xl -mx-4 px-4">
               <div className="py-2 space-y-1">
                 {isWorkerManagerRoute ? (
-                  // Worker Manager internal tabs (mobile)
+                  // Suthra Punjab HR internal tabs (mobile)
                   workerManagerTabs.map((tab) => (
                     <button
                       key={tab.id}
@@ -321,6 +338,7 @@ export default function Navbar() {
                     <div>
                       <div className="text-sm font-semibold text-slate-900">{user.name}</div>
                       <div className="text-xs text-slate-500 truncate">{user.email}</div>
+                      <div className="text-xs text-slate-400 font-mono mt-1">{timeString}</div>
                     </div>
                   </div>
                   <div>

@@ -10,6 +10,7 @@ import WorkerManagerPage from './pages/WorkerManagerPage';
 import DailyReportPage from './pages/DailyReportPage';
 import VehicleRegistrationPage from './pages/VehicleRegistrationPage';
 import PrivateHRPage from './pages/PrivateHRPage';
+import Dashboard from './pages/Dashboard';
 import Layout from './pages/Layout';
 
 function App() {
@@ -44,6 +45,7 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
                 <Route index element={<Home />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="workers" element={<WorkerManagerPage />} />
                 <Route path="daily-report" element={<DailyReportPage />} />
                 <Route path="vehicle-registration" element={<VehicleRegistrationPage />} />

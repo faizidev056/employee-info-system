@@ -34,7 +34,7 @@ const Home = () => {
                 {/* Dashboard Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
 
-                    {/* Worker Manager Card */}
+                    {/* Suthra Punjab HR Card */}
                     <div className="group bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full transform hover:-translate-y-1">
                         <div className="h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
                         <div className="p-8 flex flex-col flex-grow">
@@ -43,15 +43,13 @@ const Home = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Worker Manager</h2>
-                            <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
-                                Manage employee profiles, HR records, and track attendance efficiently.
-                            </p>
+                            <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">Suthra Punjab HR</h2>
+                            <div className="flex-grow" />
                             <button
                                 onClick={() => navigate('/workers?tab=dashboard')}
                                 className="w-full py-3 px-4 bg-white border-2 border-blue-100 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-md"
                             >
-                                <span>Open Manager</span>
+                                <span>Open Suthra Punjab HR</span>
                                 <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
@@ -69,9 +67,7 @@ const Home = () => {
                                 </svg>
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-emerald-600 transition-colors">Daily Report</h2>
-                            <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
-                                Central hub for daily HR Check-In/Check-Out and fleet status reports.
-                            </p>
+                            <div className="flex-grow" />
                             <button
                                 onClick={() => navigate('/daily-report')}
                                 className="w-full py-3 px-4 bg-white border-2 border-emerald-100 text-emerald-600 font-semibold rounded-xl hover:bg-emerald-50 hover:border-emerald-200 transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-md"
@@ -95,9 +91,7 @@ const Home = () => {
                                 </svg>
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors">Vehicle Registration</h2>
-                            <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
-                                Manage fleet registration, vehicle details, and related documents.
-                            </p>
+                            <div className="flex-grow" />
                             <button
                                 onClick={() => navigate('/vehicle-registration')}
                                 className="w-full py-3 px-4 bg-white border-2 border-indigo-100 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-md"
@@ -120,9 +114,7 @@ const Home = () => {
                                 </svg>
                             </div>
                             <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-rose-600 transition-colors">Private HR</h2>
-                            <p className="text-gray-500 mb-8 flex-grow leading-relaxed">
-                                Secure access to confidential HR records and sensitive data.
-                            </p>
+                            <div className="flex-grow" />
                             <button
                                 onClick={() => navigate('/private-hr')}
                                 className="w-full py-3 px-4 bg-white border-2 border-rose-100 text-rose-600 font-semibold rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-md"

@@ -42,12 +42,12 @@ Added console logging for debugging:
 
 2. **Upload the Excel file** in Daily Report → HR → Attendance tab
 
-3. **Click "Push to Worker Manager"**
+3. **Click "Push to Suthra Punjab HR"**
    - Open browser console (F12) to see detailed logs
    - System will extract the date from your data
    - Attendance will be marked for the correct day
 
-4. **View in Worker Manager → Attendance**
+4. **View in Suthra Punjab HR → Attendance**
    - The changes will auto-sync within 30 seconds (thanks to the auto-refresh feature)
    - Or click "Reload" button to see changes immediately
 

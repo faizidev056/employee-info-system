@@ -14,20 +14,31 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
   // Update selected date and input value when value prop changes
   useEffect(() => {
     if (value) {
-      const dateParts = value.split('-')
-      if (dateParts.length === 3) {
-        const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2])
-        if (!isNaN(date.getTime())) {
-          setSelectedDate(date)
-          setInputValue(value)
-        }
+      // Accept either ISO (YYYY-MM-DD) or display format (DD-MM-YYYY)
+      const isoMatch = /^\d{4}-\d{2}-\d{2}$/.test(value)
+      const dmyMatch = /^\d{2}-\d{2}-\d{4}$/.test(value)
+
+      let date = null
+      if (isoMatch) {
+        const parts = value.split('-')
+        date = new Date(parts[0], parts[1] - 1, parts[2])
+      } else if (dmyMatch) {
+        const parts = value.split('-')
+        date = new Date(parts[2], parts[1] - 1, parts[0])
       } else {
-        const date = new Date(value)
-        if (!isNaN(date.getTime())) {
-          setSelectedDate(date)
-          const formattedDate = date.toISOString().split('T')[0]
-          setInputValue(formattedDate)
-        }
+        const parsed = new Date(value)
+        if (!isNaN(parsed.getTime())) date = parsed
+      }
+
+      if (date && !isNaN(date.getTime())) {
+        setSelectedDate(date)
+        const dd = String(date.getDate()).padStart(2, '0')
+        const mm = String(date.getMonth() + 1).padStart(2, '0')
+        const yyyy = date.getFullYear()
+        setInputValue(`${dd}-${mm}-${yyyy}`)
+      } else {
+        setSelectedDate(null)
+        setInputValue('')
       }
     } else {
       setSelectedDate(null)
@@ -69,29 +80,23 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
 
     let parsedDate = null
     if (inputVal.trim()) {
-      // Try to parse as YYYY-MM-DD first
-      const dateParts = inputVal.split('-')
-      if (dateParts.length === 3 && dateParts[0].length === 4 && dateParts[1].length <= 2 && dateParts[2].length <= 2) {
-        const year = parseInt(dateParts[0])
-        const month = parseInt(dateParts[1]) - 1
-        const day = parseInt(dateParts[2])
-        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
-          parsedDate = new Date(year, month, day)
-          if (isNaN(parsedDate.getTime())) {
-            parsedDate = null
-          }
-        }
-      } else if (inputVal.match(/^\d{4}-\d{1,2}-\d{1,2}$/)) {
-        // Try other common formats
+      // Accept DD-MM-YYYY or YYYY-MM-DD
+      if (/^\d{2}-\d{2}-\d{4}$/.test(inputVal)) {
+        const parts = inputVal.split('-')
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        parsedDate = new Date(year, month, day)
+        if (isNaN(parsedDate.getTime())) parsedDate = null
+      } else if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(inputVal)) {
         parsedDate = new Date(inputVal)
-        if (isNaN(parsedDate.getTime())) {
-          parsedDate = null
-        }
+        if (isNaN(parsedDate.getTime())) parsedDate = null
       }
     }
+
     setSelectedDate(parsedDate)
 
-    // Create synthetic event with the formatted date value
+    // Emit ISO (YYYY-MM-DD) for form state; keep display as dd-mm-yyyy
     const syntheticEvent = {
       target: {
         name,
@@ -104,10 +109,13 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
   const handleDateSelect = (day) => {
     const newDate = new Date(currentYear, currentMonth, day)
     setSelectedDate(newDate)
-    setInputValue(newDate.toISOString().split('T')[0])
+    const dd = String(newDate.getDate()).padStart(2, '0')
+    const mm = String(newDate.getMonth() + 1).padStart(2, '0')
+    const yyyy = newDate.getFullYear()
+    setInputValue(`${dd}-${mm}-${yyyy}`)
     setIsOpen(false)
 
-    // Create synthetic event for onChange
+    // Emit ISO (YYYY-MM-DD) for form state
     const event = {
       target: {
         name,
@@ -186,7 +194,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
           type="text"
           name={name}
           value={inputValue}
-          placeholder={placeholder}
+          placeholder={placeholder || 'dd-mm-yyyy'}
           onChange={handleInputChange}
           onClick={() => setIsOpen(false)}
           autoComplete="new-password"
