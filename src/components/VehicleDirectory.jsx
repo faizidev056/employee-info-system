@@ -140,17 +140,17 @@ export default function VehicleDirectory() {
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-[11px]">
               <thead>
-                <tr className="bg-white/40 border-b border-white/50 text-xs backdrop-blur-sm">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">SR</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Owner's Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">CNIC</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Zakwan ID</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Joining Date</th>
+                <tr className="bg-white/40 border-b border-white/50 backdrop-blur-sm">
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">SR</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Vehicle Code</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Owner's Name</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">CNIC</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Phone</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Zakwan ID</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Reg No</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Joining Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -163,61 +163,55 @@ export default function VehicleDirectory() {
                     className="group hover:bg-white/40 bg-transparent transition-colors"
                   >
                     {/* SR */}
-                    <td className="px-4 py-3">
-                      <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-semibold text-sm">
+                    <td className="px-2 py-3">
+                      <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-bold text-[11px]">
                         {v.sr || idx + 1}
                       </div>
                     </td>
 
                     {/* Vehicle Code */}
-                    <td className="px-4 py-3">
-                      <span className="font-mono font-semibold text-sm text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
-                        {v.vehicle_code || '-'}
+                    <td className="px-2 py-3">
+                      <span className="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {v.vehicle_code || '—'}
                       </span>
                     </td>
 
                     {/* Owner's Name */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-800 text-sm font-medium">
+                    <td className="px-2 py-3">
+                      <div className="text-slate-800 font-semibold truncate max-w-[120px]" title={v.owned_by || v.owned_by_type}>
                         {v.owned_by || v.owned_by_type || '—'}
                       </div>
                     </td>
 
                     {/* CNIC */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-600 text-sm font-mono tracking-wide">
+                    <td className="px-2 py-3">
+                      <div className="text-slate-600 font-mono tracking-tighter">
                         {v.owner_cnic || <span className="text-slate-300 font-sans">—</span>}
                       </div>
                     </td>
 
                     {/* Phone */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-600 text-sm">
+                    <td className="px-2 py-3">
+                      <div className="text-slate-600 whitespace-nowrap">
                         {v.owner_contact || <span className="text-slate-300">—</span>}
                       </div>
                     </td>
 
                     {/* Zakwan ID */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-700 text-sm font-mono">
-                        {v.reg_id || '-'}
-                      </div>
+                    <td className="px-2 py-3 font-mono text-slate-700">
+                      {v.reg_id || '—'}
                     </td>
 
                     {/* Reg No */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-700 text-sm font-mono">
-                        {v.reg_no || '-'}
-                      </div>
+                    <td className="px-2 py-3 font-mono text-slate-700">
+                      {v.reg_no || '—'}
                     </td>
 
                     {/* Joining Date */}
-                    <td className="px-4 py-3">
-                      <div className="text-slate-600 text-sm">
-                        {v.joining_date
-                          ? new Date(v.joining_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
-                          : <span className="text-slate-300">—</span>}
-                      </div>
+                    <td className="px-2 py-3 text-slate-600 whitespace-nowrap">
+                      {v.joining_date
+                        ? new Date(v.joining_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : <span className="text-slate-300">—</span>}
                     </td>
                   </motion.tr>
                 ))}
