@@ -727,12 +727,12 @@ export default function WorkerManager() {
 
 
   return (
-    <div className={`flex h-screen font-sans selection:bg-sky-500/20 selection:text-sky-300 overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#111827] text-slate-200' : 'bg-[#F8FAFC] text-slate-800'
+    <div className={`flex h-full font-sans selection:bg-sky-500/20 selection:text-sky-300 overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#111827] text-slate-200' : 'bg-[#F8FAFC] text-slate-800'
       }`}>
       <SidebarDashboard activeTab={activeTab} onTabChange={handleTabChange} darkMode={darkMode} />
 
 
-      <main className="flex-1 h-screen overflow-y-auto relative custom-scrollbar">
+      <main className="flex-1 h-full overflow-y-auto relative custom-scrollbar">
         {/* Background Gradients - Conditional */}
         {darkMode && (
           <div className="fixed top-0 left-64 right-0 h-96 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none z-0" />

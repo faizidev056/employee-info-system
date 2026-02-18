@@ -151,33 +151,21 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Navigation */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {isWorkerManagerRoute ? (
-              // Suthra Punjab HR internal tabs
-              workerManagerTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => navigate(`/workers?tab=${tab.id}`)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 ${currentTab === tab.id
-                    ? 'text-white bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/30'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-sm'
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))
-            ) : (
-              // Top-level navigation
-              navItems.map((item) => (
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path.split('?')[0] || (item.path.includes('?') && location.pathname === item.path.split('?')[0]);
+
+              return (
                 <button
                   key={item.id}
                   onClick={() => navigate(item.path)}
-                  className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 group ${location.pathname === item.path
+                  className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 group ${isActive
                     ? 'text-white bg-gradient-to-r from-blue-500 to-indigo-500 shadow-md shadow-blue-500/30'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-sm'
                     }`}
                 >
-                  <span className={location.pathname === item.path ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}>
+                  <span className={isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
@@ -187,8 +175,8 @@ export default function Navbar() {
                     </span>
                   )}
                 </button>
-              ))
-            )}
+              );
+            })}
           </div>
 
           {/* User Menu */}
@@ -272,39 +260,23 @@ export default function Navbar() {
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-white/40 bg-white/40 backdrop-blur-xl rounded-b-2xl -mx-4 px-4">
               <div className="py-2 space-y-1">
-                {isWorkerManagerRoute ? (
-                  // Suthra Punjab HR internal tabs (mobile)
-                  workerManagerTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        navigate(`/workers?tab=${tab.id}`)
-                        setMobileMenuOpen(false)
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${currentTab === tab.id
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
-                        : 'text-slate-600 hover:bg-white/60'
-                        }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))
-                ) : (
-                  // Top-level navigation (mobile)
-                  navItems.map((item) => (
+                {/* Top-level navigation (mobile) */}
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path.split('?')[0];
+                  return (
                     <button
                       key={item.id}
                       onClick={() => {
                         navigate(item.path)
                         setMobileMenuOpen(false)
                       }}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${location.pathname === item.path
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
                         : 'text-slate-600 hover:bg-white/60'
                         }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <span className={location.pathname === item.path ? 'text-white' : 'text-slate-400'}>
+                        <span className={isActive ? 'text-white' : 'text-slate-400'}>
                           {item.icon}
                         </span>
                         <span>{item.label}</span>
@@ -315,7 +287,32 @@ export default function Navbar() {
                         </span>
                       )}
                     </button>
-                  ))
+                  )
+                })}
+
+                {/* Suthra Punjab HR internal tabs (mobile only if on route) */}
+                {isWorkerManagerRoute && (
+                  <>
+                    <div className="border-t border-white/40 my-2 mx-4"></div>
+                    <div className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4 ml-1">
+                      Internal Navigation
+                    </div>
+                    {workerManagerTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          navigate(`/workers?tab=${tab.id}`)
+                          setMobileMenuOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${currentTab === tab.id
+                          ? 'bg-white/50 text-blue-600 shadow-sm border border-blue-100'
+                          : 'text-slate-600 hover:bg-white/60'
+                          }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </>
                 )}
               </div>
 

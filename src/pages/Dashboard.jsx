@@ -156,10 +156,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-slate-100 flex overflow-hidden font-sans">
+    <div className="h-full bg-[#0B1120] text-slate-100 flex overflow-hidden font-sans">
       <SidebarDashboard />
 
-      <main className="flex-1 h-screen overflow-y-auto relative p-6 md:p-8 custom-scrollbar">
+      <main className="flex-1 h-full overflow-y-auto relative p-6 md:p-8 custom-scrollbar">
         {/* Background Gradients */}
         <div className="fixed inset-0 pointer-events-none z-0">
           <div className="absolute top-[0%] left-[20%] w-[40%] h-[40%] bg-blue-500/5 blur-[100px] rounded-full"></div>

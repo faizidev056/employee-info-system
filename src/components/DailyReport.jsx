@@ -7,7 +7,7 @@ export default function DailyReport() {
   const [activeSubTab, setActiveSubTab] = useState('hr')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white relative overflow-hidden text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 via-indigo-50 to-white relative font-sans selection:bg-blue-100 selection:text-blue-900">
       {/* Animated Background Blobs */}
       <div className="fixed top-0 -left-40 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none z-0"></div>
       <div className="fixed top-40 -right-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 pointer-events-none z-0"></div>
@@ -24,8 +24,8 @@ export default function DailyReport() {
             <button
               onClick={() => setActiveSubTab('hr')}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative ${activeSubTab === 'hr'
-                  ? 'text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
             >
               {activeSubTab === 'hr' && (
@@ -46,8 +46,8 @@ export default function DailyReport() {
             <button
               onClick={() => setActiveSubTab('fleet')}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative ${activeSubTab === 'fleet'
-                  ? 'text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                ? 'text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                 }`}
             >
               {activeSubTab === 'fleet' && (

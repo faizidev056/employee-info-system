@@ -19,7 +19,7 @@ export default function VehicleRegistration() {
     ];
 
     return (
-        <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white overflow-hidden font-sans text-slate-900 relative">
+        <div className="flex h-full bg-gradient-to-br from-blue-50 via-indigo-50 to-white overflow-hidden font-sans text-slate-900 relative">
             {/* Animated Background Blobs */}
             <div className="fixed top-0 -left-40 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob pointer-events-none z-0"></div>
             <div className="fixed top-40 -right-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 pointer-events-none z-0"></div>

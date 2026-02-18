@@ -10,7 +10,7 @@ const Home = () => {
     };
 
     return (
-        <div className="relative min-h-[calc(100vh-4rem)] bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
+        <div className="relative h-full overflow-y-auto bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
             {/* Animated Background Blobs - contained to avoid scrollbars from blobs but allow content scroll */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-0 -left-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>

@@ -20,7 +20,7 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
       initial={false}
       animate={{ width: isExpanded ? 256 : 80 }}
       transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
-      className={`border-r min-h-screen p-4 hidden md:flex flex-col gap-6 transition-colors duration-300 group/sidebar relative z-30 shadow-sm hover:shadow-md will-change-[width] ${className} ${darkMode
+      className={`border-r h-full p-4 hidden md:flex flex-col gap-6 transition-colors duration-300 group/sidebar relative z-30 shadow-sm hover:shadow-md will-change-[width] ${className} ${darkMode
         ? 'bg-[#111827] border-slate-800 hover:border-slate-700'
         : 'bg-white border-slate-200 hover:border-slate-300'
         }`}

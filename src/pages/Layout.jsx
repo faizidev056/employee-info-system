@@ -2,15 +2,13 @@ import Navbar from '../components/Navbar';
 import { Outlet, useLocation } from 'react-router-dom';
 // import VehicleRegistrationsPage from './VehicleRegistrationsPage';
 const Layout = () => {
-    const location = useLocation();
-    const hideNavbarPaths = ['/workers', '/dashboard'];
-    const showNavbar = !hideNavbarPaths.includes(location.pathname);
-
     return (
-        <div>
-            {showNavbar && <Navbar />}
+        <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+            <div className="flex-none z-50">
+                <Navbar />
+            </div>
             {/* <VehicleRegistrationsPage /> */}
-            <main>
+            <main className="flex-1 relative overflow-hidden">
                 <Outlet />
             </main>
         </div>
