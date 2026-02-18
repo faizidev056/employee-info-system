@@ -72,45 +72,106 @@ export default function VehicleTerminated() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading terminated vehicles...</p>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-500 mx-auto mb-4"></div>
+            <p className="text-gray-400 text-sm">Loading records...</p>
           </div>
         </div>
       ) : vehicles.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-3xl p-12 text-center shadow-sm">
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-12 text-center shadow-lg">
           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-100">
             <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <h3 className="text-2xl font-bold text-slate-900 mb-2">No Terminated Vehicles</h3>
-          <p className="text-slate-500 mb-8 text-lg">Vehicles terminated will appear here for audits and reports.</p>
+          <p className="text-slate-500 mb-8">Inactive vehicles will appear here after termination.</p>
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-[11px]">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/50">
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">#</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Zakwan ID</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Owner</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Terminated</th>
+                <tr className="bg-white/40 border-b border-white/50 backdrop-blur-sm">
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">SR</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Vehicle Code</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Owner's Name</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">CNIC</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Phone</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Zakwan ID</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Reg No</th>
+                  <th className="px-2 py-3 text-left font-bold text-slate-500 uppercase tracking-tighter">Joined Date</th>
+                  <th className="px-2 py-3 text-left font-bold text-rose-600 uppercase tracking-tighter">Terminated On</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {vehicles.map((v, i) => (
-                  <motion.tr key={v.id || i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.02 }} className="transition-colors hover:bg-gray-50 bg-white">
-                    <td className="px-3 py-2"><span className="text-slate-400">{i + 1}</span></td>
-                    <td className="px-3 py-2"><div className="text-slate-900 font-mono">{v.reg_id || v.vehicle_code || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700">{v.reg_no || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700">{v.type || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700">{v.owned_by || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-600">{v.joining_date ? new Date(v.joining_date).toLocaleDateString() : '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-600">{v.termination_date ? new Date(v.termination_date).toLocaleDateString() : '-'}</div></td>
+                {vehicles.map((v, idx) => (
+                  <motion.tr
+                    key={v.id || idx}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.02 }}
+                    className="group hover:bg-rose-50/30 transition-colors"
+                  >
+                    {/* SR */}
+                    <td className="px-2 py-3">
+                      <div className="w-7 h-7 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-bold text-[11px]">
+                        {v.sr || idx + 1}
+                      </div>
+                    </td>
+
+                    {/* Vehicle Code */}
+                    <td className="px-2 py-3">
+                      <span className="font-mono font-bold text-[11px] text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {v.vehicle_code || '—'}
+                      </span>
+                    </td>
+
+                    {/* Owner's Name */}
+                    <td className="px-2 py-3">
+                      <div className="text-slate-800 font-semibold truncate max-w-[120px]" title={v.owned_by || v.owned_by_type}>
+                        {v.owned_by || v.owned_by_type || '—'}
+                      </div>
+                    </td>
+
+                    {/* CNIC */}
+                    <td className="px-2 py-3">
+                      <div className="text-slate-600 font-mono tracking-tighter">
+                        {v.owner_cnic || <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
+
+                    {/* Phone */}
+                    <td className="px-2 py-3">
+                      <div className="text-slate-600 whitespace-nowrap">
+                        {v.owner_contact || <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
+
+                    {/* Zakwan ID */}
+                    <td className="px-2 py-3 font-mono text-slate-700">
+                      {v.reg_id || '—'}
+                    </td>
+
+                    {/* Reg No */}
+                    <td className="px-2 py-3 font-mono text-slate-700">
+                      {v.reg_no || '—'}
+                    </td>
+
+                    {/* Joined Date */}
+                    <td className="px-2 py-3 text-slate-600 whitespace-nowrap">
+                      {v.joining_date
+                        ? new Date(v.joining_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : <span className="text-slate-300">—</span>}
+                    </td>
+
+                    {/* Terminated Date */}
+                    <td className="px-2 py-3">
+                      <div className="px-2 py-1 bg-rose-50 text-rose-700 rounded-md inline-block font-semibold whitespace-nowrap">
+                        {v.termination_date
+                          ? new Date(v.termination_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-rose-300">N/A</span>}
+                      </div>
+                    </td>
                   </motion.tr>
                 ))}
               </tbody>
