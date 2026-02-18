@@ -174,13 +174,7 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-xs font-medium text-slate-300">System Operational</span>
-              </div>
-              <div className="px-3 py-1.5 bg-slate-800 border border-white/10 rounded-lg font-mono text-sm text-slate-300">
-                {new Date().toLocaleDateString()}
-              </div>
+              {/* Optional: Add Theme Toggle or other controls here if needed in future */}
             </div>
           </header>
 

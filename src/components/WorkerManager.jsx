@@ -780,16 +780,6 @@ export default function WorkerManager() {
                   </svg>
                 )}
               </button>
-
-              <div className={`hidden md:flex px-4 py-2 border rounded-xl items-center gap-3 transition-colors duration-300 ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span className={`text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>System Operational</span>
-              </div>
-              <div className={`px-4 py-2 border rounded-xl flex items-center gap-2 text-sm font-mono transition-colors duration-300 ${darkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600 shadow-sm'
-                }`}>
-                <span>{new Date().toLocaleDateString()}</span>
-              </div>
             </div>
           </header>
 

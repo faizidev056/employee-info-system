@@ -137,29 +137,7 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
       </nav>
 
       <div className="px-1 mt-auto overflow-hidden">
-        <div
-          onClick={() => setIsExpanded(!isExpanded)}
-          className={`rounded-2xl p-4 border relative overflow-hidden group transition-all duration-300 cursor-pointer ${darkMode
-            ? 'bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20'
-            : 'bg-slate-50 border-slate-200'
-            } ${!isExpanded ? 'p-2 flex justify-center' : ''}`}
-        >
-          <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-indigo-500/20 transition-all"></div>
-
-          <div className="relative z-10 flex flex-col items-center">
-            {isExpanded ? (
-              <>
-                <div className={`text-[10px] font-bold uppercase tracking-wider mb-1 w-full ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>System Status</div>
-                <div className="flex items-center gap-2 w-full">
-                  <div className="w-1.5 h-1.5 flex-shrink-0 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-                  <span className={`text-xs font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Online</span>
-                </div>
-              </>
-            ) : (
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
-            )}
-          </div>
-        </div>
+        {/* System status removed as per request */}
       </div>
     </motion.aside>
   )

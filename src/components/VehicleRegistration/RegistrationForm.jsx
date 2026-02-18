@@ -16,6 +16,8 @@ const RegistrationForm = () => {
         // Owner selection: default to Contractor; if 'Other' selected user can type name into `ownedBy`
         ownedByType: 'Contractor',
         ownedBy: '',
+        ownerContact: '',
+        ownerCnic: '',
         joiningDate: '',
         status: 'Active'
     });
@@ -168,6 +170,8 @@ const RegistrationForm = () => {
             vehicleCodeSuffix: '',
             ownedByType: 'Contractor',
             ownedBy: '',
+            ownerContact: '',
+            ownerCnic: '',
             joiningDate: '',
             status: 'Active'
         });
@@ -192,7 +196,7 @@ const RegistrationForm = () => {
                 .select('vehicle_code')
                 .eq('vehicle_code', fullVehicleCode)
                 .limit(1);
-            
+
             if (checkError) throw checkError;
             if (existingVehicles && existingVehicles.length > 0) {
                 throw new Error(`Vehicle Code "${fullVehicleCode}" already exists! Please use a different suffix.`);
@@ -207,12 +211,14 @@ const RegistrationForm = () => {
                 p_model: formData.model || null,
                 p_year: formData.year ? Number(formData.year) : null,
                 p_owned_by_type: formData.ownedByType || 'Contractor',
-                p_owned_by: formData.ownedByType === 'Other' ? (formData.ownedBy || null) : (formData.ownedByType || 'Contractor'),
+                p_owned_by: formData.ownedByType === 'Other'
+                    ? `${formData.ownedBy}${formData.ownerContact ? ` | ${formData.ownerContact}` : ''}${formData.ownerCnic ? ` | ${formData.ownerCnic}` : ''}`
+                    : (formData.ownedByType || 'Contractor'),
                 p_joining_date: formData.joiningDate || null,
                 p_status: formData.status || 'Active',
                 p_sr: null,  // RPC will auto-generate SR based on type_code
                 p_vehicle_code_suffix: formData.vehicleCodeSuffix || null
-            }; 
+            };
 
             const { data: rpcData, error: rpcError } = await supabase.rpc('register_vehicle', rpcParams);
             if (rpcError) throw rpcError;
@@ -401,30 +407,6 @@ const RegistrationForm = () => {
                     />
                 </div>
 
-                {/* Owned By */}
-                <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Owned By</label>
-                    <select
-                        name="ownedByType"
-                        value={formData.ownedByType}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
-                    >
-                        <option value="Contractor">Contractor</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    {formData.ownedByType === 'Other' && (
-                        <input
-                            type="text"
-                            name="ownedBy"
-                            value={formData.ownedBy}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
-                            placeholder="Enter owner name"
-                        />
-                    )}
-                </div>
-
                 {/* Joining Date */}
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-slate-700">Joining Date</label>
@@ -436,6 +418,63 @@ const RegistrationForm = () => {
                         className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
                     />
                 </div>
+
+                {/* Owned By */}
+                <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700">Owned By</label>
+                    <select
+                        name="ownedByType"
+                        value={formData.ownedByType}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
+                    >
+                        <option value="Contractor">Contractor</option>
+                        <option value="Local Govt">Local Govt</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                {/* Conditional fields for 'Other' - structured as individual grid items */}
+                {formData.ownedByType === 'Other' && (
+                    <>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Owner Name <span className="text-red-500">*</span></label>
+                            <input
+                                type="text"
+                                name="ownedBy"
+                                value={formData.ownedBy}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
+                                placeholder="Enter owner name"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">Contact No <span className="text-xs text-slate-400 font-normal">(Optional)</span></label>
+                            <input
+                                type="text"
+                                name="ownerContact"
+                                value={formData.ownerContact}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
+                                placeholder="e.g. 0300-1234567"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700">CNIC <span className="text-xs text-slate-400 font-normal">(Optional)</span></label>
+                            <input
+                                type="text"
+                                name="ownerCnic"
+                                value={formData.ownerCnic}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 placeholder-slate-400"
+                                placeholder="e.g. 35202-1234567-1"
+                            />
+                        </div>
+                    </>
+                )}
+
+
 
 
 
