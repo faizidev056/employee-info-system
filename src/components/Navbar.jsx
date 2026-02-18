@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -135,7 +135,16 @@ export default function Navbar() {
   ]
 
   return (
-    <nav className="bg-white/70 backdrop-blur-2xl border-b border-white/60 sticky top-0 z-50 shadow-lg shadow-indigo-100/10 transition-all duration-300">
+    <motion.nav
+      initial={location.pathname === '/' ? { y: -60, opacity: 0 } : false}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{
+        delay: 3.1,
+        duration: 3.5, // Slower for an even more deliberate "polite placement"
+        ease: [0.16, 1, 0.3, 1] // Ultra-smooth ease-out
+      }}
+      className="bg-white/70 backdrop-blur-2xl border-b border-white/60 sticky top-0 z-50 shadow-lg shadow-indigo-100/10"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
@@ -366,6 +375,6 @@ export default function Navbar() {
           )}
         </AnimatePresence>
       </div>
-    </nav>
+    </motion.nav>
   )
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from './supabaseClient';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -34,24 +35,30 @@ function App() {
     }, []);
 
     if (loading) {
-        return <div>Loading...</div>;
+        return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+            </div>
+        );
     }
 
     return (
-        <Routes>
-            <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
-            <Route path="/signup" element={!session ? <SignUp /> : <Navigate to="/" />} />
-            <Route path="/forgot-password" element={!session ? <ForgotPassword /> : <Navigate to="/" />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
-                <Route index element={<Home />} />
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="workers" element={<WorkerManagerPage />} />
-                <Route path="daily-report" element={<DailyReportPage />} />
-                <Route path="vehicle-registration" element={<VehicleRegistrationPage />} />
-                <Route path="private-hr" element={<PrivateHRPage />} />
-            </Route>
-        </Routes>
+        <div className="h-full w-full relative">
+            <Routes>
+                <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
+                <Route path="/signup" element={!session ? <SignUp /> : <Navigate to="/" />} />
+                <Route path="/forgot-password" element={!session ? <ForgotPassword /> : <Navigate to="/" />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/" element={session ? <Layout /> : <Navigate to="/login" />}>
+                    <Route index element={<Home />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="workers" element={<WorkerManagerPage />} />
+                    <Route path="daily-report" element={<DailyReportPage />} />
+                    <Route path="vehicle-registration" element={<VehicleRegistrationPage />} />
+                    <Route path="private-hr" element={<PrivateHRPage />} />
+                </Route>
+            </Routes>
+        </div>
     );
 }
 
