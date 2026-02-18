@@ -93,7 +93,7 @@ export default function VehicleTerminated() {
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50/50">
                   <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">#</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Zakwan ID</th>
                   <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
                   <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Type</th>
                   <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider">Owner</th>

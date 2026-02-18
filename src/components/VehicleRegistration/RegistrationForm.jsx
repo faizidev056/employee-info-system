@@ -211,9 +211,9 @@ const RegistrationForm = () => {
                 p_model: formData.model || null,
                 p_year: formData.year ? Number(formData.year) : null,
                 p_owned_by_type: formData.ownedByType || 'Contractor',
-                p_owned_by: formData.ownedByType === 'Other'
-                    ? `${formData.ownedBy}${formData.ownerContact ? ` | ${formData.ownerContact}` : ''}${formData.ownerCnic ? ` | ${formData.ownerCnic}` : ''}`
-                    : (formData.ownedByType || 'Contractor'),
+                p_owned_by: formData.ownedByType === 'Other' ? (formData.ownedBy || null) : null,
+                p_owner_contact: formData.ownedByType === 'Other' ? (formData.ownerContact || null) : null,
+                p_owner_cnic: formData.ownedByType === 'Other' ? (formData.ownerCnic || null) : null,
                 p_joining_date: formData.joiningDate || null,
                 p_status: formData.status || 'Active',
                 p_sr: null,  // RPC will auto-generate SR based on type_code
@@ -274,7 +274,7 @@ const RegistrationForm = () => {
                         <div>
                             <h3 className="text-sm font-semibold text-green-800">Last Registered</h3>
                             <p className="text-sm text-green-700">Sr: <span className="font-medium">{lastRegistered.sr}</span></p>
-                            <p className="text-sm text-green-700">Reg-ID: <span className="font-medium">{lastRegistered.reg_id}</span></p>
+                            <p className="text-sm text-green-700">Zakwan ID: <span className="font-medium">{lastRegistered.reg_id}</span></p>
                             <p className="text-sm text-green-700">Vehicle Code: <span className="font-medium">{lastRegistered.vehicle_code}</span></p>
                             <p className="text-sm text-green-700">Owned By: <span className="font-medium">{lastRegistered.owned_by || '—'}</span></p>
                         </div>
@@ -301,19 +301,19 @@ const RegistrationForm = () => {
                     <p className="text-xs text-slate-400">Serial number is auto-generated (e.g. 1, 2, 3...)</p>
                 </div>
 
-                {/* Reg-ID */}
+                {/* Zakwan ID */}
                 <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Reg-ID <span className="text-xs text-slate-400">{regLoading ? '(Generating...)' : '(Auto)'}</span></label>
+                    <label className="text-sm font-medium text-slate-700">Zakwan ID <span className="text-xs text-slate-400">{regLoading ? '(Generating...)' : '(Auto)'}</span></label>
                     <input
                         type="text"
                         name="regId"
                         value={formData.regId}
                         onChange={handleChange}
                         className="w-full px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg focus:outline-none transition-all text-slate-800 placeholder-slate-400"
-                        placeholder="Auto-generated registration ID"
+                        placeholder="Auto-generated Zakwan ID"
                         readOnly
                     />
-                    <p className="text-xs text-slate-400">Reg ID is auto-generated from vehicle type (e.g. ZKB-TT/001)</p>
+                    <p className="text-xs text-slate-400">Zakwan ID is auto-generated from vehicle type (e.g. ZKB-TT/001)</p>
                 </div>
 
                 {/* Reg No */}

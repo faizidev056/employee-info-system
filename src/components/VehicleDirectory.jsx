@@ -22,7 +22,7 @@ export default function VehicleDirectory() {
       let { data, error } = await supabase
         .from('vehicle_registrations')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('sr', { ascending: true })
 
       if (error) {
         // Fallback to legacy `vehicles` table if present
@@ -41,15 +41,23 @@ export default function VehicleDirectory() {
     }
   }
 
+  const VEHICLE_TYPES = [
+    'Tractor Trolley', 'Front end blade', 'Front end loader', 'Dumper truck',
+    'Arm roller', 'Compactor', 'Mini tripper', 'Loader rickshaws',
+    'Mechanical Washer', 'Mechanical sweeper', 'Drain cleaner',
+    'Water bowser', 'Container Repair Vehicle', 'Other'
+  ]
+
   const filtered = vehicles.filter(v => {
     const q = searchQuery.toLowerCase()
-
-    // Support both new `vehicle_registrations` and legacy `vehicles` fields
-    const nameOrModel = (v.name || v.model || v.reg_no || '')
-    const plateOrReg = (v.plate_number || v.reg_no || v.reg_id || '')
-    const code = (v.code || v.vehicle_code || v.reg_id || '')
-
-    const matchesSearch = !searchQuery || nameOrModel.toLowerCase().includes(q) || plateOrReg.toLowerCase().includes(q) || code.toLowerCase().includes(q)
+    const matchesSearch = !searchQuery ||
+      (v.vehicle_code || '').toLowerCase().includes(q) ||
+      (v.owned_by || '').toLowerCase().includes(q) ||
+      (v.owner_cnic || '').toLowerCase().includes(q) ||
+      (v.owner_contact || '').toLowerCase().includes(q) ||
+      (v.reg_id || '').toLowerCase().includes(q) ||
+      (v.reg_no || '').toLowerCase().includes(q) ||
+      (v.sr || '').toLowerCase().includes(q)
     const matchesType = !typeFilter || (v.type || '') === typeFilter
     return matchesSearch && matchesType
   })
@@ -89,31 +97,32 @@ export default function VehicleDirectory() {
         </div>
       ) : (
         <div className="bg-white/40 backdrop-blur-xl border border-white/60 rounded-2xl overflow-hidden shadow-lg">
+          {/* Toolbar */}
           <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                {/* Search */}
                 <div className="relative flex-1">
                   <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <input
                     type="text"
-                    placeholder="Search by name, plate, or code..."
+                    placeholder="Search by vehicle code, owner, CNIC, Zakwan ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm shadow-sm transition-all"
                   />
                 </div>
 
+                {/* Type filter */}
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 >
                   <option value="">All Types</option>
-                  <option value="Truck">Truck</option>
-                  <option value="Van">Van</option>
-                  <option value="Car">Car</option>
+                  {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
 
@@ -129,44 +138,98 @@ export default function VehicleDirectory() {
             </div>
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="bg-white/40 border-b border-white/50 text-xs backdrop-blur-sm">
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider"># / SR</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg ID</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No / Plate</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Make / Model</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Type</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Owner</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">SR</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Vehicle Code</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Owner's Name</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">CNIC</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Phone</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Zakwan ID</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Reg No</th>
+                  <th className="px-4 py-3 text-left font-semibold text-slate-500 uppercase tracking-wider">Joining Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((v, idx) => (
-                  <motion.tr key={v.id || idx} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} className="group hover:bg-white/40 bg-transparent transition-colors">
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-semibold text-sm">{idx + 1}</div>
-                        <div>
-                          <div className="text-slate-900 text-sm font-medium truncate">{v.sr || v.id || ''}</div>
-                        </div>
+                  <motion.tr
+                    key={v.id || idx}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.02 }}
+                    className="group hover:bg-white/40 bg-transparent transition-colors"
+                  >
+                    {/* SR */}
+                    <td className="px-4 py-3">
+                      <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center text-slate-700 font-semibold text-sm">
+                        {v.sr || idx + 1}
                       </div>
                     </td>
-                    <td className="px-3 py-2"><div className="text-slate-900 text-sm font-mono font-semibold">{v.reg_id || v.vehicle_code || v.code || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700 text-sm">{v.reg_no || v.plate_number || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700 text-sm">{[v.make, v.model].filter(Boolean).join(' / ') || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-700 text-sm">{v.type || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-600 text-sm">{v.owned_by || v.assigned_driver || '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-slate-600 text-sm">{v.joining_date ? new Date(v.joining_date).toLocaleDateString() : '-'}</div></td>
-                    <td className="px-3 py-2"><div className="text-sm"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${v.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-50 text-gray-600 border border-gray-100'}`}>{v.status || 'Unknown'}</span></div></td>
+
+                    {/* Vehicle Code */}
+                    <td className="px-4 py-3">
+                      <span className="font-mono font-semibold text-sm text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
+                        {v.vehicle_code || '-'}
+                      </span>
+                    </td>
+
+                    {/* Owner's Name */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-800 text-sm font-medium">
+                        {v.owned_by || v.owned_by_type || '—'}
+                      </div>
+                    </td>
+
+                    {/* CNIC */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-600 text-sm font-mono tracking-wide">
+                        {v.owner_cnic || <span className="text-slate-300 font-sans">—</span>}
+                      </div>
+                    </td>
+
+                    {/* Phone */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-600 text-sm">
+                        {v.owner_contact || <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
+
+                    {/* Zakwan ID */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-700 text-sm font-mono">
+                        {v.reg_id || '-'}
+                      </div>
+                    </td>
+
+                    {/* Reg No */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-700 text-sm font-mono">
+                        {v.reg_no || '-'}
+                      </div>
+                    </td>
+
+                    {/* Joining Date */}
+                    <td className="px-4 py-3">
+                      <div className="text-slate-600 text-sm">
+                        {v.joining_date
+                          ? new Date(v.joining_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : <span className="text-slate-300">—</span>}
+                      </div>
+                    </td>
                   </motion.tr>
                 ))}
               </tbody>
             </table>
-          </div>
 
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-slate-400 text-sm">
+                No vehicles match your search.
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
