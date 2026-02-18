@@ -52,7 +52,7 @@ export default function PrivateHR() {
       <div className="flex-1 p-6 overflow-y-auto relative z-10">
         <AnimatePresence>
           <motion.div key={activeTab} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.18 }}>
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               {activeTab === 'registration' && <PrivateHRRegistration supabase={supabase} />}
               {activeTab === 'directory' && <PrivateHRDirectory />}
               {activeTab === 'records' && <PrivateHRRecords />}
