@@ -30,6 +30,7 @@ export default function PersonalInfo({ formData, errors, onChange, darkMode }) {
           <div className="relative group">
             <input
               type="text"
+              id="fullName"
               name="fullName"
               value={formData.fullName}
               onChange={onChange}
@@ -61,6 +62,7 @@ export default function PersonalInfo({ formData, errors, onChange, darkMode }) {
           <div className="relative group">
             <input
               type="text"
+              id="fatherName"
               name="fatherName"
               value={formData.fatherName}
               onChange={onChange}
@@ -116,6 +118,7 @@ export default function PersonalInfo({ formData, errors, onChange, darkMode }) {
           </label>
           <div className="relative group">
             <select
+              id="religion"
               name="religion"
               value={formData.religion}
               onChange={onChange}
@@ -154,6 +157,7 @@ export default function PersonalInfo({ formData, errors, onChange, darkMode }) {
           <div className="relative group">
             <input
               type="tel"
+              id="phoneNumber"
               name="phoneNumber"
               value={formData.phoneNumber}
               onChange={onChange}

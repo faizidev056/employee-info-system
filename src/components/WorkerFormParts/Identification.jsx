@@ -63,6 +63,7 @@ export default function Identification({ formData, errors, onChange, darkMode })
           <div className="relative group">
             <input
               type="text"
+              id="cnic"
               name="cnic"
               value={formData.cnic}
               onChange={handleCnicChange}

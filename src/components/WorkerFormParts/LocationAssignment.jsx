@@ -31,6 +31,7 @@ export default function LocationAssignment({ formData, errors, onChange, ucWardO
           </label>
           <div className="relative group">
             <select
+              id="ucWard"
               name="ucWard"
               value={formData.ucWard}
               onChange={onChange}
@@ -68,6 +69,7 @@ export default function LocationAssignment({ formData, errors, onChange, ucWardO
             </label>
             <div className="relative group">
               <select
+                id="attendancePoint"
                 name="attendancePoint"
                 value={formData.attendancePoint}
                 onChange={onChange}

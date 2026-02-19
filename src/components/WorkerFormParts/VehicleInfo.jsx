@@ -28,6 +28,7 @@ export default function VehicleInfo({ formData, errors, onChange, darkMode }) {
         <div className="relative group max-w-md">
           <input
             type="text"
+            id="vehicleCode"
             name="vehicleCode"
             value={formData.vehicleCode}
             onChange={onChange}

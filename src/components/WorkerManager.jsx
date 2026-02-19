@@ -415,16 +415,42 @@ export default function WorkerManager() {
 
     if (!validation.isValid) {
       console.log('Validation failed. Errors:', validation.errors)
-      // Scroll to first error field
-      const firstErrorField = Object.keys(validation.errors)[0]
-      if (firstErrorField) {
-        const element = document.querySelector(`[name="${firstErrorField}"]`)
-        console.log('Scrolling to field:', firstErrorField, 'Element found:', !!element)
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          element.focus()
+
+      // Define preferred order of fields for scrolling
+      const fieldOrder = [
+        'fullName', 'fatherName', 'dateOfBirth', 'religion', 'phoneNumber',
+        'cnic', 'cnicIssueDate', 'cnicExpiryDate',
+        'designation', 'joiningDate',
+        'ucWard', 'attendancePoint',
+        'vehicleCode', 'address'
+      ]
+
+      // Use requestAnimationFrame to ensure error messages are rendered and layout is updated
+      requestAnimationFrame(() => {
+        // Find the first field in our preferred order that has an error
+        const firstErrorField = fieldOrder.find(field => validation.errors[field]) || Object.keys(validation.errors)[0]
+
+        if (firstErrorField) {
+          // Try to find by name or id
+          const element = document.querySelector(`[name="${firstErrorField}"]`) || document.getElementById(firstErrorField)
+
+          if (element) {
+            element.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            })
+
+            // Add a vibrant highlight effect
+            element.classList.add('ring-rose-500/40', 'ring-offset-2', 'ring-4')
+            setTimeout(() => {
+              element.classList.remove('ring-rose-500/40', 'ring-offset-2', 'ring-4')
+            }, 3000)
+
+            // Focus after the scroll starts
+            setTimeout(() => element.focus(), 600)
+          }
         }
-      }
+      })
       return
     }
 
@@ -732,7 +758,7 @@ export default function WorkerManager() {
       <SidebarDashboard activeTab={activeTab} onTabChange={handleTabChange} darkMode={darkMode} />
 
 
-      <main className="flex-1 h-full overflow-y-auto relative custom-scrollbar">
+      <main className="flex-1 h-full overflow-y-auto relative custom-scrollbar scroll-smooth">
         {/* Background Gradients - Conditional */}
         {darkMode && (
           <div className="fixed top-0 left-64 right-0 h-96 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none z-0" />

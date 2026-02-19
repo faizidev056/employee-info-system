@@ -201,6 +201,7 @@ export default function DatePicker({ name, value, onChange, placeholder, error, 
         <input
           ref={inputRef}
           type="text"
+          id={name}
           name={name}
           value={inputValue}
           placeholder={placeholder || 'DD/MM/YYYY'}

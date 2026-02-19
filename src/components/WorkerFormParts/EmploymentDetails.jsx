@@ -29,6 +29,7 @@ export default function EmploymentDetails({ formData, errors, onChange, darkMode
           </label>
           <div className="relative group">
             <select
+              id="designation"
               name="designation"
               value={formData.designation}
               onChange={onChange}

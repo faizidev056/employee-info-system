@@ -26,6 +26,7 @@ export default function AddressSection({ formData, onChange, darkMode }) {
         </label>
         <div className="relative group">
           <textarea
+            id="address"
             name="address"
             value={formData.address}
             onChange={onChange}
