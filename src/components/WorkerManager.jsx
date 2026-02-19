@@ -72,6 +72,15 @@ export default function WorkerManager() {
 
   // Terminated filter state
   const [terminatedSearchQuery, setTerminatedSearchQuery] = useState('')
+  const [terminatedDesignationFilter, setTerminatedDesignationFilter] = useState('')
+  const [terminatedMonthFilter, setTerminatedMonthFilter] = useState('')
+
+  // Attendance filter state
+  const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('')
+  const [attendanceMonth, setAttendanceMonth] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
 
 
   const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
@@ -219,14 +228,31 @@ export default function WorkerManager() {
   // Terminated employees filter logic
   const terminatedFilteredWorkers = useMemo(() => {
     const q = (terminatedSearchQuery || '').toLowerCase().trim()
-    const terminated = workers.filter(w => w.status === 'Terminated')
-    if (!q) return terminated
-    return terminated.filter(w =>
-      (w.full_name || '').toLowerCase().includes(q) ||
-      (w.cnic || '').includes(q) ||
-      (w.employee_code || '').toLowerCase().includes(q)
-    )
-  }, [workers, terminatedSearchQuery])
+
+    return workers.filter(w => {
+      if (w.status !== 'Terminated') return false
+
+      const matchesSearch = !q ||
+        (w.full_name || '').toLowerCase().includes(q) ||
+        (w.cnic || '').includes(q) ||
+        (w.employee_code || '').toLowerCase().includes(q)
+
+      const matchesDesignation = !terminatedDesignationFilter || w.designation === terminatedDesignationFilter
+
+      const matchesMonth = () => {
+        if (!terminatedMonthFilter) return true
+        if (!w.termination_date) return false
+        const termDate = new Date(w.termination_date)
+        const [year, month] = terminatedMonthFilter.split('-')
+        return (
+          termDate.getFullYear() === parseInt(year) &&
+          termDate.getMonth() + 1 === parseInt(month)
+        )
+      }
+
+      return matchesSearch && matchesDesignation && matchesMonth()
+    })
+  }, [workers, terminatedSearchQuery, terminatedDesignationFilter, terminatedMonthFilter])
 
 
   // Designation to Code and Salary mapping
@@ -776,19 +802,19 @@ export default function WorkerManager() {
                   transition={{ duration: 0.5 }}
                   className="flex-1"
                 >
-                  <h1 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  <h1 className={`text-3xl font-semibold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                     {activeTab === 'dashboard' && 'Analytics Overview'}
                     {activeTab === 'workers' && 'Staff Registry'}
                     {activeTab === 'hr' && 'HR Records'}
                     {activeTab === 'terminated' && 'Terminated Employees'}
-                    {activeTab === 'attendance' && 'Attendance Management'}
+                    {activeTab === 'attendance' && 'Overall Attendance'}
                   </h1>
                   <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
                     {activeTab === 'workers' && 'Manage and view all worker profiles'}
                     {activeTab === 'hr' && 'Comprehensive employee records and actions'}
                     {activeTab === 'terminated' && 'History of former employees'}
-                    {activeTab === 'attendance' && 'Track and manage daily attendance'}
+                    {activeTab === 'attendance' && 'Monthly attendance sheets — click a cell to toggle (P/A/L) for the current month.'}
                   </p>
                 </motion.div>
 
@@ -817,17 +843,17 @@ export default function WorkerManager() {
                 </div>
               </div>
 
-              {/* Row 2: Search and Filters (Staff Registry & HR Records Specific) */}
-              {(activeTab === 'workers' || activeTab === 'hr') && (
+              {/* Row 2: Search and Filters */}
+              {(activeTab === 'workers' || activeTab === 'hr' || activeTab === 'attendance' || activeTab === 'terminated') && (
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                   {/* Left Column: Search */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
-                    className="flex-1"
+                    className="flex-1 flex items-center gap-3"
                   >
-                    <div className="relative max-w-xl group">
+                    <div className="relative max-w-xl flex-1 group">
                       <div className={`absolute -inset-[1px] bg-gradient-to-r from-blue-500/40 via-indigo-500/40 to-blue-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
                       <div className="relative">
                         <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -835,13 +861,52 @@ export default function WorkerManager() {
                         </svg>
                         <input
                           type="text"
-                          placeholder={activeTab === 'workers' ? "Search directory..." : "Search records..."}
-                          value={activeTab === 'workers' ? searchQuery : hrSearchQuery}
-                          onChange={(e) => activeTab === 'workers' ? setSearchQuery(e.target.value) : setHrSearchQuery(e.target.value)}
+                          placeholder={activeTab === 'workers' ? "Search directory..." : activeTab === 'hr' ? "Search records..." : activeTab === 'terminated' ? "Search terminated..." : "Search attendance..."}
+                          value={activeTab === 'workers' ? searchQuery : activeTab === 'hr' ? hrSearchQuery : activeTab === 'terminated' ? terminatedSearchQuery : attendanceSearchQuery}
+                          onChange={(e) => {
+                            if (activeTab === 'workers') setSearchQuery(e.target.value)
+                            else if (activeTab === 'hr') setHrSearchQuery(e.target.value)
+                            else if (activeTab === 'terminated') setTerminatedSearchQuery(e.target.value)
+                            else setAttendanceSearchQuery(e.target.value)
+                          }}
                           className={`w-full pl-10 pr-4 py-3 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50' : 'bg-white/80 border-blue-100 text-slate-900 focus:border-blue-400/50 shadow-blue-500/5'}`}
                         />
                       </div>
                     </div>
+
+                    {((activeTab === 'workers' && (searchQuery || designationFilter || monthFilter)) ||
+                      (activeTab === 'hr' && (hrSearchQuery || hrDesignationFilter || hrMonthFilter)) ||
+                      (activeTab === 'terminated' && (terminatedSearchQuery || terminatedDesignationFilter || terminatedMonthFilter)) ||
+                      (activeTab === 'attendance' && (attendanceSearchQuery))) && (
+                        <motion.button
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          onClick={() => {
+                            if (activeTab === 'workers') {
+                              setSearchQuery('')
+                              setDesignationFilter('')
+                              setMonthFilter('')
+                            } else if (activeTab === 'hr') {
+                              setHrSearchQuery('')
+                              setHrDesignationFilter('')
+                              setHrMonthFilter('')
+                            } else if (activeTab === 'terminated') {
+                              setTerminatedSearchQuery('')
+                              setTerminatedDesignationFilter('')
+                              setTerminatedMonthFilter('')
+                            } else {
+                              setAttendanceSearchQuery('')
+                            }
+                          }}
+                          className="p-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-500 transition-colors shadow-sm"
+                          title="Clear all filters"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </motion.button>
+                      )}
                   </motion.div>
 
                   {/* Right Column: Filters & Badge */}
@@ -852,54 +917,42 @@ export default function WorkerManager() {
                       transition={{ delay: 0.3, duration: 0.5 }}
                       className="flex flex-wrap items-center justify-end gap-3"
                     >
-                      <div className="relative group min-w-[180px]">
-                        <select
-                          value={activeTab === 'workers' ? designationFilter : hrDesignationFilter}
-                          onChange={(e) => activeTab === 'workers' ? setDesignationFilter(e.target.value) : setHrDesignationFilter(e.target.value)}
-                          className={`w-full pl-4 pr-10 py-3 backdrop-blur-md border rounded-xl text-sm transition-all cursor-pointer appearance-none shadow-sm ${darkMode
-                            ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50'
-                            : 'bg-white/80 border-blue-100 text-slate-700 focus:border-blue-400/50 shadow-blue-500/5'}`}
-                        >
-                          <option value="">All Designations</option>
-                          <option value="Sanitary Supervisor">Sanitary Supervisor</option>
-                          <option value="Helper">Helper</option>
-                          <option value="Sanitary Worker">Sanitary Worker</option>
-                          <option value="Driver">Driver</option>
-                        </select>
-                        <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
+                      {activeTab !== 'attendance' && (
+                        <div className="relative group min-w-[180px]">
+                          <select
+                            value={activeTab === 'workers' ? designationFilter : activeTab === 'hr' ? hrDesignationFilter : terminatedDesignationFilter}
+                            onChange={(e) => {
+                              if (activeTab === 'workers') setDesignationFilter(e.target.value)
+                              else if (activeTab === 'hr') setHrDesignationFilter(e.target.value)
+                              else setTerminatedDesignationFilter(e.target.value)
+                            }}
+                            className={`w-full pl-4 pr-10 py-3 backdrop-blur-md border rounded-xl text-sm transition-all cursor-pointer appearance-none shadow-sm ${darkMode
+                              ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50'
+                              : 'bg-white/80 border-blue-100 text-slate-700 focus:border-blue-400/50 shadow-blue-500/5'}`}
+                          >
+                            <option value="">All Designations</option>
+                            <option value="Sanitary Supervisor">Sanitary Supervisor</option>
+                            <option value="Helper">Helper</option>
+                            <option value="Sanitary Worker">Sanitary Worker</option>
+                            <option value="Driver">Driver</option>
+                          </select>
+                          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      )}
 
                       <div className="min-w-[200px]">
                         <MonthPicker
-                          value={activeTab === 'workers' ? monthFilter : hrMonthFilter}
-                          onChange={(e) => activeTab === 'workers' ? setMonthFilter(e.target.value) : setHrMonthFilter(e.target.value)}
+                          value={activeTab === 'workers' ? monthFilter : activeTab === 'hr' ? hrMonthFilter : activeTab === 'terminated' ? terminatedMonthFilter : attendanceMonth}
+                          onChange={(e) => {
+                            if (activeTab === 'workers') setMonthFilter(e.target.value)
+                            else if (activeTab === 'hr') setHrMonthFilter(e.target.value)
+                            else if (activeTab === 'terminated') setTerminatedMonthFilter(e.target.value)
+                            else setAttendanceMonth(e.target.value)
+                          }}
                         />
                       </div>
-
-                      {((activeTab === 'workers' && (searchQuery || designationFilter || monthFilter)) ||
-                        (activeTab === 'hr' && (hrSearchQuery || hrDesignationFilter || hrMonthFilter))) && (
-                          <button
-                            onClick={() => {
-                              if (activeTab === 'workers') {
-                                setSearchQuery('')
-                                setDesignationFilter('')
-                                setMonthFilter('')
-                              } else {
-                                setHrSearchQuery('')
-                                setHrDesignationFilter('')
-                                setHrMonthFilter('')
-                              }
-                            }}
-                            className="p-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-500 transition-colors shadow-sm"
-                            title="Clear all filters"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
                     </motion.div>
 
                     <motion.div
@@ -910,7 +963,7 @@ export default function WorkerManager() {
                     >
                       <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
                       <span className="text-cyan-700 text-[10px] font-bold uppercase tracking-wider">
-                        {activeTab === 'workers' ? filteredWorkers.length : hrFilteredWorkers.length} of {workers.length} employees
+                        {activeTab === 'workers' ? filteredWorkers.length : activeTab === 'hr' ? hrFilteredWorkers.length : activeTab === 'terminated' ? terminatedFilteredWorkers.length : workers.length} of {workers.length} employees
                       </span>
                     </motion.div>
                   </div>
@@ -994,30 +1047,38 @@ export default function WorkerManager() {
               <section className="mt-2">
                 <div className={`border rounded-2xl overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-white/5 border-white/6' : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50'
                   }`}>
-                  <div className={`px-6 py-4 border-b flex items-center justify-between ${darkMode ? 'border-white/6' : 'border-slate-100'
-                    }`}>
-                    <h3 className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Recent Registrations</h3>
-                    <button onClick={() => handleTabChange('workers')} className="text-xs text-sky-400 hover:text-sky-300 font-medium transition-colors">View All</button>
+                  <div className={`px-6 py-4 border-b flex items-center justify-between ${darkMode ? 'border-white/6' : 'border-slate-100'}`}>
+                    <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-800'}`}>Recent Activities</h3>
+                    <motion.button
+                      onClick={() => handleTabChange('workers')}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={`p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-white/5 text-slate-400 hover:text-white' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-900'}`}
+                      title="View Recently Active Staff"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </motion.button>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                      <thead className={`text-xs uppercase font-medium ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-500'
-                        }`}>
+                      <thead className={`text-xs uppercase font-medium ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
                         <tr>
-                          <th className="px-6 py-3">Employee</th>
-                          <th className="px-6 py-3">Role</th>
-                          <th className="px-6 py-3">Status</th>
+                          <th className="px-6 py-3 text-left">Employee</th>
+                          <th className="px-6 py-3 text-left">Role</th>
+                          <th className="px-6 py-3 text-center">Status</th>
                           <th className="px-6 py-3 text-right">Date</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                         {workers.slice(0, 5).map(worker => (
-                          <tr key={worker.id} className={`transition-colors border-b last:border-0 ${darkMode ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-100'
-                            }`}>
-                            <td className={`px-6 py-3 font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{worker.full_name}</td>
+                          <tr key={worker.id} className={`transition-colors border-b last:border-0 ${darkMode ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-100'}`}>
+                            <td className={`px-6 py-3 font-normal ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{worker.full_name}</td>
                             <td className={`px-6 py-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{worker.designation}</td>
-                            <td className="px-6 py-3">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${worker.status === 'Active'
+                            <td className="px-6 py-3 text-center">
+                              <span className={`inline-flex items-center justify-center w-20 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all ${worker.status === 'Active'
                                 ? (darkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
                                 : (darkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-rose-50 text-rose-700 border-rose-200')
                                 }`}>
@@ -1045,7 +1106,7 @@ export default function WorkerManager() {
               transition={{ duration: 0.5, ease: "easeOut" }}
               className="flex flex-col items-center px-4"
             >
-              <div className="relative z-10 w-full max-w-4xl">
+              <div className="relative z-10 w-full max-w-7xl">
                 {/* Header Section - Moved Outside */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 px-2">
                   <div className="flex items-center gap-6">
@@ -1154,7 +1215,7 @@ export default function WorkerManager() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-2">No Workers Registered Yet</h3>
+                  <h3 className="text-2xl font-semibold text-slate-900 mb-2">No Workers Registered Yet</h3>
                   <p className="text-slate-500 mb-8 text-lg">Start by registering your first employee to populate the directory</p>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -1174,14 +1235,14 @@ export default function WorkerManager() {
                     <table className="w-full">
                       <thead>
                         <tr className={`border-b text-xs backdrop-blur-sm transition-colors ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white/40 border-white/50'}`}>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-12 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sr.</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-48 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Name / Father Name</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-36 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>CNIC</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider hidden sm:table-cell w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>DOB / Age</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Phone</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider hidden sm:table-cell w-24 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Religion</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Designation</th>
-                          <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Joined</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-12 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sr.</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-48 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Name / Father Name</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-36 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>CNIC</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider hidden sm:table-cell w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>DOB / Age</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Phone</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider hidden sm:table-cell w-24 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Religion</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-32 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Designation</th>
+                          <th className={`px-4 py-3 text-left font-medium uppercase tracking-wider w-28 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Joined</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1212,7 +1273,7 @@ export default function WorkerManager() {
                               </td>
                               <td className="px-3 py-2">
                                 <div className="min-w-0">
-                                  <div className={`text-sm font-medium truncate ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>{worker.full_name}</div>
+                                  <div className={`text-sm font-normal truncate ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>{worker.full_name}</div>
                                   <div className={`text-xs truncate ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{worker.father_name}</div>
                                 </div>
                               </td>
@@ -1246,7 +1307,7 @@ export default function WorkerManager() {
                               </td>
 
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className={`text-sm font-semibold ${darkMode ? 'text-slate-300' : 'text-slate-900'}`}>
+                                <div className={`text-sm font-medium ${darkMode ? 'text-slate-300' : 'text-slate-900'}`}>
                                   {worker.joining_date ? new Date(worker.joining_date).toLocaleDateString() : 'N/A'}
                                 </div>
                               </td>
@@ -1278,19 +1339,19 @@ export default function WorkerManager() {
               >
                 {/* Summary Statistics */}
                 <div className={`p-6 rounded-3xl border transition-all duration-300 ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200/60 shadow-sm'}`}>
-                  <h3 className={`text-sm font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Summary Statistics</h3>
+                  <h3 className={`text-sm font-medium mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Summary Statistics</h3>
                   <div className="flex flex-wrap gap-12 md:gap-24">
                     <div className="flex flex-col gap-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Workers</p>
-                      <h4 className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{totalEmployees}</h4>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Total Workers</p>
+                      <h4 className={`text-2xl font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{totalEmployees}</h4>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active</p>
-                      <h4 className={`text-2xl font-black ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`}>{activeEmployees}</h4>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Active</p>
+                      <h4 className={`text-2xl font-semibold ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`}>{activeEmployees}</h4>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Payroll</p>
-                      <h4 className={`text-2xl font-black ${darkMode ? 'text-sky-500' : 'text-sky-600'}`}>{formatSalary(totalSalary)}</h4>
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Total Payroll</p>
+                      <h4 className={`text-2xl font-semibold ${darkMode ? 'text-sky-500' : 'text-sky-600'}`}>{formatSalary(totalSalary)}</h4>
                     </div>
                   </div>
                 </div>
@@ -1326,7 +1387,7 @@ export default function WorkerManager() {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleTabChange('registration')}
-                        className={`px-8 py-4 font-semibold rounded-xl transition-all duration-300 shadow-lg ${darkMode ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200'}`}
+                        className={`px-8 py-4 font-medium rounded-xl transition-all duration-300 shadow-lg ${darkMode ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-indigo-500/20' : 'bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200'}`}
                       >
                         Register Employee
                       </motion.button>
@@ -1337,17 +1398,17 @@ export default function WorkerManager() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-white/50 bg-white/40 backdrop-blur-sm">
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-8">#</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-36">Employee</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">CNIC</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">DOB</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Phone</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Religion</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Code</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-28">CNIC Dates</th>
-                            <th className="px-2 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16">Joined</th>
-                            <th className="px-2 py-2 text-center font-semibold text-slate-500 uppercase tracking-wider w-28">Status</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-8">#</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-36">Employee</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-24">CNIC</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-16">DOB</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-20">Phone</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-16">Religion</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-24">Designation</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-16">Code</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-28">CNIC Dates</th>
+                            <th className="px-2 py-2 text-left font-medium text-slate-500 uppercase tracking-wider w-16">Joined</th>
+                            <th className="px-2 py-2 text-center font-medium text-slate-500 uppercase tracking-wider w-28">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -1366,7 +1427,7 @@ export default function WorkerManager() {
 
                               <td className="px-2 py-2">
                                 <div className="min-w-0">
-                                  <p className="text-slate-900 font-medium truncate" title={worker.full_name}>{worker.full_name}</p>
+                                  <p className="text-slate-900 font-normal truncate" title={worker.full_name}>{worker.full_name}</p>
                                   <p className="text-slate-400 text-[10px] truncate" title={worker.father_name}>{worker.father_name}</p>
                                 </div>
                               </td>
@@ -1389,7 +1450,7 @@ export default function WorkerManager() {
 
                               <td className="px-2 py-2">
                                 <div className="min-w-0">
-                                  <p className="text-slate-700 text-[11px] font-medium truncate" title={worker.designation}>{worker.designation}</p>
+                                  <p className="text-slate-700 text-[11px] font-normal truncate" title={worker.designation}>{worker.designation}</p>
                                   {worker.vehicle_code && (
                                     <p className="text-slate-400 text-[10px] truncate" title={worker.vehicle_code}>{worker.vehicle_code}</p>
                                   )}
@@ -1397,7 +1458,7 @@ export default function WorkerManager() {
                               </td>
 
                               <td className="px-2 py-2">
-                                <p className="text-slate-900 font-mono text-[11px] font-semibold truncate">{worker.employee_code || '-'}</p>
+                                <p className="text-slate-900 font-mono text-[11px] font-medium truncate">{worker.employee_code || '-'}</p>
                               </td>
 
                               <td className="px-2 py-2">
@@ -1414,7 +1475,7 @@ export default function WorkerManager() {
                               </td>
 
                               <td className="px-2 py-2">
-                                <p className="text-slate-900 text-[11px] font-medium truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
+                                <p className="text-slate-900 text-[11px] font-normal truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
                               </td>
 
                               <td className="px-2 py-2 text-center w-28">
@@ -1511,108 +1572,70 @@ export default function WorkerManager() {
           {/* Terminated Employees Tab */}
           {activeTab === 'terminated' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="max-w-7xl mx-auto">
-              <div className="mb-8 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-colors ${darkMode ? 'bg-rose-500/10 border-rose-500/20' : 'bg-rose-50 border-rose-100'}`}>
-                    <svg className={`w-6 h-6 ${darkMode ? 'text-rose-400' : 'text-rose-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-rose-600'}`}>Terminated Employees</h2>
-                    <p className={`text-sm transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Read-only listing of terminated employees for auditing and reporting</p>
-                  </div>
-                </div>
-              </div>
+
 
               <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-rose-100/10'}`}>
-                {/* Search Bar - Integrated into card header for alignment */}
-                <div className={`p-6 border-b backdrop-blur-md transition-colors ${darkMode ? 'border-white/10' : 'border-white/40'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="relative max-w-md flex-1 group">
-                      {/* Glowing Border Wrapper */}
-                      <div className={`absolute -inset-[1px] bg-gradient-to-r from-rose-500/40 via-orange-500/40 to-rose-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
-                      <div className="relative">
-                        <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input
-                          type="text"
-                          placeholder="Search terminated..."
-                          value={terminatedSearchQuery}
-                          onChange={(e) => setTerminatedSearchQuery(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-rose-500/50' : 'bg-white/80 border-rose-100 text-slate-900 focus:border-rose-400/50 shadow-rose-500/5'}`}
-                        />
-                      </div>
-                    </div>
+                {/* Search Bar removed as it's now in the header */}
 
-                    <div className={`px-3 py-1.5 border rounded-lg text-xs font-semibold transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-rose-50 border-rose-100 text-rose-700'}`}>
-                      {terminatedFilteredWorkers.length} terminated
-                    </div>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-xs border-separate border-spacing-0">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50/50">
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-10">Sr.</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-40">Name / Father Name</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">CNIC</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">DOB / Age</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Phone</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-16 hidden sm:table-cell">Religion</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Designation</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-20">Joined</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-500 uppercase tracking-wider w-24">Terminated Date</th>
+                      <tr className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50/50'} backdrop-blur-md`}>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-12 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Sr.</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-40 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Name / Father Name</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-32 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>CNIC</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>DOB / Age</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-32 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Phone</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-24 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'} hidden sm:table-cell`}>Religion</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-36 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Designation</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Joining Date</th>
+                        <th className={`px-4 py-3 text-left font-semibold uppercase tracking-wider w-28 border-b transition-colors ${darkMode ? 'border-white/10 text-slate-400' : 'border-slate-200 text-slate-500'}`}>Terminated Date</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className={`divide-y transition-colors ${darkMode ? 'divide-white/5 bg-slate-900/40' : 'divide-slate-100 bg-white/40'}`}>
                       {terminatedFilteredWorkers.map((worker, idx) => (
-
-                        <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-3 py-2">
-                            <span className="text-slate-500 font-mono text-xs">{idx + 1}</span>
+                        <tr key={worker.id} className={`group transition-all ${darkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-slate-50'}`}>
+                          <td className="px-4 py-3">
+                            <span className={`font-mono text-[11px] font-semibold ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{idx + 1}</span>
                           </td>
-                          <td className="px-3 py-2">
+                          <td className="px-4 py-3">
                             <div className="min-w-0">
-                              <p className="text-slate-900 font-medium truncate" title={worker.full_name}>{worker.full_name}</p>
-                              <p className="text-slate-400 text-[10px] truncate" title={worker.father_name}>{worker.father_name}</p>
+                              <p className={`font-semibold truncate text-sm ${darkMode ? 'text-white' : 'text-slate-900'}`} title={worker.full_name}>{worker.full_name}</p>
+                              <p className={`text-[10px] truncate ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} title={worker.father_name}>{worker.father_name}</p>
                             </div>
                           </td>
-                          <td className="px-3 py-2">
-                            <p className="text-slate-600 font-mono truncate">{worker.cnic}</p>
+                          <td className="px-4 py-3">
+                            <p className={`font-mono text-[11px] truncate font-normal ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{worker.cnic}</p>
                           </td>
-                          <td className="px-3 py-2">
-                            <div className="text-slate-600 truncate text-xs">
+                          <td className="px-4 py-3">
+                            <div className={`truncate text-xs font-medium ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                               {worker.date_of_birth ? new Date(worker.date_of_birth).toLocaleDateString() : '-'}
                             </div>
-                            <div className="text-slate-400 text-[10px]">
+                            <div className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                               Age: {worker.date_of_birth ? Math.floor((new Date() - new Date(worker.date_of_birth)) / (1000 * 60 * 60 * 24 * 365.25)) : '-'}
                             </div>
                           </td>
-                          <td className="px-3 py-2">
-                            <p className="text-slate-600 truncate">{worker.phone_number}</p>
+                          <td className="px-4 py-3">
+                            <p className={`font-normal truncate ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{worker.phone_number}</p>
                           </td>
-                          <td className="px-3 py-2 hidden sm:table-cell">
-                            <p className="text-slate-600 truncate">{worker.religion || '-'}</p>
+                          <td className="px-4 py-3 hidden sm:table-cell">
+                            <p className={`truncate ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{worker.religion || '-'}</p>
                           </td>
-                          <td className="px-3 py-2">
-                            <p className="text-slate-700 truncate" title={worker.designation}>{worker.designation}</p>
+                          <td className="px-4 py-3">
+                            <p className={`font-medium truncate ${darkMode ? 'text-slate-300' : 'text-slate-700'}`} title={worker.designation}>{worker.designation}</p>
                           </td>
-                          <td className="px-3 py-2">
-                            <p className="text-slate-600 truncate">{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : '-'}</p>
+                          <td className="px-4 py-3">
+                            <p className={`font-normal truncate ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{worker.joining_date ? new Date(worker.joining_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}</p>
                           </td>
-                          <td className="px-3 py-2">
-                            <p className="text-rose-600 font-medium truncate">{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString(undefined, { year: '2-digit', month: 'numeric', day: 'numeric' }) : 'Unknown'}</p>
+                          <td className="px-4 py-3">
+                            <p className={`font-semibold truncate text-rose-500`}>{worker.termination_date ? new Date(worker.termination_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown'}</p>
                           </td>
                         </tr>
                       ))}
                       {terminatedFilteredWorkers.length === 0 && (
-
                         <tr>
-                          <td className="px-6 py-12 text-center text-slate-400 font-medium" colSpan={11}>
-                            No terminated employees found
+                          <td className={`px-6 py-20 text-center font-medium italic ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} colSpan={9}>
+                            No matching terminated records found for this period
                           </td>
                         </tr>
                       )}
@@ -1627,13 +1650,16 @@ export default function WorkerManager() {
           {
             activeTab === 'attendance' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                  <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Overall Attendance</h2>
-                  <p className="text-slate-500 text-sm mt-1">Monthly attendance sheets — click a cell to toggle (P/A/L) for the current month. Past months are read-only.</p>
-                </div>
+
 
                 <div>
-                  <Attendance workers={workers} darkMode={darkMode} />
+                  <Attendance
+                    workers={workers}
+                    darkMode={darkMode}
+                    externalSearchQuery={attendanceSearchQuery}
+                    externalMonth={attendanceMonth}
+                    onExternalMonthChange={setAttendanceMonth}
+                  />
                 </div>
               </motion.div>
             )
@@ -1654,14 +1680,24 @@ export default function WorkerManager() {
                   animate={{ scale: 1, y: 0 }}
                   exit={{ scale: 0.9, y: 20 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-white border border-gray-200 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                  className={`border shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col transition-colors ${darkMode ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'}`}
                 >
                   {/* Modal Header */}
-                  <div className="sticky top-0 flex items-center justify-between p-6 border-b border-gray-100 bg-white/95 backdrop-blur z-10">
-                    <h2 className="text-xl font-bold text-slate-900">Edit Employee Record</h2>
+                  <div className={`p-6 border-b transition-colors flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl ${darkMode ? 'border-white/10 bg-slate-900/90' : 'border-slate-100 bg-white/90'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${darkMode ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h2 className={`text-xl font-bold transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Edit Employee</h2>
+                        <p className={`text-xs transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Update internal records for {editFormData.full_name || 'Personnel'}</p>
+                      </div>
+                    </div>
                     <button
                       onClick={handleCancelEdit}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-slate-500 hover:text-slate-700"
+                      className={`p-2 rounded-xl transition-all ${darkMode ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1670,92 +1706,49 @@ export default function WorkerManager() {
                   </div>
 
                   {/* Modal Body */}
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Full Name */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Full Name</label>
-                        <input
-                          type="text"
-                          value={editFormData.full_name || ''}
-                          onChange={(e) => handleEditChange(e, 'full_name')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
+                  <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-6">
+                      {/* Form Field Helper */}
+                      {Object.entries({
+                        full_name: 'Full Name',
+                        father_name: "Father's Name",
+                        date_of_birth: 'Date of Birth',
+                        cnic: 'CNIC Number',
+                        cnic_issue_date: 'CNIC Issue Date',
+                        cnic_expiry_date: 'CNIC Expiry Date',
+                        phone_number: 'Phone Number',
+                        uc_ward_name: 'UC / Ward',
+                        salary: 'Salary (PKR)',
+                        religion: 'Religion'
+                      }).map(([key, label]) => (
+                        <div key={key} className="space-y-1.5">
+                          <label className={`block text-[10px] font-bold uppercase tracking-widest pl-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {label}
+                          </label>
+                          <input
+                            type={key.includes('date') ? 'date' : key === 'salary' ? 'number' : 'text'}
+                            value={editFormData[key] || ''}
+                            onChange={(e) => handleEditChange(e, key)}
+                            className={`w-full px-4 py-3 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${darkMode
+                              ? 'bg-slate-800/50 border-white/10 text-white focus:border-blue-500/50'
+                              : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white shadow-sm'
+                              }`}
+                          />
+                        </div>
+                      ))}
 
-                      {/* Father's Name */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Father's Name</label>
-                        <input
-                          type="text"
-                          value={editFormData.father_name || ''}
-                          onChange={(e) => handleEditChange(e, 'father_name')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Date of Birth */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Date of Birth</label>
-                        <input
-                          type="date"
-                          value={editFormData.date_of_birth || ''}
-                          onChange={(e) => handleEditChange(e, 'date_of_birth')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* CNIC */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">CNIC</label>
-                        <input
-                          type="text"
-                          value={editFormData.cnic || ''}
-                          onChange={(e) => handleEditChange(e, 'cnic')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* CNIC Issue Date */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">CNIC Issue Date</label>
-                        <input
-                          type="date"
-                          value={editFormData.cnic_issue_date || ''}
-                          onChange={(e) => handleEditChange(e, 'cnic_issue_date')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* CNIC Expiry Date */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">CNIC Expiry Date</label>
-                        <input
-                          type="date"
-                          value={editFormData.cnic_expiry_date || ''}
-                          onChange={(e) => handleEditChange(e, 'cnic_expiry_date')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Phone Number */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Phone Number</label>
-                        <input
-                          type="text"
-                          value={editFormData.phone_number || ''}
-                          onChange={(e) => handleEditChange(e, 'phone_number')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Designation */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Designation</label>
+                      {/* Designation Special Handling */}
+                      <div className="space-y-1.5">
+                        <label className={`block text-[10px] font-bold uppercase tracking-widest pl-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Designation
+                        </label>
                         <select
                           value={editFormData.designation || ''}
                           onChange={(e) => handleEditChange(e, 'designation')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors cursor-pointer"
+                          className={`w-full px-4 py-3 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer appearance-none ${darkMode
+                            ? 'bg-slate-800/50 border-white/10 text-white focus:border-blue-500/50'
+                            : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white shadow-sm'
+                            }`}
                         >
                           <option value="">Select Designation</option>
                           <option value="Sanitary Supervisor">Sanitary Supervisor</option>
@@ -1765,59 +1758,34 @@ export default function WorkerManager() {
                         </select>
                       </div>
 
-                      {/* UC/Ward */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">UC/Ward</label>
-                        <input
-                          type="text"
-                          value={editFormData.uc_ward_name || ''}
-                          onChange={(e) => handleEditChange(e, 'uc_ward_name')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Salary */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Salary (PKR)</label>
-                        <input
-                          type="number"
-                          value={editFormData.salary || ''}
-                          onChange={(e) => handleEditChange(e, 'salary')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Religion */}
-                      <div>
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Religion</label>
-                        <input
-                          type="text"
-                          value={editFormData.religion || ''}
-                          onChange={(e) => handleEditChange(e, 'religion')}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors"
-                        />
-                      </div>
-
-                      {/* Address */}
-                      <div className="lg:col-span-3">
-                        <label className="block text-slate-700 text-xs font-semibold mb-2 uppercase tracking-wider">Address</label>
+                      {/* Address Full Width */}
+                      <div className="lg:col-span-3 space-y-1.5">
+                        <label className={`block text-[10px] font-bold uppercase tracking-widest pl-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Current Address
+                        </label>
                         <textarea
                           value={editFormData.address || ''}
                           onChange={(e) => handleEditChange(e, 'address')}
                           rows="3"
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-colors resize-none"
+                          className={`w-full px-4 py-3 border rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none ${darkMode
+                            ? 'bg-slate-800/50 border-white/10 text-white focus:border-blue-500/50'
+                            : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white shadow-sm'
+                            }`}
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Modal Footer */}
-                  <div className="sticky bottom-0 flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-white/95 backdrop-blur">
+                  <div className={`p-6 border-t transition-colors flex items-center justify-end gap-3 sticky bottom-0 z-20 backdrop-blur-xl ${darkMode ? 'border-white/10 bg-slate-900/90' : 'border-slate-100 bg-white/90'}`}>
                     <button
                       onClick={handleCancelEdit}
-                      className="px-4 py-2 bg-white text-slate-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all duration-200 font-medium text-sm shadow-sm"
+                      className={`px-6 py-2.5 rounded-xl transition-all font-bold text-sm ${darkMode
+                        ? 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 shadow-sm'
+                        }`}
                     >
-                      Cancel
+                      Discard Changes
                     </button>
                     <button
                       onClick={() => {
@@ -1825,12 +1793,19 @@ export default function WorkerManager() {
                         if (currentWorker) handleSaveEdit(currentWorker.id)
                       }}
                       disabled={loading}
-                      className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-all duration-200 font-medium text-sm flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-slate-900/20"
+                      className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Save Changes
+                      {loading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                      Update Personnel
                     </button>
                   </div>
                 </motion.div>
@@ -1838,46 +1813,88 @@ export default function WorkerManager() {
             )}
           </AnimatePresence>
 
-          {/* Termination Confirmation Modal */}
           <AnimatePresence>
             {terminationModal.open && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setTerminationModal({ open: false, workerId: null })}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                onClick={() => setTerminationModal({ open: false, workerId: null, worker: null })}
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[70] p-4"
               >
                 <motion.div
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
+                  initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.85, opacity: 0, y: 40 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-gradient-to-br from-slate-900 to-slate-800 border border-red-500/30 rounded-2xl shadow-2xl max-w-md w-full p-6"
+                  className={`relative max-w-md w-full p-8 rounded-[2rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.5)] border transition-all ${darkMode ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-100'
+                    }`}
                 >
-                  <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-500/20 rounded-full">
-                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4v2m0 0a9 9 0 110-18 9 9 0 010 18z" />
-                    </svg>
+                  {/* Danger Glow Effect */}
+                  <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 bg-rose-500/20 blur-[80px] pointer-events-none opacity-50"></div>
+
+                  <div className="relative mb-8 flex flex-col items-center">
+                    <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mb-6 rotate-12 group hover:rotate-0 transition-transform duration-500">
+                      <div className="w-14 h-14 bg-rose-500/20 rounded-2xl flex items-center justify-center">
+                        <svg className="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <h2 className={`text-2xl font-black mb-2 tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Terminate Personnel?</h2>
+                    <p className={`text-sm text-center font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      This action will immediately revoke active status for this employee in the system.
+                    </p>
                   </div>
-                  <h2 className="text-xl font-bold text-white text-center mb-4">Terminate Employee?</h2>
+
                   {terminationModal.worker && (
-                    <p className="text-gray-300 text-center mb-6 text-sm"><span className="font-semibold">Name:</span> {terminationModal.worker.full_name} | <span className="font-semibold">CNIC:</span> <span className="font-mono">{terminationModal.worker.cnic}</span></p>
+                    <div className={`mb-8 p-5 rounded-3xl border transition-colors flex items-center gap-4 ${darkMode ? 'bg-white/[0.03] border-white/5' : 'bg-slate-50 border-slate-100'
+                      }`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg ${darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 shadow-sm'
+                        }`}>
+                        {terminationModal.worker.full_name?.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-bold truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {terminationModal.worker.full_name}
+                        </p>
+                        <p className={`text-[10px] font-mono font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                          CNIC: {terminationModal.worker.cnic}
+                        </p>
+                      </div>
+                      <div className="px-2.5 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                        Active
+                      </div>
+                    </div>
                   )}
-                  <p className="text-gray-400 text-center mb-6 text-sm">Are you sure you want to terminate this employee? This action will update their status to "Terminated".</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      onClick={() => setTerminationModal({ open: false, workerId: null, worker: null })}
-                      className="px-4 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 border border-gray-500/30 rounded-lg transition-all duration-200 font-medium"
-                    >
-                      Cancel
-                    </button>
+
+                  <div className="flex flex-col gap-3">
                     <button
                       onClick={confirmTermination}
                       disabled={loading}
-                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all duration-200 font-medium disabled:opacity-50"
+                      className="w-full py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-[1.25rem] transition-all font-black text-sm shadow-xl shadow-rose-500/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      Terminate
+                      {loading ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                          </svg>
+                          Confirm Termination
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setTerminationModal({ open: false, workerId: null, worker: null })}
+                      className={`w-full py-4 rounded-[1.25rem] transition-all font-bold text-sm ${darkMode
+                        ? 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900'
+                        }`}
+                    >
+                      Keep Employee Active
                     </button>
                   </div>
                 </motion.div>
@@ -1893,54 +1910,113 @@ export default function WorkerManager() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
               >
                 <motion.div
-                  initial={{ scale: 0.9, y: 20 }}
-                  animate={{ scale: 1, y: 0 }}
-                  exit={{ scale: 0.9, y: 20 }}
+                  initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.9, y: 20, opacity: 0 }}
                   onClick={(e) => e.stopPropagation()}
-                  className="bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto"
+                  className={`border shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] rounded-3xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col transition-colors ${darkMode ? 'bg-slate-900 border-white/10' : 'bg-white border-slate-200'}`}
                 >
-                  <div className="sticky top-0 p-6 border-b border-white/10 bg-slate-900/90 backdrop-blur">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-xl font-bold text-white">Status History</h2>
-                      <button
-                        onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
-                        className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-                      >
-                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  {/* Modal Header */}
+                  <div className={`p-6 border-b transition-colors flex items-center justify-between sticky top-0 z-20 backdrop-blur-xl ${darkMode ? 'border-white/10 bg-slate-900/90' : 'border-slate-100 bg-white/90'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${darkMode ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                      </button>
+                      </div>
+                      <div>
+                        <h2 className={`text-xl font-bold transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Status History</h2>
+                        <p className={`text-xs transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Tracking lifecycle changes</p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
+                      className={`p-2 rounded-xl transition-all ${darkMode ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                     {historyModal.history && historyModal.history.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="relative pl-8 space-y-8 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-blue-500/50 before:via-slate-500/20 before:to-transparent">
                         {historyModal.history.map((entry, idx) => (
-                          <div key={idx} className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <p className="text-sm text-gray-400">Status Changed</p>
-                                <p className="text-white font-medium">
-                                  {entry.old_status} → <span className={`${entry.new_status === 'Active' ? 'text-green-400' :
-                                    entry.new_status === 'Terminated' ? 'text-red-400' :
-                                      'text-yellow-400'
-                                    }`}>{entry.new_status}</span>
+                          <div key={idx} className="relative group">
+                            {/* Timeline Dot */}
+                            <div className={`absolute -left-[33px] top-1.5 w-6 h-6 rounded-full border-4 flex items-center justify-center transition-colors shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800 group-hover:border-blue-500/50' : 'bg-white border-slate-100 group-hover:border-blue-400/50'
+                              }`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${entry.new_status === 'Active' ? 'bg-emerald-500' :
+                                entry.new_status === 'Terminated' ? 'bg-rose-500' : 'bg-amber-500'
+                                }`}></div>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl border transition-all ${darkMode
+                              ? 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05] hover:border-white/10'
+                              : 'bg-slate-50/50 border-slate-200/50 hover:bg-white hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5'
+                              }`}>
+                              <div className="flex flex-col gap-1 mb-2">
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  Lifecycle Event
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-white border border-slate-100 text-slate-500'}`}>
+                                    {entry.old_status}
+                                  </span>
+                                  <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${entry.new_status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' :
+                                    entry.new_status === 'Terminated' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'
+                                    }`}>
+                                    {entry.new_status}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <svg className={`w-3.5 h-3.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p className={`text-[11px] font-medium transition-colors ${darkMode ? 'text-slate-400 group-hover:text-slate-300' : 'text-slate-500 group-hover:text-slate-700'}`}>
+                                  {new Date(entry.changed_at).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
                                 </p>
                               </div>
                             </div>
-                            <p className="text-xs text-gray-500">
-                              {new Date(entry.changed_at).toLocaleString()}
-                            </p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-center text-gray-400">No status changes recorded yet</p>
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-slate-800 text-slate-600' : 'bg-slate-50 text-slate-300'}`}>
+                          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <p className={`text-sm font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>No status changes recorded yet</p>
+                      </div>
                     )}
+                  </div>
+
+                  <div className={`p-4 border-t transition-colors flex items-center justify-center sticky bottom-0 z-20 backdrop-blur-xl ${darkMode ? 'border-white/10 bg-slate-900/90' : 'border-slate-100 bg-white/90'}`}>
+                    <button
+                      onClick={() => setHistoryModal({ open: false, workerId: null, history: [] })}
+                      className={`w-full py-2.5 rounded-xl transition-all font-bold text-sm ${darkMode
+                        ? 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                        }`}
+                    >
+                      Close Lifecycle History
+                    </button>
                   </div>
                 </motion.div>
               </motion.div>

@@ -19,7 +19,6 @@ export default function LocationAssignment({ formData, errors, onChange, ucWardO
           <h3 className={`text-base font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             Location & Assignment
           </h3>
-          <p className={`text-[10px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Area mapping and attendance hub</p>
         </div>
       </div>
 

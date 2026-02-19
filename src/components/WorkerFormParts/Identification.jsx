@@ -50,7 +50,6 @@ export default function Identification({ formData, errors, onChange, darkMode })
           <h3 className={`text-base font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             Identification
           </h3>
-          <p className={`text-[10px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Official document details</p>
         </div>
       </div>
 
