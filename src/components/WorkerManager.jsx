@@ -767,45 +767,148 @@ export default function WorkerManager() {
         <div className={`relative z-10 transition-all duration-300 ${activeTab === 'registration' ? 'p-4 md:p-6 pb-20' : 'p-6 md:p-8'} max-w-[1600px] mx-auto min-h-full`}>
           {/* Header */}
           {activeTab !== 'registration' && (
-            <header className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                  {activeTab === 'dashboard' && 'Analytics Overview'}
-                  {activeTab === 'workers' && 'Employee Directory'}
-                  {activeTab === 'hr' && 'HR Records'}
-                  {activeTab === 'terminated' && 'Terminated Employees'}
-                  {activeTab === 'attendance' && 'Attendance Management'}
-                </h1>
-                <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
-                  {activeTab === 'workers' && 'Manage and view all worker profiles'}
-                  {activeTab === 'hr' && 'Comprehensive employee records and actions'}
-                  {activeTab === 'terminated' && 'History of former employees'}
-                  {activeTab === 'attendance' && 'Track and manage daily attendance'}
-                </p>
+            <header className="mb-12">
+              {/* Row 1: Title and Theme Toggle */}
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex-1"
+                >
+                  <h1 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {activeTab === 'dashboard' && 'Analytics Overview'}
+                    {activeTab === 'workers' && 'Staff Registry'}
+                    {activeTab === 'hr' && 'HR Records'}
+                    {activeTab === 'terminated' && 'Terminated Employees'}
+                    {activeTab === 'attendance' && 'Attendance Management'}
+                  </h1>
+                  <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
+                    {activeTab === 'workers' && 'Manage and view all worker profiles'}
+                    {activeTab === 'hr' && 'Comprehensive employee records and actions'}
+                    {activeTab === 'terminated' && 'History of former employees'}
+                    {activeTab === 'attendance' && 'Track and manage daily attendance'}
+                  </p>
+                </motion.div>
+
+                <div className="flex items-center gap-3">
+                  {/* Theme Toggle - Hidden on Dashboard */}
+                  {activeTab !== 'dashboard' && (
+                    <button
+                      onClick={() => setDarkMode(!darkMode)}
+                      className={`p-2.5 rounded-xl border transition-all duration-300 ${darkMode
+                        ? 'bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
+                        }`}
+                      title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    >
+                      {darkMode ? (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                {/* Theme Toggle */}
-                <button
-                  onClick={() => setDarkMode(!darkMode)}
-                  className={`p-2 rounded-xl border transition-all duration-300 ${darkMode
-                    ? 'bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
-                    }`}
-                  title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                >
-                  {darkMode ? (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              {/* Row 2: Search and Filters (Staff Registry Specific) */}
+              {activeTab === 'workers' && (
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                  {/* Left Column: Search */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                    className="flex-1"
+                  >
+                    <div className="relative max-w-xl group">
+                      <div className={`absolute -inset-[1px] bg-gradient-to-r from-blue-500/40 via-indigo-500/40 to-blue-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
+                      <div className="relative">
+                        <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          type="text"
+                          placeholder="Search directory..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-3 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50' : 'bg-white/80 border-blue-100 text-slate-900 focus:border-blue-400/50 shadow-blue-500/5'}`}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Right Column: Filters & Badge */}
+                  <div className="flex flex-col items-end gap-3">
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3, duration: 0.5 }}
+                      className="flex flex-wrap items-center justify-end gap-3"
+                    >
+                      <div className="relative group min-w-[180px]">
+                        <select
+                          value={designationFilter}
+                          onChange={(e) => setDesignationFilter(e.target.value)}
+                          className={`w-full pl-4 pr-10 py-3 backdrop-blur-md border rounded-xl text-sm transition-all cursor-pointer appearance-none shadow-sm ${darkMode
+                            ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50'
+                            : 'bg-white/80 border-blue-100 text-slate-700 focus:border-blue-400/50 shadow-blue-500/5'}`}
+                        >
+                          <option value="">All Designations</option>
+                          <option value="Sanitary Supervisor">Sanitary Supervisor</option>
+                          <option value="Helper">Helper</option>
+                          <option value="Sanitary Worker">Sanitary Worker</option>
+                          <option value="Driver">Driver</option>
+                        </select>
+                        <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+
+                      <div className="min-w-[200px]">
+                        <MonthPicker
+                          value={monthFilter}
+                          onChange={(e) => setMonthFilter(e.target.value)}
+                        />
+                      </div>
+
+                      {(searchQuery || designationFilter || monthFilter) && (
+                        <button
+                          onClick={() => {
+                            setSearchQuery('')
+                            setDesignationFilter('')
+                            setMonthFilter('')
+                          }}
+                          className="p-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-500 transition-colors shadow-sm"
+                          title="Clear all filters"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="flex items-center gap-2 px-3 py-1 bg-cyan-50/50 backdrop-blur-sm border border-cyan-100/60 rounded-lg shadow-sm"
+                    >
+                      <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
+                      <span className="text-cyan-700 text-[10px] font-bold uppercase tracking-wider">
+                        {filteredWorkers.length} of {workers.length} employees
+                      </span>
+                    </motion.div>
+                  </div>
+                </div>
+              )}
             </header>
           )}
 
@@ -1022,36 +1125,6 @@ export default function WorkerManager() {
               transition={{ duration: 0.3 }}
               className="max-w-7xl mx-auto"
             >
-              <motion.div
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="mb-8 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-colors ${darkMode ? 'bg-blue-500/10 border-blue-500/20' : 'bg-blue-50 border-blue-100'}`}>
-                    <svg className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className={`text-3xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>Employee Directory</h2>
-                    <p className={`text-sm transition-colors ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>View and manage all registered workers - Read Only</p>
-                  </div>
-                </div>
-
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-50/50 backdrop-blur-sm border border-blue-100/60 rounded-xl shadow-sm"
-                >
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <span className="text-blue-700 text-sm font-medium">View Only</span>
-                </motion.div>
-              </motion.div>
 
 
 
@@ -1088,76 +1161,6 @@ export default function WorkerManager() {
               ) : (
                 <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-indigo-100/10'}`}>
 
-                  {/* Search and Filters Bar */}
-                  <div className="p-6 border-b border-white/40 bg-white/30 backdrop-blur-md">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                        {/* Search Bar */}
-                        <div className="relative max-w-md flex-1 group">
-                          {/* Glowing Border Wrapper */}
-                          <div className={`absolute -inset-[1px] bg-gradient-to-r from-blue-500/40 via-indigo-500/40 to-blue-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
-                          <div className="relative">
-                            <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                              type="text"
-                              placeholder="Search directory..."
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50' : 'bg-white/80 border-blue-100 text-slate-900 focus:border-blue-400/50 shadow-blue-500/5'}`}
-                            />
-                          </div>
-                        </div>
-
-
-
-
-                        {/* Designation Filter */}
-                        <select
-                          value={designationFilter}
-                          onChange={(e) => setDesignationFilter(e.target.value)}
-                          className="px-4 py-2.5 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm shadow-blue-500/5 appearance-none"
-                        >
-                          <option value="">All Designations</option>
-                          <option value="Sanitary Supervisor">Sanitary Supervisor</option>
-                          <option value="Helper">Helper</option>
-                          <option value="Sanitary Worker">Sanitary Worker</option>
-                          <option value="Driver">Driver</option>
-                        </select>
-
-                        {/* Month Filter */}
-                        <div className="flex-1 sm:flex-initial">
-                          <MonthPicker
-                            value={monthFilter}
-                            onChange={(e) => setMonthFilter(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Filter Summary and Count */}
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-50 border border-cyan-100 rounded-lg">
-                          <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
-                          <span className="text-cyan-700 text-xs font-semibold">
-                            {filteredWorkers.length} of {workers.length} employee{workers.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        {(searchQuery || designationFilter || monthFilter) && (
-                          <button
-                            onClick={() => {
-                              setSearchQuery('')
-                              setDesignationFilter('')
-                              setMonthFilter('')
-                            }}
-                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium transition-colors"
-                          >
-                            Clear Filters
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Table */}
                   <div className="overflow-x-auto">
