@@ -18,8 +18,10 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
   return (
     <motion.aside
       initial={false}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
       animate={{ width: isExpanded ? 256 : 80 }}
-      transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className={`border-r h-full p-4 hidden md:flex flex-col gap-6 transition-colors duration-300 group/sidebar relative z-30 shadow-sm hover:shadow-md will-change-[width] ${className} ${darkMode
         ? 'bg-[#111827] border-slate-800 hover:border-slate-700'
         : 'bg-white border-slate-200 hover:border-slate-300'
@@ -48,10 +50,7 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
         </AnimatePresence>
       </button>
 
-      <div
-        className="flex items-center gap-3 px-2 cursor-pointer"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+      <div className="flex items-center gap-3 px-2">
         <div className="w-8 h-8 flex-shrink-0 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
           <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
         </div>
@@ -78,10 +77,7 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => {
-                    onTabChange && onTabChange(item.id)
-                    if (!isExpanded) setIsExpanded(true)
-                  }}
+                  onClick={() => onTabChange && onTabChange(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden ${isActive
                     ? 'text-white shadow-lg shadow-sky-500/5'
                     : darkMode
