@@ -817,8 +817,8 @@ export default function WorkerManager() {
                 </div>
               </div>
 
-              {/* Row 2: Search and Filters (Staff Registry Specific) */}
-              {activeTab === 'workers' && (
+              {/* Row 2: Search and Filters (Staff Registry & HR Records Specific) */}
+              {(activeTab === 'workers' || activeTab === 'hr') && (
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                   {/* Left Column: Search */}
                   <motion.div
@@ -835,9 +835,9 @@ export default function WorkerManager() {
                         </svg>
                         <input
                           type="text"
-                          placeholder="Search directory..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder={activeTab === 'workers' ? "Search directory..." : "Search records..."}
+                          value={activeTab === 'workers' ? searchQuery : hrSearchQuery}
+                          onChange={(e) => activeTab === 'workers' ? setSearchQuery(e.target.value) : setHrSearchQuery(e.target.value)}
                           className={`w-full pl-10 pr-4 py-3 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50' : 'bg-white/80 border-blue-100 text-slate-900 focus:border-blue-400/50 shadow-blue-500/5'}`}
                         />
                       </div>
@@ -854,8 +854,8 @@ export default function WorkerManager() {
                     >
                       <div className="relative group min-w-[180px]">
                         <select
-                          value={designationFilter}
-                          onChange={(e) => setDesignationFilter(e.target.value)}
+                          value={activeTab === 'workers' ? designationFilter : hrDesignationFilter}
+                          onChange={(e) => activeTab === 'workers' ? setDesignationFilter(e.target.value) : setHrDesignationFilter(e.target.value)}
                           className={`w-full pl-4 pr-10 py-3 backdrop-blur-md border rounded-xl text-sm transition-all cursor-pointer appearance-none shadow-sm ${darkMode
                             ? 'bg-slate-900/60 border-white/10 text-white focus:border-blue-500/50'
                             : 'bg-white/80 border-blue-100 text-slate-700 focus:border-blue-400/50 shadow-blue-500/5'}`}
@@ -873,26 +873,33 @@ export default function WorkerManager() {
 
                       <div className="min-w-[200px]">
                         <MonthPicker
-                          value={monthFilter}
-                          onChange={(e) => setMonthFilter(e.target.value)}
+                          value={activeTab === 'workers' ? monthFilter : hrMonthFilter}
+                          onChange={(e) => activeTab === 'workers' ? setMonthFilter(e.target.value) : setHrMonthFilter(e.target.value)}
                         />
                       </div>
 
-                      {(searchQuery || designationFilter || monthFilter) && (
-                        <button
-                          onClick={() => {
-                            setSearchQuery('')
-                            setDesignationFilter('')
-                            setMonthFilter('')
-                          }}
-                          className="p-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-500 transition-colors shadow-sm"
-                          title="Clear all filters"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
+                      {((activeTab === 'workers' && (searchQuery || designationFilter || monthFilter)) ||
+                        (activeTab === 'hr' && (hrSearchQuery || hrDesignationFilter || hrMonthFilter))) && (
+                          <button
+                            onClick={() => {
+                              if (activeTab === 'workers') {
+                                setSearchQuery('')
+                                setDesignationFilter('')
+                                setMonthFilter('')
+                              } else {
+                                setHrSearchQuery('')
+                                setHrDesignationFilter('')
+                                setHrMonthFilter('')
+                              }
+                            }}
+                            className="p-3 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-500 transition-colors shadow-sm"
+                            title="Clear all filters"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
                     </motion.div>
 
                     <motion.div
@@ -903,7 +910,7 @@ export default function WorkerManager() {
                     >
                       <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
                       <span className="text-cyan-700 text-[10px] font-bold uppercase tracking-wider">
-                        {filteredWorkers.length} of {workers.length} employees
+                        {activeTab === 'workers' ? filteredWorkers.length : hrFilteredWorkers.length} of {workers.length} employees
                       </span>
                     </motion.div>
                   </div>
@@ -1269,32 +1276,7 @@ export default function WorkerManager() {
                 transition={{ delay: 0.1 }}
                 className="mb-8 flex flex-col gap-6"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center border border-indigo-100">
-                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h2 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>HR Records</h2>
-                      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Complete employee records and documentation - Customizable</p>
-                    </div>
-                  </div>
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, type: "spring" }}
-                    className={`flex items-center gap-2 px-4 py-2 border rounded-xl shadow-sm backdrop-blur-sm transition-colors ${darkMode ? 'bg-white/10 border-white/20' : 'bg-indigo-50/50 border-indigo-100/60'}`}
-                  >
-                    <svg className={`w-5 h-5 ${darkMode ? 'text-indigo-400' : 'text-indigo-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span className={`text-sm font-medium ${darkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Editable Records</span>
-                  </motion.div>
-                </div>
-
-                {/* Summary Statistics - Moved under header */}
+                {/* Summary Statistics */}
                 <div className={`p-6 rounded-3xl border transition-all duration-300 ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200/60 shadow-sm'}`}>
                   <h3 className={`text-sm font-semibold mb-6 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>Summary Statistics</h3>
                   <div className="flex flex-wrap gap-12 md:gap-24">
@@ -1315,62 +1297,6 @@ export default function WorkerManager() {
 
                 {/* HR Table Card */}
                 <div className={`backdrop-blur-xl border rounded-3xl overflow-hidden shadow-xl relative z-10 transition-colors ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-purple-100/10'}`}>
-
-                  {/* HR Filters (integrated into card header for alignment) */}
-                  <div className={`p-6 border-b backdrop-blur-md transition-colors ${darkMode ? 'border-white/10' : 'border-white/40'}`}>
-                    <div className="flex flex-col md:flex-row md:items-center gap-3">
-                      {/* Search input with glowing border */}
-                      <div className="max-w-md flex-1 group relative">
-                        <div className={`absolute -inset-[1px] bg-gradient-to-r from-purple-500/40 via-blue-500/40 to-purple-500/40 rounded-xl blur-[2px] opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition duration-500`}></div>
-                        <div className="relative">
-                          <svg className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          <input
-                            type="text"
-                            placeholder="Search records..."
-                            value={hrSearchQuery}
-                            onChange={(e) => setHrSearchQuery(e.target.value)}
-                            className={`w-full pl-10 pr-4 py-2.5 backdrop-blur-md border rounded-xl placeholder-slate-400 focus:outline-none transition-all text-sm shadow-sm ${darkMode ? 'bg-slate-900/60 border-white/10 text-white focus:border-purple-500/50' : 'bg-white/80 border-purple-100 text-slate-900 focus:border-purple-400/50 shadow-blue-500/5'}`}
-                          />
-                        </div>
-                      </div>
-
-
-                      {/* Controls: Designation, Month/Year, Count, Clear */}
-                      <div className="flex items-center gap-3">
-                        <select
-                          value={hrDesignationFilter}
-                          onChange={(e) => setHrDesignationFilter(e.target.value)}
-                          className={`px-4 py-2.5 backdrop-blur-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all cursor-pointer shadow-sm min-w-[170px] appearance-none ${darkMode ? 'bg-white/5 border-white/10 text-slate-200' : 'bg-white/50 border-white/60 text-slate-700 shadow-blue-500/5'}`}
-                        >
-                          <option value="">All Designations</option>
-                          <option value="Sanitary Supervisor">Sanitary Supervisor</option>
-                          <option value="Helper">Helper</option>
-                          <option value="Sanitary Worker">Sanitary Worker</option>
-                          <option value="Driver">Driver</option>
-                        </select>
-
-                        <MonthPicker
-                          value={hrMonthFilter}
-                          onChange={(e) => setHrMonthFilter(e.target.value)}
-                        />
-
-                        <div className={`px-3 py-1.5 border rounded-lg text-xs font-semibold transition-colors ${darkMode ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-purple-50 border-purple-100 text-purple-700'}`}>
-                          {hrFilteredWorkers.length} of {workers.length}
-                        </div>
-
-                        {(hrSearchQuery || hrDesignationFilter || hrMonthFilter) && (
-                          <button
-                            onClick={() => { setHrSearchQuery(''); setHrDesignationFilter(''); setHrMonthFilter('') }}
-                            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-red-600 text-xs font-medium transition-colors"
-                          >
-                            Clear
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
 
 
 
