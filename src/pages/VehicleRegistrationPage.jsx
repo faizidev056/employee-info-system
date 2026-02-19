@@ -1,7 +1,7 @@
-import VehicleRegistration from '../components/VehicleRegistration';
+import VehicleManager from '../components/VehicleManager';
 
 const VehicleRegistrationPage = () => {
-    return <VehicleRegistration />;
+    return <VehicleManager />;
 };
 
 export default VehicleRegistrationPage;

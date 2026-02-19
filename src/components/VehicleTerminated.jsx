@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '../supabaseClient'
 
-export default function VehicleTerminated() {
+export default function VehicleTerminated({ darkMode = false, externalSearchQuery = '' }) {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const searchQuery = externalSearchQuery
 
   useEffect(() => { loadTerminated() }, [])
 
@@ -59,15 +61,20 @@ export default function VehicleTerminated() {
     }
   }
 
+  const filtered = vehicles.filter(v => {
+    const q = searchQuery.toLowerCase().trim()
+    return !q ||
+      (v.vehicle_code || '').toLowerCase().includes(q) ||
+      (v.owned_by || '').toLowerCase().includes(q) ||
+      (v.owner_cnic || '').toLowerCase().includes(q) ||
+      (v.owner_contact || '').toLowerCase().includes(q) ||
+      (v.reg_id || '').toLowerCase().includes(q) ||
+      (v.reg_no || '').toLowerCase().includes(q) ||
+      String(v.sr || '').toLowerCase().includes(q)
+  })
+
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-rose-600">Terminated Vehicles</h2>
-          <p className="text-slate-500 text-sm">Read-only listing of terminated vehicles for auditing and reporting</p>
-        </div>
-        <div className="px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-lg text-rose-700 text-xs font-semibold">{vehicles.filter(v => v.status === 'Terminated').length} terminated</div>
-      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
@@ -104,7 +111,7 @@ export default function VehicleTerminated() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {vehicles.map((v, idx) => (
+                {filtered.map((v, idx) => (
                   <motion.tr
                     key={v.id || idx}
                     initial={{ opacity: 0, x: -6 }}
