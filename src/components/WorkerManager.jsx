@@ -105,12 +105,34 @@ export default function WorkerManager() {
     const tab = searchParams.get('tab')
     if (tab && tab !== activeTab) {
       setActiveTab(tab)
+      // Also reset filters when tab changes via URL
+      setSearchQuery('')
+      setDesignationFilter('')
+      setMonthFilter('')
+      setTerminatedSearchQuery('')
+      setTerminatedDesignationFilter('')
+      setTerminatedMonthFilter('')
+      setAttendanceSearchQuery('')
+      setHrSearchQuery('')
+      setHrDesignationFilter('')
+      setHrMonthFilter('')
     }
   }, [searchParams])
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId)
     setSearchParams({ tab: tabId })
+    // Reset all search and filter states when switching tabs
+    setSearchQuery('')
+    setDesignationFilter('')
+    setMonthFilter('')
+    setTerminatedSearchQuery('')
+    setTerminatedDesignationFilter('')
+    setTerminatedMonthFilter('')
+    setAttendanceSearchQuery('')
+    setHrSearchQuery('')
+    setHrDesignationFilter('')
+    setHrMonthFilter('')
   }
 
   // Function to load workers from Supabase
