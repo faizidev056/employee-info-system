@@ -3,16 +3,16 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '../../lib/utils'
 
-export default function SubmitButton({ loading }) {
+export default function SubmitButton({ loading, darkMode }) {
   return (
-    <div className="pt-8 border-t border-gray-100">
+    <div className={`pt-8 border-t transition-colors duration-300 ${darkMode ? 'border-white/10' : 'border-slate-100'}`}>
       <motion.button
         type="submit"
         disabled={loading}
-        whileHover={{ scale: 1.02, translateY: -2 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: 1.01, translateY: -1 }}
+        whileTap={{ scale: 0.99 }}
         className={cn(
-          "w-full py-4 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 text-white font-bold text-lg rounded-xl shadow-lg shadow-blue-500/30 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/20 flex items-center justify-center gap-3 relative overflow-hidden group",
+          "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg rounded-2xl shadow-xl shadow-blue-500/20 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 flex items-center justify-center gap-3 relative overflow-hidden group",
           loading && "opacity-70 cursor-not-allowed"
         )}
       >

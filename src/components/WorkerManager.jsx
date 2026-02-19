@@ -738,50 +738,50 @@ export default function WorkerManager() {
           <div className="fixed top-0 left-64 right-0 h-96 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none z-0" />
         )}
 
-        <div className="relative z-10 p-6 md:p-8 max-w-[1600px] mx-auto min-h-full">
+        <div className={`relative z-10 transition-all duration-300 ${activeTab === 'registration' ? 'p-4 md:p-6 pb-20' : 'p-6 md:p-8'} max-w-[1600px] mx-auto min-h-full`}>
           {/* Header */}
-          <header className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                {activeTab === 'dashboard' && 'Analytics Overview'}
-                {activeTab === 'registration' && 'Worker Registration'}
-                {activeTab === 'workers' && 'Employee Directory'}
-                {activeTab === 'hr' && 'HR Records'}
-                {activeTab === 'terminated' && 'Terminated Employees'}
-                {activeTab === 'attendance' && 'Attendance Management'}
-              </h1>
-              <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
-                {activeTab === 'registration' && 'Add new employees to the system'}
-                {activeTab === 'workers' && 'Manage and view all worker profiles'}
-                {activeTab === 'hr' && 'Comprehensive employee records and actions'}
-                {activeTab === 'terminated' && 'History of former employees'}
-                {activeTab === 'attendance' && 'Track and manage daily attendance'}
-              </p>
-            </div>
+          {activeTab !== 'registration' && (
+            <header className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  {activeTab === 'dashboard' && 'Analytics Overview'}
+                  {activeTab === 'workers' && 'Employee Directory'}
+                  {activeTab === 'hr' && 'HR Records'}
+                  {activeTab === 'terminated' && 'Terminated Employees'}
+                  {activeTab === 'attendance' && 'Attendance Management'}
+                </h1>
+                <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
+                  {activeTab === 'workers' && 'Manage and view all worker profiles'}
+                  {activeTab === 'hr' && 'Comprehensive employee records and actions'}
+                  {activeTab === 'terminated' && 'History of former employees'}
+                  {activeTab === 'attendance' && 'Track and manage daily attendance'}
+                </p>
+              </div>
 
-            <div className="flex items-center gap-4">
-              {/* Theme Toggle */}
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className={`p-2 rounded-xl border transition-all duration-300 ${darkMode
-                  ? 'bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
-                  }`}
-                title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {darkMode ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </header>
+              <div className="flex items-center gap-4">
+                {/* Theme Toggle */}
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`p-2 rounded-xl border transition-all duration-300 ${darkMode
+                    ? 'bg-white/5 border-white/10 text-yellow-400 hover:bg-white/10'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm'
+                    }`}
+                  title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                >
+                  {darkMode ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </header>
+          )}
 
           {/* Error and Success Messages */}
           <AnimatePresence>
@@ -904,78 +904,89 @@ export default function WorkerManager() {
           {/* Registration Tab */}
           {activeTab === 'registration' && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center justify-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="flex flex-col items-center px-4"
             >
-              {/* Registration Form */}
               <div className="relative z-10 w-full max-w-4xl">
-                {/* Enhanced card with clean white background (kept light for form usability) */}
+                {/* Header Section - Moved Outside */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 px-2">
+                  <div className="flex items-center gap-6">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-300 ${darkMode ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400' : 'bg-cyan-50 border-cyan-100 text-cyan-600'}`}>
+                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className={`text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>New Employee</h2>
+                      <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Complete the onboarding profile</p>
+                    </div>
+                  </div>
+
+                  {!supabaseConfigured && (
+                    <div className="flex items-center gap-3 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">Database Offline</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Form Card */}
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1, duration: 0.3 }}
-                  className="relative bg-white border border-gray-200 rounded-3xl p-8 md:p-12 shadow-2xl shadow-slate-900/5 overflow-hidden text-slate-900"
+                  initial={{ scale: 0.98, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  className={`relative overflow-hidden rounded-[2rem] border transition-all duration-300 ${darkMode
+                    ? 'bg-slate-900/60 border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] backdrop-blur-2xl'
+                    : 'bg-white border-slate-200/60 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.06)]'
+                    }`}
                 >
-
-                  {/* Header */}
-                  <div className="relative z-10 mb-8 pb-6 border-b border-gray-100">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 bg-cyan-50 rounded-xl flex items-center justify-center border border-cyan-100">
-                        <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                          Worker Registration
-                        </h1>
-                        <p className="text-slate-500 text-sm mt-1">Fill in the details to register a new worker</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Form */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-lg font-medium text-slate-900">Registration Form</h2>
-                      {!supabaseConfigured && (
-                        <p className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">Supabase not configured — set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY</p>
+                  <div className="p-6 md:p-10">
+                    {/* Error Alert */}
+                    <AnimatePresence>
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-3 text-rose-500"
+                        >
+                          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-sm font-bold">{error}</p>
+                        </motion.div>
                       )}
-                    </div>
-                    <div>{error && <p className="text-red-500 text-sm bg-red-50 px-2 py-1 rounded border border-red-100">{error}</p>}</div>
-                  </div>
+                    </AnimatePresence>
 
-                  <form onSubmit={handleSubmit} className="relative z-10 space-y-8" autoComplete={getAutocompleteToken()} spellCheck="false" autoCapitalize="off">
-                    {/* Anti-autofill hidden fields to reduce browser suggestions */}
-                    <input type="text" name="__no_autofill_username" autoComplete={getAutocompleteToken()} style={{ display: 'none' }} aria-hidden="true" />
-                    <input type="password" name="__no_autofill_password" autoComplete={getAutocompleteToken()} style={{ display: 'none' }} aria-hidden="true" />
-                    {/* Subcomponents */}
-                    <PersonalInfo formData={formData} errors={errors} onChange={handleChange} />
-                    <Identification formData={formData} errors={errors} onChange={handleChange} />
-                    <EmploymentDetails formData={formData} errors={errors} onChange={handleChange} />
-                    <LocationAssignment formData={formData} errors={errors} onChange={handleChange} ucWardOptions={ucWardOptions} />
+                    {/* Main Form */}
+                    <form onSubmit={handleSubmit} className="space-y-10" autoComplete="new-password">
+                      {/* Anti-autofill hidden fields to distract browser suggestions */}
+                      <input type="text" name="__no_autofill_email" autoComplete="new-password" style={{ display: 'none' }} aria-hidden="true" />
+                      <input type="password" name="__no_autofill_password" autoComplete="new-password" style={{ display: 'none' }} aria-hidden="true" />
+                      <PersonalInfo formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
+                      <Identification formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
+                      <EmploymentDetails formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
+                      <LocationAssignment formData={formData} errors={errors} onChange={handleChange} ucWardOptions={ucWardOptions} darkMode={darkMode} />
 
-                    {formData.designation === 'Driver' && (
-                      <VehicleInfo formData={formData} errors={errors} onChange={handleChange} />
-                    )}
+                      {formData.designation === 'Driver' && (
+                        <VehicleInfo formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
+                      )}
 
-                    <AddressSection formData={formData} onChange={handleChange} />
+                      <AddressSection formData={formData} onChange={handleChange} darkMode={darkMode} />
 
-                    <SubmitButton loading={loading} />
-                  </form>
-
-                  {/* Footer Note */}
-                  <div className="relative z-10 mt-8 pt-6 border-t border-gray-100 text-center">
-                    <p className="text-slate-400 text-sm">
-                      All fields marked with <span className="text-red-500 font-semibold">*</span> are required
-                    </p>
+                      <div className="pt-4">
+                        <SubmitButton loading={loading} darkMode={darkMode} />
+                      </div>
+                    </form>
                   </div>
                 </motion.div>
+
               </div>
             </motion.div>
           )}
+
 
           {/* Workers Directory Tab */}
           {activeTab === 'workers' && (
