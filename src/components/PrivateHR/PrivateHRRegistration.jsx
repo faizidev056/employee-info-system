@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PersonalInfo from '../WorkerFormParts/PersonalInfo'
 import Identification from '../WorkerFormParts/Identification'
@@ -7,7 +7,7 @@ import SubmitButton from '../WorkerFormParts/SubmitButton'
 import DatePicker from '../WorkerFormParts/DatePicker'
 import { getAutocompleteToken } from '../../lib/utils'
 
-export default function PrivateHRRegistration({ supabase }) {
+export default function PrivateHRRegistration({ supabase, darkMode }) {
   const [formData, setFormData] = useState({
     fullName: '',
     fatherName: '',
@@ -106,135 +106,97 @@ export default function PrivateHRRegistration({ supabase }) {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4 }}
-      className="flex items-center justify-center py-6"
+      className="flex items-center justify-center"
     >
       <div className="relative z-10 w-full max-w-4xl">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="relative bg-white border border-gray-200 rounded-3xl p-8 md:p-12 shadow-2xl shadow-slate-900/5 overflow-hidden text-slate-900"
+          className={`relative border rounded-[2.5rem] p-8 md:p-12 shadow-2xl transition-all duration-300 overflow-hidden ${darkMode
+              ? 'bg-slate-900/40 backdrop-blur-3xl border-white/10 text-white shadow-indigo-900/20'
+              : 'bg-white border-purple-100 text-slate-900 shadow-purple-900/5'
+            }`}
         >
           {/* Header */}
-          <div className="relative z-10 mb-8 pb-6 border-b border-gray-100">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center border border-rose-100">
-                <svg className="w-6 h-6 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`relative z-10 mb-10 pb-8 border-b transition-colors duration-300 ${darkMode ? 'border-white/10' : 'border-purple-50'}`}>
+            <div className="flex items-center gap-5">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-300 ${darkMode ? 'bg-purple-500/10 border-purple-500/20 text-purple-400' : 'bg-purple-50 border-purple-100 text-purple-600'
+                }`}>
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-10V4a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 01-2 2h20a2 2 0 01-2-2V5z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                  Private HR Registration
+                <h1 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Personnel Registration
                 </h1>
-                <p className="text-slate-500 text-sm mt-1">Manual entry for private employee documentation</p>
+                <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Private Workforce Secure Entry</p>
               </div>
             </div>
           </div>
 
-          {/* Notifications */}
           <AnimatePresence>
             {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-2"
-              >
-                <span>⚠</span> {error}
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 text-sm flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-bold">!</span> {error}
               </motion.div>
             )}
             {success && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 text-sm flex items-center gap-2"
-              >
-                <span>✓</span> {success}
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-8 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-500 text-sm flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span> {success}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="relative z-10 space-y-10" autoComplete={getAutocompleteToken()}>
-            {/* Sections */}
-            <PersonalInfo formData={formData} errors={errors} onChange={handleChange} />
+          <form onSubmit={handleSubmit} className="relative z-10 space-y-12" autoComplete={getAutocompleteToken()}>
+            <PersonalInfo formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
+            <Identification formData={formData} errors={errors} onChange={handleChange} darkMode={darkMode} />
 
-            <Identification formData={formData} errors={errors} onChange={handleChange} />
-
-            {/* Manual Employment Details (Customized to be editable) */}
-            <div className="space-y-4 pt-6">
-              <h2 className="text-slate-900 text-lg font-semibold flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 border border-amber-100">
+            {/* Employment Info */}
+            <div className="space-y-6">
+              <div className={`flex items-center gap-3 pb-3 border-b transition-colors duration-300 ${darkMode ? 'border-white/10' : 'border-slate-100'}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center border transition-all duration-300 ${darkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-100 text-amber-600'
+                  }`}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                </span>
-                Employment Info (Manual)
-              </h2>
+                </div>
+                <h2 className={`text-base font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Employment Details</h2>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-slate-700 text-sm font-semibold mb-2">Designation <span className="text-red-400">*</span></label>
-                  <input
-                    type="text"
-                    name="designation"
-                    value={formData.designation}
-                    onChange={handleChange}
-                    placeholder="e.g. Accountant"
-                    className={`w-full px-3 py-2.5 bg-white border ${errors.designation ? 'border-red-500' : 'border-gray-200'} rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
-                  />
-                  {errors.designation && <p className="text-red-500 text-xs mt-1">{errors.designation}</p>}
+                <div className="space-y-2">
+                  <label className={`block text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Designation *</label>
+                  <input type="text" name="designation" value={formData.designation} onChange={handleChange} className={`w-full px-4 py-3 rounded-xl text-sm transition-all duration-300 border focus:outline-none focus:ring-4 ${darkMode ? 'bg-white/5 border-white/10 text-white focus:border-purple-500/50 focus:ring-purple-500/10' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-purple-500/50 focus:ring-purple-500/10 shadow-sm shadow-purple-500/5'}`} placeholder="e.g. Supervisor" />
+                  {errors.designation && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.designation}</p>}
                 </div>
-
-                <div>
-                  <label className="block text-slate-700 text-sm font-semibold mb-2">Employee Code</label>
-                  <input
-                    type="text"
-                    name="employeeCode"
-                    value={formData.employeeCode}
-                    onChange={handleChange}
-                    placeholder="Enter code"
-                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  />
+                <div className="space-y-2">
+                  <label className={`block text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Employee Code</label>
+                  <input type="text" name="employeeCode" value={formData.employeeCode} onChange={handleChange} className={`w-full px-4 py-3 rounded-xl text-sm font-mono transition-all duration-300 border focus:outline-none focus:ring-4 ${darkMode ? 'bg-white/5 border-white/10 text-white focus:border-purple-500/50 focus:ring-purple-500/10' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-purple-500/50 focus:ring-purple-500/10 shadow-sm shadow-purple-500/5'}`} placeholder="CODE-001" />
                 </div>
-
-                <div>
-                  <label className="block text-slate-700 text-sm font-semibold mb-2">Salary (PKR)</label>
-                  <input
-                    type="text"
-                    name="salary"
-                    value={formData.salary}
-                    onChange={handleChange}
-                    placeholder="Amount"
-                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  />
+                <div className="space-y-2">
+                  <label className={`block text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Salary (PKR)</label>
+                  <input type="text" name="salary" value={formData.salary} onChange={handleChange} className={`w-full px-4 py-3 rounded-xl text-sm transition-all duration-300 border focus:outline-none focus:ring-4 ${darkMode ? 'bg-white/5 border-white/10 text-white focus:border-purple-500/50 focus:ring-purple-500/10' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-purple-500/50 focus:ring-purple-500/10 shadow-sm shadow-purple-500/5'}`} placeholder="Amount" />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 text-sm font-semibold mb-2">Joining Date <span className="text-red-400">*</span></label>
-                <DatePicker
-                  name="joiningDate"
-                  value={formData.joiningDate}
-                  onChange={handleChange}
-                  error={errors.joiningDate}
-                />
-                {errors.joiningDate && <p className="text-red-500 text-xs mt-1">{errors.joiningDate}</p>}
+              <div className="space-y-2">
+                <label className={`block text-xs font-bold uppercase tracking-widest ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Joining Date *</label>
+                <DatePicker name="joiningDate" value={formData.joiningDate} onChange={handleChange} darkMode={darkMode} error={errors.joiningDate} />
               </div>
             </div>
 
-            <AddressSection formData={formData} onChange={handleChange} />
+            <AddressSection formData={formData} onChange={handleChange} darkMode={darkMode} />
 
             <div className="pt-8">
-              <SubmitButton loading={loading} />
+              <SubmitButton loading={loading} darkMode={darkMode} />
             </div>
           </form>
 
-          {/* Footer Note */}
-          <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-            <p className="text-slate-400 text-sm italic font-medium">
-              Information is stored in the Private HR secure repository.
+          <div className={`mt-12 pt-8 border-t text-center transition-colors duration-300 ${darkMode ? 'border-white/5' : 'border-purple-50'}`}>
+            <p className={`text-xs italic font-medium ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              Locked Record: Encrypted and stored in the HR secure repository.
             </p>
           </div>
         </motion.div>

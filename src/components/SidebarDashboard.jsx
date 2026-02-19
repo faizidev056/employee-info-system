@@ -2,11 +2,19 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
-export default function SidebarDashboard({ activeTab, onTabChange, className = '', darkMode = false }) {
+export default function SidebarDashboard({
+  activeTab,
+  onTabChange,
+  className = '',
+  darkMode = false,
+  items,
+  title = "SUTHRA",
+  subtitle = "Punjab HR"
+}) {
   const [isExpanded, setIsExpanded] = useState(false)
   const navigate = useNavigate()
 
-  const menuItems = [
+  const defaultMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: (active) => <path d="M3 13h8V3H3v10zM13 21h8v-8h-8v8zM13 3v6h8V3h-8zM3 21h8v-6H3v6z" /> },
     { id: 'registration', label: 'New Registration', icon: (active) => <path d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /> },
     { id: 'workers', label: 'Staff Registry', icon: (active) => <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /> },
@@ -14,6 +22,8 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
     { id: 'attendance', label: 'Attendance', icon: (active) => <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /> },
     { id: 'terminated', label: 'Terminated', icon: (active) => <path d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" /> },
   ]
+
+  const menuItems = items || defaultMenuItems
 
   return (
     <motion.aside
@@ -63,8 +73,8 @@ export default function SidebarDashboard({ activeTab, onTabChange, className = '
               transition={{ duration: 0.15 }}
               className="overflow-hidden"
             >
-              <div className={`text-sm font-bold tracking-wide transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>SUTHRA</div>
-              <div className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">Punjab HR</div>
+              <div className={`text-sm font-bold tracking-wide transition-colors ${darkMode ? 'text-white' : 'text-slate-900'}`}>{title}</div>
+              <div className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">{subtitle}</div>
             </motion.div>
           )}
         </AnimatePresence>

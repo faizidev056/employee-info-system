@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 
 const VehicleAttendance = () => {
     const [vehicles, setVehicles] = useState([]);
-    const [vehicleAttendance, setVehicleAttendance] = useState({});
+    const [operationalData, setOperationalData] = useState({});
     const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(true);
 
@@ -13,9 +13,9 @@ const VehicleAttendance = () => {
         loadVehicles();
     }, []);
 
-    // Load attendance for selected date when date changes
+    // Load fleet data for selected date when date changes
     useEffect(() => {
-        loadVehicleAttendance(attendanceDate);
+        loadFleetOperationalData(attendanceDate);
     }, [attendanceDate]);
 
     const loadVehicles = async () => {
@@ -40,60 +40,31 @@ const VehicleAttendance = () => {
         }
     };
 
-    const loadVehicleAttendance = async (date) => {
+    const loadFleetOperationalData = async (date) => {
         try {
             const { data, error } = await supabase
-                .from('vehicle_attendance')
-                .select('vehicle_id, status')
-                .eq('attendance_date', date);
+                .from('fleet_daily_reports')
+                .select('reg_no, mileage, ignition_time')
+                .eq('date', date);
 
             if (error) {
-                console.error('Error loading attendance:', error);
+                console.error('Error loading operational data:', error);
                 return;
             }
 
-            // Create a map of vehicle_id -> status
-            const attendanceMap = {};
+            // Create a map of vehicle_code (reg_no) -> {mileage, ignition_time}
+            const dataMap = {};
             if (data) {
                 data.forEach((record) => {
-                    attendanceMap[record.vehicle_id] = record.status;
+                    dataMap[record.reg_no] = {
+                        mileage: record.mileage,
+                        ignition_time: record.ignition_time
+                    };
                 });
             }
-            setVehicleAttendance(attendanceMap);
+            setOperationalData(dataMap);
         } catch (err) {
-            console.error('Unexpected error loading attendance:', err);
-        }
-    };
-
-    const handleStatusChange = async (vehicleId, newStatus) => {
-        try {
-            // Update local state immediately for better UX
-            setVehicleAttendance((prev) => ({
-                ...prev,
-                [vehicleId]: newStatus,
-            }));
-
-            // Upsert attendance record in database
-            const { error } = await supabase
-                .from('vehicle_attendance')
-                .upsert(
-                    {
-                        vehicle_id: vehicleId,
-                        attendance_date: attendanceDate,
-                        status: newStatus,
-                        updated_at: new Date().toISOString(),
-                    },
-                    { onConflict: 'vehicle_id,attendance_date' }
-                );
-
-            if (error) {
-                console.error('Error saving attendance:', error);
-                // Revert local state on error
-                loadVehicleAttendance(attendanceDate);
-            }
-        } catch (err) {
-            console.error('Unexpected error saving attendance:', err);
-            loadVehicleAttendance(attendanceDate);
+            console.error('Unexpected error loading operational data:', err);
         }
     };
 
@@ -113,7 +84,7 @@ const VehicleAttendance = () => {
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-slate-900 tracking-tight">Fleet Attendance</h2>
-                        <p className="text-sm text-slate-500 mt-0.5">Mark daily operations and maintenance status</p>
+                        <p className="text-sm text-slate-500 mt-0.5">Real-time operational metrics from fleet operations</p>
                     </div>
                 </div>
                 <div>
@@ -128,23 +99,26 @@ const VehicleAttendance = () => {
 
             {loading ? (
                 <div className="p-8 text-center text-slate-500">
-                    <p>Loading vehicles...</p>
+                    <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p>Fetching vehicle status...</p>
                 </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                        <thead className="bg-gray-50/50">
+                        <thead className="bg-gray-50/50 border-b border-gray-100">
                             <tr>
                                 <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">Zakwan ID</th>
                                 <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">Vehicle Code</th>
                                 <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em]">Type</th>
-                                <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] text-center">Status</th>
-                                <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] text-right">Actions</th>
+                                <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] text-center">Working Hours</th>
+                                <th className="px-8 py-5 text-[11px] font-bold text-slate-500 uppercase tracking-[0.15em] text-center">Mileage</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {vehicles.map((vehicle) => {
-                                const status = vehicleAttendance[vehicle.id] || 'Absent';
+                                const opData = operationalData[vehicle.vehicle_code] || { mileage: 0, ignition_time: 0 };
+                                const isHeavyMachinery = vehicle.type === 'Front end blade' || vehicle.type === 'Front end loader';
+
                                 return (
                                     <motion.tr
                                         key={vehicle.id}
@@ -155,62 +129,31 @@ const VehicleAttendance = () => {
                                         <td className="px-8 py-5 text-sm font-bold text-slate-900 font-mono">{vehicle.reg_id}</td>
                                         <td className="px-8 py-5 text-sm font-semibold text-emerald-600 font-mono uppercase tracking-wider">{vehicle.vehicle_code}</td>
                                         <td className="px-8 py-5">
-                                            <span className="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                                            <span className="text-xs font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">
                                                 {vehicle.type}
                                             </span>
                                         </td>
                                         <td className="px-8 py-5 text-center">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${status === 'Present' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                    status === 'Absent' ? 'bg-rose-50 text-rose-700 border-rose-100' :
-                                                        'bg-amber-50 text-amber-700 border-amber-100'
-                                                }`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full mr-2 ${status === 'Present' ? 'bg-emerald-500' :
-                                                        status === 'Absent' ? 'bg-rose-500' :
-                                                            'bg-amber-500'
-                                                    }`} />
-                                                {status}
-                                            </span>
+                                            {isHeavyMachinery ? (
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`px-3 py-1 rounded-lg text-sm font-black ${opData.ignition_time > 0 ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+                                                        {opData.ignition_time || '0.00'} <span className="text-[10px] font-bold">Hrs</span>
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-300 font-bold">—</span>
+                                            )}
                                         </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex justify-end items-center gap-2">
-                                                <button
-                                                    onClick={() => handleStatusChange(vehicle.id, 'Present')}
-                                                    className={`p-2.5 rounded-xl transition-all duration-300 ${status === 'Present'
-                                                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                                                            : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                                                        }`}
-                                                    title="Mark Present"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStatusChange(vehicle.id, 'Absent')}
-                                                    className={`p-2.5 rounded-xl transition-all duration-300 ${status === 'Absent'
-                                                            ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
-                                                            : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
-                                                        }`}
-                                                    title="Mark Absent"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleStatusChange(vehicle.id, 'Maintenance')}
-                                                    className={`p-2.5 rounded-xl transition-all duration-300 ${status === 'Maintenance'
-                                                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
-                                                            : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
-                                                        }`}
-                                                    title="Mark Maintenance"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
+                                        <td className="px-8 py-5 text-center">
+                                            {!isHeavyMachinery ? (
+                                                <div className="flex flex-col items-center">
+                                                    <span className={`px-3 py-1 rounded-lg text-sm font-black ${opData.mileage > 0 ? 'text-blue-600 bg-blue-50 border border-blue-100' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+                                                        {opData.mileage || '0.00'} <span className="text-[10px] font-bold">Km</span>
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-300 font-bold">—</span>
+                                            )}
                                         </td>
                                     </motion.tr>
                                 );
@@ -222,8 +165,14 @@ const VehicleAttendance = () => {
 
             {/* Empty State */}
             {!loading && vehicles.length === 0 && (
-                <div className="p-8 text-center text-slate-500">
-                    <p>No vehicles found. Register a vehicle to start tracking attendance.</p>
+                <div className="p-12 text-center">
+                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                        <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900">No Vehicles Active</h3>
+                    <p className="text-slate-500 mt-1">There are no active vehicles registered in the system.</p>
                 </div>
             )}
         </motion.div>

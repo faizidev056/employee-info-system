@@ -3,20 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../supabaseClient'
 import DatePicker from '../WorkerFormParts/DatePicker'
 
-export default function PrivateHRRecords() {
+export default function PrivateHRRecords({ externalSearch, externalMonth }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Search & Filter States
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeDropdown, setActiveDropdown] = useState(null)
-
   // Modal States
   const [editingRow, setEditingRow] = useState(null)
   const [terminationModal, setTerminationModal] = useState({ open: false, row: null })
   const [historyModal, setHistoryModal] = useState({ open: false, recordId: null, history: [] })
+  const [activeDropdown, setActiveDropdown] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -49,14 +46,14 @@ export default function PrivateHRRecords() {
   }
 
   const filteredRows = useMemo(() => {
-    if (!searchQuery) return rows
-    const q = searchQuery.toLowerCase()
+    const q = (externalSearch || '').toLowerCase().trim()
+    if (!q) return rows
     return rows.filter(r =>
       (r.full_name || '').toLowerCase().includes(q) ||
-      (r.cnic || '').includes(searchQuery) ||
+      (r.cnic || '').includes(q) ||
       (r.designation || '').toLowerCase().includes(q)
     )
-  }, [rows, searchQuery])
+  }, [rows, externalSearch])
 
   const stats = useMemo(() => {
     const total = rows.length
@@ -71,7 +68,6 @@ export default function PrivateHRRecords() {
       const oldRow = rows.find(r => r.id === id)
       const oldStatus = oldRow?.status || 'Active'
 
-      // Prepare payload exactly like WorkerManager
       const updatePayload = { status: newStatus }
       if (newStatus === 'Terminated') {
         updatePayload.termination_date = new Date().toISOString().split('T')[0]
@@ -79,17 +75,13 @@ export default function PrivateHRRecords() {
         updatePayload.termination_date = null
       }
 
-      console.log('Updating status:', { id, updatePayload })
-
       const { error: updateError } = await supabase
         .from('private_hr')
         .update(updatePayload)
         .eq('id', id)
 
       if (updateError) {
-        // Fallback for missing termination_date column (legacy tables)
         if (updateError.message?.includes('termination_date') || updateError.code === 'PGRST204') {
-          console.warn('termination_date column missing, updating status only')
           const { error: retryError } = await supabase
             .from('private_hr')
             .update({ status: newStatus })
@@ -100,7 +92,6 @@ export default function PrivateHRRecords() {
         }
       }
 
-      // Log to history with exact pattern
       try {
         await supabase.from('status_history').insert([{
           record_id: id,
@@ -109,20 +100,12 @@ export default function PrivateHRRecords() {
           table_source: 'private_hr',
           changed_at: new Date().toISOString()
         }])
-      } catch (e) {
-        console.warn('History log failed:', e)
-      }
+      } catch (e) { }
 
       setSuccess(`Employee status updated to ${newStatus}`)
-
-      // Update local state AND re-fetch to ensure sync
-      setRows(prev => prev.map(r =>
-        r.id === id ? { ...r, ...updatePayload } : r
-      ))
-
+      setRows(prev => prev.map(r => r.id === id ? { ...r, ...updatePayload } : r))
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
-      console.error('Error updating status:', err)
       setError(err.message || 'Failed to update status')
     } finally {
       setLoading(false)
@@ -175,36 +158,22 @@ export default function PrivateHRRecords() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 py-6 px-4">
-      {/* Header & Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 flex items-center gap-4">
-          <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center border border-rose-100 shadow-sm">
-            <svg className="w-7 h-7 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Private HR Records</h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">Personnel lifecycle management — Actions & Documentation</p>
-          </div>
+    <div className="space-y-6">
+      {/* Stats Board */}
+      <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-3xl flex items-center justify-around shadow-sm max-w-2xl mx-auto">
+        <div className="text-center">
+          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total File</p>
+          <p className="text-2xl font-black text-slate-900">{stats.total}</p>
         </div>
-
-        <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-4 rounded-2xl flex items-center justify-around shadow-sm">
-          <div className="text-center">
-            <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total</p>
-            <p className="text-xl font-black text-slate-900">{stats.total}</p>
-          </div>
-          <div className="w-px h-8 bg-slate-200"></div>
-          <div className="text-center">
-            <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-widest">Active</p>
-            <p className="text-xl font-black text-emerald-500">{stats.active}</p>
-          </div>
-          <div className="w-px h-8 bg-slate-200"></div>
-          <div className="text-center">
-            <p className="text-[10px] uppercase font-bold text-rose-400 tracking-widest">Terminated</p>
-            <p className="text-xl font-black text-rose-500">{stats.terminated}</p>
-          </div>
+        <div className="w-px h-10 bg-slate-200"></div>
+        <div className="text-center">
+          <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-widest">Active</p>
+          <p className="text-2xl font-black text-emerald-500">{stats.active}</p>
+        </div>
+        <div className="w-px h-10 bg-slate-200"></div>
+        <div className="text-center">
+          <p className="text-[10px] uppercase font-bold text-rose-400 tracking-widest">Terminated</p>
+          <p className="text-2xl font-black text-rose-500">{stats.terminated}</p>
         </div>
       </div>
 
@@ -216,26 +185,13 @@ export default function PrivateHRRecords() {
         )}
       </AnimatePresence>
 
-      {/* Main Table Card */}
       <div className="bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2rem] overflow-hidden shadow-2xl shadow-indigo-900/5">
-        <div className="p-6 border-b border-white/40 bg-white/40 flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full max-w-md group">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by name, CNIC, role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400/50 transition-all shadow-sm"
-            />
-          </div>
-          <button onClick={load} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
+        <div className="p-6 border-b border-white/40 bg-white/40 flex justify-end">
+          <button onClick={load} className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/10">
             <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Reload
+            Sync Records
           </button>
         </div>
 

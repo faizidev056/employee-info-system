@@ -2,12 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../supabaseClient'
 
-export default function PrivateHRTerminated() {
+export default function PrivateHRTerminated({ externalSearch, externalMonth }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -44,7 +43,6 @@ export default function PrivateHRTerminated() {
     try {
       setLoading(true)
 
-      // Try with termination_date first
       const { error: updateError } = await supabase
         .from('private_hr')
         .update({ status: 'Active', termination_date: null })
@@ -62,7 +60,6 @@ export default function PrivateHRTerminated() {
         }
       }
 
-      // Log history
       try {
         await supabase.from('status_history').insert([{
           record_id: id,
@@ -84,36 +81,17 @@ export default function PrivateHRTerminated() {
   }
 
   const filteredRows = useMemo(() => {
-    if (!searchQuery) return rows
-    const q = searchQuery.toLowerCase()
+    const q = (externalSearch || '').toLowerCase().trim()
+    if (!q) return rows
     return rows.filter(r =>
       (r.full_name || '').toLowerCase().includes(q) ||
-      (r.cnic || '').includes(searchQuery) ||
+      (r.cnic || '').includes(q) ||
       (r.designation || '').toLowerCase().includes(q)
     )
-  }, [rows, searchQuery])
+  }, [rows, externalSearch])
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 py-6 px-4">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center border border-red-100 shadow-sm">
-            <svg className="w-7 h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Terminated Personnel</h2>
-            <p className="text-slate-500 text-sm font-medium mt-1">Closed files — Historical data & Reactivation</p>
-          </div>
-        </div>
-
-        <div className="bg-red-50/50 border border-red-100 px-6 py-3 rounded-2xl">
-          <p className="text-[10px] uppercase font-bold text-red-400 tracking-widest text-center">Inactive Total</p>
-          <p className="text-2xl font-black text-red-600 text-center">{rows.length}</p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <AnimatePresence>
         {(error || success) && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={`p-4 rounded-xl text-sm font-medium mb-4 ${error ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
@@ -123,22 +101,10 @@ export default function PrivateHRTerminated() {
       </AnimatePresence>
 
       <div className="bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2rem] overflow-hidden shadow-2xl shadow-red-900/5">
-        <div className="p-6 border-b border-white/40 bg-white/40 flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full max-w-md">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Filter by name, CNIC, etc..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl text-sm focus:ring-4 focus:ring-red-500/10 focus:border-red-400/50 transition-all shadow-sm"
-            />
-          </div>
-          <button onClick={load} className="text-slate-500 hover:text-slate-900 font-bold text-sm transition-colors flex items-center gap-2">
+        <div className="p-6 border-b border-white/40 bg-white/40 flex justify-end">
+          <button onClick={load} className="text-slate-500 hover:text-slate-900 font-bold text-xs transition-colors flex items-center gap-2">
             <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            Refresh List
+            Sync Inactive
           </button>
         </div>
 
