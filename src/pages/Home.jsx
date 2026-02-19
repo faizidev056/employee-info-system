@@ -2,11 +2,19 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+    UsersIcon,
+    DocumentTextIcon,
+    TruckIcon,
+    LockClosedIcon,
+    ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline';
 
 const Home = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showSplash, setShowSplash] = useState(true);
+    const [hoveredId, setHoveredId] = useState(null);
 
     // Reset splash whenever the location key changes (navigating to dashboard)
     useEffect(() => {
@@ -27,38 +35,42 @@ const Home = () => {
             id: 'hr',
             title: 'Suthra Punjab HR',
             color: 'blue',
-            icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+            icon: UsersIcon,
             path: '/workers?tab=dashboard',
-            label: 'Open Suthra Punjab HR'
+            gradient: 'from-blue-500 to-cyan-500',
+            glow: 'rgba(59, 130, 246, 0.5)'
         },
         {
             id: 'report',
             title: 'Daily Report',
             color: 'emerald',
-            icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+            icon: DocumentTextIcon,
             path: '/daily-report',
-            label: 'View Reports'
+            gradient: 'from-emerald-500 to-teal-500',
+            glow: 'rgba(16, 185, 129, 0.5)'
         },
         {
             id: 'fleet',
             title: 'Vehicle Registration',
             color: 'indigo',
-            icon: 'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0',
+            icon: TruckIcon,
             path: '/vehicle-registration',
-            label: 'Manage Fleet'
+            gradient: 'from-indigo-500 to-purple-500',
+            glow: 'rgba(99, 102, 241, 0.5)'
         },
         {
             id: 'private',
             title: 'Private HR',
             color: 'rose',
-            icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
+            icon: LockClosedIcon,
             path: '/private-hr',
-            label: 'Access Private'
+            gradient: 'from-rose-500 to-pink-500',
+            glow: 'rgba(244, 63, 94, 0.5)'
         }
     ];
 
     return (
-        <div className="relative h-full overflow-y-auto bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
+        <div className="relative h-screen overflow-hidden bg-[#F0FDF4]">
             <AnimatePresence>
                 {showSplash && (
                     <motion.div
@@ -145,9 +157,7 @@ const Home = () => {
                                                             'rgba(244, 63, 94, 0.6)'
                                             }}
                                         >
-                                            <svg className={`w-12 h-12 md:w-14 md:h-14 text-${item.color}-400 drop-shadow-[0_0_15px_rgba(0,0,0,0.6)]`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
-                                            </svg>
+                                            <item.icon className={`w-12 h-12 md:w-14 md:h-14 text-${item.color}-400 drop-shadow-[0_0_15px_rgba(0,0,0,0.6)]`} />
                                         </motion.div>
                                     );
                                 })}
@@ -165,102 +175,127 @@ const Home = () => {
                             .stroke-text {
                                 -webkit-text-stroke: 2px rgba(16, 185, 129, 0.15);
                             }
-                            .border-gradient {
-                                border-image: linear-gradient(to bottom right, rgba(255,255,255,0.3), rgba(255,255,255,0.05)) 1;
-                            }
                         `}</style>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Backround Blobs */}
+            {/* Minimal Background Aesthetic */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 -left-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-                <div className="absolute top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-                <div className="absolute -bottom-8 left-20 w-80 h-80 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+                {/* Subtle Grain only for texture */}
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.015] brightness-0 contrast-100"></div>
             </div>
 
-            {/* Main Content */}
+            {/* Main Content (Static Dashboard) */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: showSplash ? 0 : 1 }}
                 transition={{ duration: 0.8 }}
-                className="relative z-10 container mx-auto px-4 py-12"
+                className="relative z-10 h-full flex flex-col items-center justify-center px-4"
             >
-
-                {/* Header Section */}
+                {/* Static Header resembling Marquee center */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: showSplash ? 0 : 1, y: showSplash ? -20 : 0 }}
                     transition={{ delay: 0.2 }}
-                    className="text-center mb-12"
+                    className="text-center mb-20"
                 >
-                    <h1 className="text-5xl font-black text-slate-900 mb-4 tracking-tighter uppercase italic">
-                        Suthra <span className="text-emerald-600">Punjab</span>
+                    <h2 className="text-emerald-800/40 font-bold tracking-[0.8em] uppercase text-[10px] mb-4">
+                        Tehsil Haroonabad
+                    </h2>
+                    <h1 className="text-4xl md:text-7xl font-black text-slate-900 mb-6 tracking-tighter uppercase italic">
+                        Suthra <span className="text-emerald-500">Punjab</span>
                     </h1>
-                    <p className="text-gray-500 text-lg max-w-2xl mx-auto font-medium">
-                        Unified Employee Information & Fleet Management System
-                    </p>
-                    <div className="h-1.5 w-32 bg-gradient-to-r from-emerald-500 to-teal-500 mx-auto mt-6 rounded-full"></div>
+                    <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent mx-auto"></div>
                 </motion.div>
 
-                {/* Dashboard Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+                {/* Aesthetic Icon Grid */}
+                <div className="flex flex-wrap justify-center gap-12 md:gap-24 max-w-6xl mx-auto items-center">
                     {dashboardCards.map((card, i) => (
-                        <motion.div
-                            key={card.id}
-                            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                            animate={{
-                                opacity: showSplash ? 0 : 1,
-                                y: showSplash ? 50 : 0,
-                                scale: showSplash ? 0.9 : 1
-                            }}
-                            transition={{ delay: 0.4 + (i * 0.1), type: "spring", stiffness: 100 }}
-                            className="group bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full transform hover:-translate-y-1"
-                        >
-                            <div className={`h-2 bg-gradient-to-r ${card.color === 'blue' ? 'from-blue-400 to-blue-600' :
-                                card.color === 'emerald' ? 'from-emerald-400 to-emerald-600' :
-                                    card.color === 'indigo' ? 'from-indigo-400 to-indigo-600' :
-                                        'from-rose-400 to-rose-600'
-                                }`}></div>
-                            <div className="p-8 flex flex-col flex-grow">
-                                <motion.div
-                                    layoutId={`icon-${card.id}`}
-                                    className={`w-14 h-14 bg-${card.color}-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-                                >
-                                    <svg className={`w-8 h-8 text-${card.color}-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={card.icon} />
-                                    </svg>
-                                </motion.div>
-                                <h2 className={`text-xl font-bold text-gray-900 mb-3 group-hover:text-${card.color}-600 transition-colors`}>{card.title}</h2>
-                                <div className="flex-grow" />
-                                <button
-                                    onClick={() => navigate(card.path)}
-                                    className={`w-full py-3 px-4 bg-white border-2 border-${card.color}-100 text-${card.color}-600 font-semibold rounded-xl hover:bg-${card.color}-50 hover:border-${card.color}-200 transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-md`}
-                                >
-                                    <span>{card.label}</span>
-                                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </motion.div>
+                        <div key={card.id} className="relative flex flex-col items-center">
+                            <motion.button
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                layoutId={`icon-${card.id}`}
+                                animate={{
+                                    opacity: showSplash ? 0 : 1,
+                                    scale: showSplash ? 0.5 : 1
+                                }}
+                                transition={{
+                                    delay: 0.4 + (i * 0.1),
+                                    type: "spring",
+                                    stiffness: 150,
+                                    damping: 15
+                                }}
+                                onMouseEnter={() => setHoveredId(card.id)}
+                                onMouseLeave={() => setHoveredId(null)}
+                                onClick={() => navigate(card.path)}
+                                className={`
+                                    group relative w-28 h-28 md:w-36 md:h-36 
+                                    rounded-[3rem] flex items-center justify-center 
+                                    transition-all duration-500 ease-out
+                                    bg-white/40 backdrop-blur-xl border border-white/60
+                                    hover:border-emerald-500/30 hover:scale-110 active:scale-95
+                                    shadow-xl shadow-emerald-900/5
+                                `}
+                                style={{
+                                    boxShadow: hoveredId === card.id
+                                        ? `0 20px 40px -10px ${card.glow.replace('0.5', '0.15')}, inset 0 0 10px white`
+                                        : '0 10px 25px -5px rgba(0,0,0,0.03)'
+                                }}
+                            >
+                                {/* Inner Accent Glow */}
+                                <div className={`absolute inset-0 rounded-[3rem] bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-[0.07] transition-opacity duration-700`}></div>
+
+                                {/* Animated Hover Border */}
+                                <div className={`absolute -inset-[1px] rounded-[3rem] bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-30 transition-opacity duration-700 blur-[1px]`}></div>
+
+                                <card.icon className={`
+                                    w-12 h-12 md:w-16 md:h-16 
+                                    transition-all duration-500
+                                    ${hoveredId === card.id ? `text-${card.color}-600` : 'text-slate-400 group-hover:text-emerald-600'}
+                                    group-hover:drop-shadow-[0_0_20px_rgba(16,185,129,0.2)]
+                                `} />
+
+                                {/* Tooltip Revealed on Hover */}
+                                <AnimatePresence>
+                                    {hoveredId === card.id && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, filter: 'blur(10px)', scale: 0.9 }}
+                                            animate={{ opacity: 1, y: -90, filter: 'blur(0px)', scale: 1 }}
+                                            exit={{ opacity: 0, y: 0, filter: 'blur(10px)', scale: 0.9 }}
+                                            className="absolute pointer-events-none whitespace-nowrap z-50 px-6 py-3 rounded-2xl bg-slate-900 border border-white/20 text-white font-bold text-xs tracking-[0.2em] uppercase shadow-2xl"
+                                        >
+                                            {card.title}
+                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-white/20 rotate-45"></div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </motion.button>
+
+                            {/* Static Code Label */}
+                            <span className="mt-8 text-[10px] font-bold text-emerald-900/30 tracking-[0.5em] uppercase">
+                                {card.id}
+                            </span>
+                        </div>
                     ))}
                 </div>
 
                 {/* Sign Out Section */}
-                <div className="mt-16 text-center">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: showSplash ? 0 : 1 }}
+                    transition={{ delay: 1 }}
+                    className="mt-20 text-center"
+                >
                     <button
                         onClick={handleSignOut}
-                        className="px-8 py-3 text-sm font-semibold text-slate-500 hover:text-red-600 bg-white/50 hover:bg-white rounded-full border border-gray-200 hover:border-red-200 transition-all duration-300 shadow-sm hover:shadow-md flex items-center justify-center gap-2 mx-auto"
+                        className="group flex items-center gap-3 px-10 py-3.5 rounded-full bg-emerald-900/5 hover:bg-red-500/5 border border-emerald-900/10 hover:border-red-500/20 transition-all duration-500 shadow-sm"
                     >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Sign Out
+                        <ArrowRightOnRectangleIcon className="w-5 h-5 text-emerald-900/30 group-hover:text-red-500 transition-colors" />
+                        <span className="text-[10px] font-bold text-emerald-900/40 group-hover:text-red-500 tracking-[0.3em] uppercase transition-colors">Terminate Session</span>
                     </button>
-                    <p className="mt-4 text-xs text-gray-400">Logged in via Secure Session</p>
-                </div>
+                    <p className="mt-6 text-[8px] text-emerald-900/20 font-bold tracking-[0.5em] uppercase">Secure PITB Infrastructure</p>
+                </motion.div>
             </motion.div>
 
             <style>{`
