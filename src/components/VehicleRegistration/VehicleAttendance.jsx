@@ -17,11 +17,11 @@ const VehicleAttendance = () => {
     };
 
     const formatToHMS = (decimal) => {
-        if (decimal === undefined || decimal === null || decimal === '' || isNaN(parseFloat(decimal)) || parseFloat(decimal) === 0) return '00:00:00';
-        const num = parseFloat(decimal);
-        const hours = Math.floor(num);
-        const minutes = Math.floor((num - hours) * 60);
-        const seconds = Math.round(((num - hours) * 60 - minutes) * 60);
+        if (decimal === undefined || decimal === null || decimal === '' || isNaN(parseFloat(decimal))) return '00:00:00';
+        const totalSeconds = Math.round(parseFloat(decimal) * 3600);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     };
 
@@ -220,7 +220,7 @@ const VehicleAttendance = () => {
                                         </td>
                                         <td className="px-8 py-5 text-center">
                                             <span className={`font-mono text-sm font-bold ${displayIgTime !== undefined && displayIgTime !== null ? 'text-slate-700' : 'text-slate-300'}`}>
-                                                {displayIgTime !== undefined && displayIgTime !== null ? (workingHours ? formatToHMS(displayIgTime) : `${displayIgTime || '0.00'} Hrs`) : '—'}
+                                                {displayIgTime !== undefined && displayIgTime !== null ? formatToHMS(displayIgTime) : '—'}
                                             </span>
                                         </td>
                                         <td className="px-8 py-5 text-center">

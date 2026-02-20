@@ -5,6 +5,27 @@ import { supabase } from '../../../supabaseClient'
 
 const mileageHeaders = ['sr', 'reg_no', 'vehicle_type', 'used_for', 'mileage', 'ignition_time', 'threshold', 'remarks']
 
+const formatToHMS = (decimal) => {
+  if (decimal === undefined || decimal === null || decimal === '' || isNaN(parseFloat(decimal))) return '00:00:00';
+  const totalSeconds = Math.round(parseFloat(decimal) * 3600);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+const hmsToDecimal = (hms) => {
+  if (!hms || typeof hms !== 'string' || !hms.includes(':')) {
+    const val = parseFloat(hms);
+    return isNaN(val) ? 0 : val;
+  }
+  const parts = hms.split(':').map(Number);
+  const hours = parts[0] || 0;
+  const minutes = parts[1] || 0;
+  const seconds = parts[2] || 0;
+  return parseFloat((hours + minutes / 60 + seconds / 3600).toFixed(4));
+};
+
 export default function MileageReport() {
   const [rows, setRows] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -782,7 +803,7 @@ export default function MileageReport() {
         vehicle_type: r.vehicle_type || '',
         used_for: r.used_for || '',
         mileage: r.mileage ? String(r.mileage) : '',
-        ignition_time: r.ignition_time ? String(r.ignition_time) : '',
+        ignition_time: r.ignition_time ? formatToHMS(r.ignition_time) : '00:00:00',
         threshold: r.threshold ? String(r.threshold) : '',
         remarks: r.remarks || ''
       }))
@@ -908,7 +929,7 @@ export default function MileageReport() {
           attendance_date: today,
           status: 'Present',
           mileage: sourceRow?.mileage ? parseFloat(sourceRow.mileage) : null,
-          ignition_time: sourceRow?.ignition_time ? parseFloat(sourceRow.ignition_time) : null,
+          ignition_time: sourceRow?.ignition_time ? hmsToDecimal(sourceRow.ignition_time) : null,
           updated_at: new Date().toISOString()
         }
       })
@@ -991,9 +1012,13 @@ export default function MileageReport() {
     const thresholdIdx = findColumnIndex(['threshold', 'limit'])
     const remarksIdx = findColumnIndex(['remarks', 'notes', 'comment'])
 
-    const getValueByIndex = (row, idx) => {
+    const getValueByIndex = (row, idx, isTime = false) => {
       if (idx >= 0 && idx < json_keys.length) {
-        return (row[json_keys[idx]] || '').toString().trim()
+        const val = row[json_keys[idx]]
+        if (isTime && typeof val === 'number') {
+          return formatToHMS(val * 24)
+        }
+        return (val || '').toString().trim()
       }
       return ''
     }
@@ -1004,7 +1029,7 @@ export default function MileageReport() {
       vehicle_type: vehicleTypeIdx >= 0 ? getValueByIndex(r, vehicleTypeIdx) : (r.vehicle_type || r['Vehicle Type'] || ''),
       used_for: usedForIdx >= 0 ? getValueByIndex(r, usedForIdx) : (r.used_for || r['Used For'] || ''),
       mileage: mileageIdx >= 0 ? getValueByIndex(r, mileageIdx) : (r.mileage || r.Mileage || ''),
-      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx) : (r.ignition_time || r['IG Time'] || ''),
+      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx, true) : (r.ignition_time || r['IG Time'] || ''),
       threshold: thresholdIdx >= 0 ? getValueByIndex(r, thresholdIdx) : (r.threshold || r.Threshold || ''),
       remarks: remarksIdx >= 0 ? getValueByIndex(r, remarksIdx) : (r.remarks || r.Remarks || '')
     }))
@@ -1038,46 +1063,7 @@ export default function MileageReport() {
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
-    const json_keys = json.length > 0 ? Object.keys(json[0]) : []
-
-    const findColumnIndex = (keywords) => {
-      for (let i = 0; i < json_keys.length; i++) {
-        const key = json_keys[i].toLowerCase()
-        for (const kw of keywords) {
-          if (key.includes(kw.toLowerCase())) {
-            return i
-          }
-        }
-      }
-      return -1
-    }
-
-    const regNoIdx = findColumnIndex(['reg', 'registration', 'reg no', 'vehicle'])
-    const vehicleTypeIdx = findColumnIndex(['vehicle type', 'type'])
-    const usedForIdx = findColumnIndex(['used for', 'purpose', 'usage'])
-    const mileageIdx = findColumnIndex(['mileage', 'distance', 'km'])
-    const igTimeIdx = findColumnIndex(['ig time', 'ignition time', 'ignition'])
-    const thresholdIdx = findColumnIndex(['threshold', 'limit'])
-    const remarksIdx = findColumnIndex(['remarks', 'notes', 'comment'])
-
-    const getValueByIndex = (row, idx) => {
-      if (idx >= 0 && idx < json_keys.length) {
-        return (row[json_keys[idx]] || '').toString().trim()
-      }
-      return ''
-    }
-
-    const normalized = json.map((r, idx) => ({
-      sr: idx + 1,
-      reg_no: regNoIdx >= 0 ? getValueByIndex(r, regNoIdx) : (r.reg_no || r['Reg No'] || r.registration || ''),
-      vehicle_type: vehicleTypeIdx >= 0 ? getValueByIndex(r, vehicleTypeIdx) : (r.vehicle_type || r['Vehicle Type'] || ''),
-      used_for: usedForIdx >= 0 ? getValueByIndex(r, usedForIdx) : (r.used_for || r['Used For'] || ''),
-      mileage: mileageIdx >= 0 ? getValueByIndex(r, mileageIdx) : (r.mileage || r.Mileage || ''),
-      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx) : (r.ignition_time || r['IG Time'] || ''),
-      threshold: thresholdIdx >= 0 ? getValueByIndex(r, thresholdIdx) : (r.threshold || r.Threshold || ''),
-      remarks: remarksIdx >= 0 ? getValueByIndex(r, remarksIdx) : (r.remarks || r.Remarks || '')
-    }))
-
+    const normalized = normalizeJsonRows(json)
     setPreviewRows(normalized.slice(0, 6))
     setRows(normalized)
   }
@@ -1189,7 +1175,7 @@ export default function MileageReport() {
           vehicle_type: (row.vehicle_type || '').trim() || null,
           used_for: (row.used_for || '').trim() || null,
           mileage: row.mileage ? parseFloat(row.mileage) : null,
-          ignition_time: row.ignition_time ? parseFloat(row.ignition_time) : null,
+          ignition_time: row.ignition_time ? hmsToDecimal(row.ignition_time) : null,
           threshold: row.threshold ? parseFloat(row.threshold) : null,
           remarks: (row.remarks || '').trim() || null
         }
@@ -1635,7 +1621,7 @@ export default function MileageReport() {
                       <td className="px-3 py-2"><input value={r.vehicle_type || ''} onChange={(e) => updateRowField(idx, 'vehicle_type', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
                       <td className="px-3 py-2"><input value={r.used_for || ''} onChange={(e) => updateRowField(idx, 'used_for', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
                       <td className="px-3 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(idx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
-                      <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
+                      <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="text" placeholder="00:00:00" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
                       <td className="px-3 py-2"><input value={r.threshold || ''} onChange={(e) => updateRowField(idx, 'threshold', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
                       <td className="px-3 py-2"><input value={r.remarks || ''} onChange={(e) => updateRowField(idx, 'remarks', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
                     </tr>

@@ -5,6 +5,27 @@ import { supabase } from '../../../supabaseClient'
 
 const fleetHeaders = ['sr', 'reg_no', 'town', 'mileage', 'ignition_time', 'fuel_allocated']
 
+const formatToHMS = (decimal) => {
+  if (decimal === undefined || decimal === null || decimal === '' || isNaN(parseFloat(decimal))) return '00:00:00';
+  const totalSeconds = Math.round(parseFloat(decimal) * 3600);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+const hmsToDecimal = (hms) => {
+  if (!hms || typeof hms !== 'string' || !hms.includes(':')) {
+    const val = parseFloat(hms);
+    return isNaN(val) ? 0 : val;
+  }
+  const parts = hms.split(':').map(Number);
+  const hours = parts[0] || 0;
+  const minutes = parts[1] || 0;
+  const seconds = parts[2] || 0;
+  return parseFloat((hours + minutes / 60 + seconds / 3600).toFixed(4));
+};
+
 export default function DailyReporting() {
   const [rows, setRows] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -70,7 +91,7 @@ export default function DailyReporting() {
         reg_no: r.reg_no || '',
         town: r.town || '',
         mileage: r.mileage ? String(r.mileage) : '',
-        ignition_time: r.ignition_time ? String(r.ignition_time) : '',
+        ignition_time: r.ignition_time ? formatToHMS(r.ignition_time) : '00:00:00',
         fuel_allocated: r.fuel_allocated ? String(r.fuel_allocated) : ''
       }))
       setRows(loadedRows)
@@ -111,16 +132,7 @@ export default function DailyReporting() {
     saveAs(new Blob([wbout], { type: 'application/octet-stream' }), `fleet-daily-reporting-template.xlsx`)
   }
 
-  const handleFile = async (e) => {
-    const f = e.target.files[0]
-    if (!f) return
-    setSelectedFileName(f.name)
-    const data = await f.arrayBuffer()
-    const wb = XLSX.read(data)
-    const first = wb.SheetNames[0]
-    const sheet = wb.Sheets[first]
-    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-
+  const normalizeFleetRows = (json) => {
     const json_keys = json.length > 0 ? Object.keys(json[0]) : []
 
     const findColumnIndex = (keywords) => {
@@ -141,22 +153,38 @@ export default function DailyReporting() {
     const igTimeIdx = findColumnIndex(['ig time', 'ignition time', 'ignition', 'on time'])
     const fuelIdx = findColumnIndex(['fuel', 'fuel allocated', 'fuel issued'])
 
-    const getValueByIndex = (row, idx) => {
+    const getValueByIndex = (row, idx, isTime = false) => {
       if (idx >= 0 && idx < json_keys.length) {
-        return (row[json_keys[idx]] || '').toString().trim()
+        const val = row[json_keys[idx]]
+        if (isTime && typeof val === 'number') {
+          return formatToHMS(val * 24)
+        }
+        return (val || '').toString().trim()
       }
       return ''
     }
 
-    const normalized = json.map((r, idx) => ({
+    return json.map((r, idx) => ({
       sr: idx + 1,
       reg_no: regNoIdx >= 0 ? getValueByIndex(r, regNoIdx) : (r.reg_no || r['Reg No'] || r.registration || ''),
       town: townIdx >= 0 ? getValueByIndex(r, townIdx) : (r.town || r.Town || r.area || ''),
       mileage: mileageIdx >= 0 ? getValueByIndex(r, mileageIdx) : (r.mileage || r.Mileage || ''),
-      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx) : (r.ignition_time || r['IG Time'] || r['Ignition Time'] || ''),
+      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx, true) : (r.ignition_time || r['IG Time'] || r['Ignition Time'] || ''),
       fuel_allocated: fuelIdx >= 0 ? getValueByIndex(r, fuelIdx) : (r.fuel_allocated || r['Fuel Allocated'] || r.fuel || '')
     }))
+  }
 
+  const handleFile = async (e) => {
+    const f = e.target.files[0]
+    if (!f) return
+    setSelectedFileName(f.name)
+    const data = await f.arrayBuffer()
+    const wb = XLSX.read(data)
+    const first = wb.SheetNames[0]
+    const sheet = wb.Sheets[first]
+    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+
+    const normalized = normalizeFleetRows(json)
     setPreviewRows(normalized.slice(0, 6))
     setRows(normalized)
   }
@@ -170,42 +198,7 @@ export default function DailyReporting() {
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
-    const json_keys = json.length > 0 ? Object.keys(json[0]) : []
-
-    const findColumnIndex = (keywords) => {
-      for (let i = 0; i < json_keys.length; i++) {
-        const key = json_keys[i].toLowerCase()
-        for (const kw of keywords) {
-          if (key.includes(kw.toLowerCase())) {
-            return i
-          }
-        }
-      }
-      return -1
-    }
-
-    const regNoIdx = findColumnIndex(['reg', 'registration', 'reg no', 'vehicle'])
-    const townIdx = findColumnIndex(['town', 'area', 'location'])
-    const mileageIdx = findColumnIndex(['mileage', 'distance', 'km'])
-    const igTimeIdx = findColumnIndex(['ig time', 'ignition time', 'ignition', 'on time'])
-    const fuelIdx = findColumnIndex(['fuel', 'fuel allocated', 'fuel issued'])
-
-    const getValueByIndex = (row, idx) => {
-      if (idx >= 0 && idx < json_keys.length) {
-        return (row[json_keys[idx]] || '').toString().trim()
-      }
-      return ''
-    }
-
-    const normalized = json.map((r, idx) => ({
-      sr: idx + 1,
-      reg_no: regNoIdx >= 0 ? getValueByIndex(r, regNoIdx) : (r.reg_no || r['Reg No'] || r.registration || ''),
-      town: townIdx >= 0 ? getValueByIndex(r, townIdx) : (r.town || r.Town || r.area || ''),
-      mileage: mileageIdx >= 0 ? getValueByIndex(r, mileageIdx) : (r.mileage || r.Mileage || ''),
-      ignition_time: igTimeIdx >= 0 ? getValueByIndex(r, igTimeIdx) : (r.ignition_time || r['IG Time'] || r['Ignition Time'] || ''),
-      fuel_allocated: fuelIdx >= 0 ? getValueByIndex(r, fuelIdx) : (r.fuel_allocated || r['Fuel Allocated'] || r.fuel || '')
-    }))
-
+    const normalized = normalizeFleetRows(json)
     setPreviewRows(normalized.slice(0, 6))
     setRows(normalized)
   }
@@ -314,7 +307,7 @@ export default function DailyReporting() {
           reg_no: regNo,
           town: (row.town || '').trim() || null,
           mileage: row.mileage ? parseFloat(row.mileage) : null,
-          ignition_time: row.ignition_time ? parseFloat(row.ignition_time) : null,
+          ignition_time: row.ignition_time ? hmsToDecimal(row.ignition_time) : null,
           fuel_allocated: row.fuel_allocated ? parseFloat(row.fuel_allocated) : null
         }
 
@@ -616,10 +609,10 @@ export default function DailyReporting() {
                     <tr key={filteredIdx} className="hover:bg-white/40 transition-colors">
                       <td className="px-4 py-2"><input value={r.sr || ''} readOnly className="w-full p-1.5 text-sm bg-transparent border-0 text-slate-500" /></td>
                       <td className="px-4 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(actualIdx, 'reg_no', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono font-medium text-slate-700" /></td>
-                      <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(actualIdx, 'town', e.target.value)} className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
-                      <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
-                      <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
-                      <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(actualIdx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono text-xs" /></td>
+                      <td className="px-4 py-2"><input value={r.town || ''} onChange={(e) => updateRowField(actualIdx, 'town', e.target.value)} className="w-full p-2 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all" /></td>
+                      <td className="px-4 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-2 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono" /></td>
+                      <td className="px-4 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="text" placeholder="00:00:00" className="w-full p-2 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono" /></td>
+                      <td className="px-4 py-2"><input value={r.fuel_allocated || ''} onChange={(e) => updateRowField(actualIdx, 'fuel_allocated', e.target.value)} type="number" step="0.01" className="w-full p-2 text-sm bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono" /></td>
                     </tr>
                   )
                 })
