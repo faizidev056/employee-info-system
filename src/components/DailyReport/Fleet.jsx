@@ -26,18 +26,6 @@ export default function Fleet({ darkMode }) {
         >
           Mileage Report
         </button>
-        <button
-          onClick={() => {
-            try { localStorage.setItem('openMileageReview', '1') } catch (e) { }
-            setActiveFleetTab('mileage-report')
-          }}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border shadow-sm ${darkMode
-            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
-            : 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200'
-            }`}
-        >
-          Review Transfer
-        </button>
       </div>
 
       <div className={`rounded-2xl border shadow-lg p-6 transition-all duration-300 ${darkMode ? 'bg-white/5 border-white/10 shadow-black/20 text-slate-200' : 'bg-white/40 backdrop-blur-xl border-white/60 shadow-emerald-500/5'}`}>

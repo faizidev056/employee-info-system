@@ -18,10 +18,6 @@ export default function MileageReport() {
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [pendingTransfer, setPendingTransfer] = useState(null)
-  const [pendingVehicleRecords, setPendingVehicleRecords] = useState([])
-  const [transferApplied, setTransferApplied] = useState(false)
-  const [showTransferReview, setShowTransferReview] = useState(false)
   // UI tab state (Added for future filters: 'Used For' and 'Threshold')
   const [activeTab, setActiveTab] = useState('all')
   const [showUsedForModal, setShowUsedForModal] = useState(false)
@@ -137,9 +133,9 @@ export default function MileageReport() {
     return staged
   }
 
-  // Merge pending transfers (daily reporting mileage / ignition time) into provided rows array.
-  // This function only applies mileage/ignition data (from pendingTransfer) and vehicle_type when present
-  const mergePendingToRows = (baseRows) => {
+  // Merge transferred data (daily reporting mileage / ignition time) into provided rows array.
+  // This function applies mileage/ignition data and vehicle_type when present
+  const mergeTransferredData = (baseRows, dailyReportingData = [], vehicleRecordsData = []) => {
     const copy = [...baseRows]
     const updates = {}
 
@@ -150,8 +146,8 @@ export default function MileageReport() {
       return /[A-Za-z\-]/.test(s) || s.length >= 3
     }
 
-    if (pendingTransfer && pendingTransfer.length > 0) {
-      pendingTransfer.forEach(item => {
+    if (dailyReportingData && dailyReportingData.length > 0) {
+      dailyReportingData.forEach(item => {
         const key = (item.vehicle_code || item.reg_no || '').toString()
         if (!key) return
         updates[key] = updates[key] || { reg_no: key }
@@ -160,8 +156,8 @@ export default function MileageReport() {
       })
     }
 
-    if (pendingVehicleRecords && pendingVehicleRecords.length > 0) {
-      pendingVehicleRecords.forEach(item => {
+    if (vehicleRecordsData && vehicleRecordsData.length > 0) {
+      vehicleRecordsData.forEach(item => {
         const key = (item.reg_no || item.vehicle_code || '').toString()
         if (!key) return
         updates[key] = updates[key] || { reg_no: key }
@@ -465,8 +461,8 @@ export default function MileageReport() {
         }
       })
 
-      // After used_for is committed, merge pending daily reporting mileage/IG and any vehicle type hints
-      const merged = mergePendingToRows(copy)
+      // After used_for is committed, merge any pending daily reporting mileage/IG (not applicable in fully auto, but kept for consistency)
+      const merged = mergeTransferredData(copy)
 
       // Deduplicate and merge rows by reg_no / vehicle_code (case-insensitive). For rows without codes, try to reconcile by vehicle_type.
       const norm = (s) => (s || '').toString().trim().toLowerCase()
@@ -516,14 +512,9 @@ export default function MileageReport() {
       return deduped
     })
 
-    // Clear staging (keep transfer in localStorage for testing; explicit discard will clear it)
+    // Clear staging
     setHasProposedUsedFor(false)
     setProposedUsedForGrid([])
-    setPendingTransfer(null)
-    setPendingVehicleRecords([])
-    // Remove persisted transfer since proposals were accepted
-    localStorage.removeItem('mileageReportTransfer')
-    setTransferApplied(true)
 
     setUsedForSaveError('')
     setShowUsedForModal(false)
@@ -699,7 +690,7 @@ export default function MileageReport() {
     checkForTransfer()
   }, [])
 
-  // Listen for direct transfers and stage both Used For and Threshold proposals
+  // Listen for direct transfers and automatically apply them
   useEffect(() => {
     const handler = (e) => {
       try {
@@ -709,26 +700,11 @@ export default function MileageReport() {
         const dailyReporting = items.filter(i => i.source === 'daily_reporting' || (i.source === undefined && i.mileage !== undefined))
         const vehicleRecords = items.filter(i => i.source === 'vehicle_records' || i.source === undefined)
 
-        // Stage pending daily reporting mileage/IG immediately (do not auto-apply)
-        if (dailyReporting && dailyReporting.length > 0) {
-          setPendingTransfer(dailyReporting)
+        if (dailyReporting.length > 0 || vehicleRecords.length > 0) {
+          setRows(prev => mergeTransferredData(prev, dailyReporting, vehicleRecords))
+          // Automatically clear the transfer buffer once processed
+          localStorage.removeItem('mileageReportTransfer')
         }
-
-        if (vehicleRecords && vehicleRecords.length > 0) {
-          const stagedUsedFor = stageProposedUsedFor(vehicleRecords)
-          if (stagedUsedFor && stagedUsedFor.length > 0) {
-            setProposedUsedForGrid(stagedUsedFor)
-            setHasProposedUsedFor(true)
-            setPendingVehicleRecords(vehicleRecords)
-          }
-          const stagedThresholds = stageProposedThresholds(vehicleRecords)
-          if (stagedThresholds && stagedThresholds.length > 0) {
-            setProposedThresholdGrid(stagedThresholds)
-            setHasProposedThreshold(true)
-          }
-        }
-
-        // Badge-only staging. User opens Used For manually to accept proposals.
       } catch (err) {
         console.warn('mileageTransfer handler error', err)
       }
@@ -771,29 +747,18 @@ export default function MileageReport() {
 
   const checkForTransfer = () => {
     const transferData = localStorage.getItem('mileageReportTransfer')
-    if (transferData && !transferApplied) {
+    if (transferData) {
       try {
         const parsed = JSON.parse(transferData)
         const items = Array.isArray(parsed) ? parsed : [parsed]
 
-        // Separate transfers by source
-        const dailyReporting = items.filter(i => i.source === 'daily_reporting' || !i.source)
-        const vehicleRecords = items.filter(i => i.source === 'vehicle_records')
+        const daily = items.filter(i => i.source === 'daily_reporting' || !i.source)
+        const vehicles = items.filter(i => i.source === 'vehicle_records')
 
-        // Set pending data for review
-        if (dailyReporting.length > 0) {
-          setPendingTransfer(dailyReporting)
+        if (daily.length > 0 || vehicles.length > 0) {
+          setRows(prev => mergeTransferredData(prev, daily, vehicles))
+          localStorage.removeItem('mileageReportTransfer')
         }
-        if (vehicleRecords.length > 0) {
-          setPendingVehicleRecords(vehicleRecords)
-          const staged = stageProposedUsedFor(vehicleRecords)
-          if (staged && staged.length > 0) {
-            setProposedUsedForGrid(staged)
-            setHasProposedUsedFor(true)
-          }
-        }
-
-        // Badge-only staging: users should open the Used For tab to process staged transfers.
       } catch (e) {
         console.error('Error parsing transfer data:', e)
       }
@@ -880,25 +845,6 @@ export default function MileageReport() {
     return labels[key] || key.toUpperCase()
   }
 
-  const applyTransferData = () => {
-    // For backward compatibility keep an action that merges pending daily reporting into rows
-    if ((!pendingTransfer || pendingTransfer.length === 0) && (!pendingVehicleRecords || pendingVehicleRecords.length === 0)) return
-    setRows(prev => mergePendingToRows(prev))
-    // Remove persisted transfer now that it's been applied so it won't re-stage on reload
-    localStorage.removeItem('mileageReportTransfer')
-    setPendingTransfer(null)
-    setPendingVehicleRecords([])
-    setTransferApplied(true)
-  }
-
-  const discardTransferData = () => {
-    localStorage.removeItem('mileageReportTransfer')
-    setPendingTransfer(null)
-    setPendingVehicleRecords([])
-    setHasProposedUsedFor(false)
-    setProposedUsedForGrid([])
-    setTransferApplied(true)
-  }
 
   const pushAttendanceData = async () => {
     if (rows.length === 0) {
@@ -948,12 +894,24 @@ export default function MileageReport() {
       }
 
       // Create attendance records for today
-      const attendanceRecords = vehicles.map(vehicle => ({
-        vehicle_id: vehicle.id,
-        attendance_date: today,
-        status: 'Present', // Mark as present since they have mileage data
-        updated_at: new Date().toISOString()
-      }))
+      const attendanceRecords = vehicles.map(vehicle => {
+        // Find the corresponding row in the mileage data
+        const sourceRow = rows.find(r => {
+          const normRow = (r.reg_no || '').toString().trim().toLowerCase();
+          return normRow === (vehicle.reg_no || '').toLowerCase() ||
+            normRow === (vehicle.reg_id || '').toLowerCase() ||
+            normRow === (vehicle.vehicle_code || '').toLowerCase();
+        });
+
+        return {
+          vehicle_id: vehicle.id,
+          attendance_date: today,
+          status: 'Present',
+          mileage: sourceRow?.mileage ? parseFloat(sourceRow.mileage) : null,
+          ignition_time: sourceRow?.ignition_time ? parseFloat(sourceRow.ignition_time) : null,
+          updated_at: new Date().toISOString()
+        }
+      })
 
       // Upsert attendance records (insert or update if already exists for this date)
       const { error: attendanceError } = await supabase
@@ -998,17 +956,7 @@ export default function MileageReport() {
     localStorage.removeItem('mileageReportData')
     localStorage.removeItem('mileageReportTransfer')
 
-    // Reset any pending/staged transfers
-    setPendingTransfer(null)
-    setPendingVehicleRecords([])
-    setHasProposedUsedFor(false)
-    setProposedUsedForGrid([])
-    setHasProposedThreshold(false)
-    setProposedThresholdGrid([])
-
     // Reset UI and flags
-    setTransferApplied(false)
-    setShowTransferReview(false)
     setSaveResult(null)
   }
 
@@ -1277,39 +1225,6 @@ export default function MileageReport() {
   return (
     <>
       <div className="p-4">
-        {/* Pending Transfer Notification - Dual Source */}
-        {(pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
-          <div className="mb-6 p-4 bg-blue-50/60 backdrop-blur-md border border-blue-200/60 rounded-2xl shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-blue-900 text-sm flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-                  ⚡ Data Transfer Ready (Dual Source)
-                </h3>
-                {pendingTransfer && pendingTransfer.length > 0 && (
-                  <p className="text-sm text-blue-800 mt-1 pl-4">📊 Daily Reporting: <strong>{pendingTransfer.length}</strong> row(s) with Mileage & IG Time</p>
-                )}
-                {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
-                  <p className="text-sm text-blue-800 pl-4">🚗 Vehicle Records: <strong>{pendingVehicleRecords.length}</strong> row(s) with Type & Usage</p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowTransferReview(true)}
-                  className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm hover:bg-blue-700 font-medium shadow-md shadow-blue-500/20 transition-all"
-                >
-                  Review & Apply
-                </button>
-                <button
-                  onClick={discardTransferData}
-                  className="px-4 py-2 rounded-xl bg-white/60 text-blue-800 text-sm hover:bg-white border border-blue-100 backdrop-blur-sm transition-all"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Attendance Push Result Notification */}
         {attendancePushResult && (
@@ -1353,106 +1268,119 @@ export default function MileageReport() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6 bg-white/40 backdrop-blur-md p-2 rounded-2xl border border-white/50 shadow-sm">
-          <div className="text-sm font-semibold text-slate-700 bg-white/60 px-4 py-2 rounded-xl backdrop-blur-sm border border-slate-100 flex items-center gap-2">
+        <div className="flex items-center justify-between mb-6 bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/40 shadow-sm transition-all">
+
+          {/* Left Side: Context/Date (Exact match to DailyReporting style) */}
+          <div className="text-sm font-semibold text-slate-700 bg-white/60 px-4 py-2 rounded-xl backdrop-blur-sm border border-slate-100 flex items-center gap-2 self-end">
             <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             {today}
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Tabs (visual only) placed alongside action buttons */}
-            <div className="hidden sm:flex items-center space-x-1 mr-2 bg-slate-100/50 p-1 rounded-xl backdrop-blur-sm">
+          {/* Right Side: Operational Stack */}
+          <div className="flex flex-col items-end gap-3">
+
+            {/* Top Row: View Mode Toggles (Separated and Renamed) */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setActiveTab('all')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                All
+                onClick={() => setActiveTab(activeTab === 'used_for' ? 'all' : 'used_for')}
+                className={`h-9 px-5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border ${activeTab === 'used_for'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md border-transparent scale-105'
+                  : 'bg-white/80 text-slate-600 border-white/10 hover:bg-white hover:text-blue-600 shadow-sm'}`}
+              >
+                <span>Used For</span>
+                {hasProposedUsedFor && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse ring-2 ring-white/20"></span>}
               </button>
+
               <button
-                onClick={() => setActiveTab('used_for')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'used_for' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-                <span className="inline-flex items-center">
-                  <span>Used For</span>
-                  {hasProposedUsedFor && proposedUsedForGrid && proposedUsedForGrid.length > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm">{proposedUsedForGrid.length}</span>
-                  )}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('threshold')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'threshold' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                onClick={() => setActiveTab(activeTab === 'threshold' ? 'all' : 'threshold')}
+                className={`h-9 px-5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border ${activeTab === 'threshold'
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md border-transparent scale-105'
+                  : 'bg-white/80 text-slate-600 border-white/10 hover:bg-white hover:text-amber-600 shadow-sm'}`}
+              >
                 Threshold
               </button>
             </div>
 
-            <button onClick={downloadTemplate} className="px-4 py-2 rounded-xl bg-slate-700/10 text-slate-700 hover:bg-slate-700/20 text-sm font-medium transition-all border border-slate-700/5">Template</button>
+            {/* Bottom Row: Primary Actions (Standardized Heights) */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }}
+                className="h-10 px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm"
+              >
+                Upload Report
+              </button>
 
-            <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm">Upload Report</button>
+              <button
+                onClick={exportData}
+                className="h-10 px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm"
+              >
+                Export
+              </button>
 
-            <button onClick={clearTable} className="px-4 py-2 rounded-xl bg-rose-50/80 text-rose-600 hover:bg-rose-100 border border-rose-100 text-sm font-medium transition-all backdrop-blur-sm">Clear</button>
+              <button
+                onClick={clearTable}
+                className="h-10 px-4 py-2 rounded-xl bg-rose-50/80 text-rose-600 hover:bg-rose-100 border border-rose-100 text-sm font-medium transition-all backdrop-blur-sm"
+              >
+                Clear
+              </button>
 
-            {/* Quick action: open Used For modal when staged proposals exist */}
-            {hasProposedUsedFor && (
-              <button onClick={() => openUsedForModal()} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 text-sm font-medium transition-all">Process Used For</button>
-            )}
+              <div className="w-px h-6 bg-slate-200/50 mx-1"></div>
 
-            <button onClick={exportData} className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all border border-transparent">Export</button>
+              {/* Attendance Push - Icon Button (Matched to HR Report style) */}
+              <div className="relative group/push">
+                {pushingAttendance && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3 z-10">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+                  </span>
+                )}
+                <button
+                  onClick={pushAttendanceData}
+                  disabled={pushingAttendance || rows.length === 0}
+                  title="Push Attendance Data"
+                  className={`p-2.5 rounded-full shadow-lg transition-all duration-300 relative overflow-hidden group/btn ${pushingAttendance
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    : 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-110 active:scale-95 border border-white/20'
+                    }`}
+                >
+                  <div className={`transition-transform duration-700 ${pushingAttendance ? 'animate-spin' : 'group-hover/btn:rotate-180'}`}>
+                    {pushingAttendance ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                    )}
+                  </div>
+                </button>
+              </div>
 
-            <button
-              onClick={pushAttendanceData}
-              disabled={pushingAttendance || rows.length === 0}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {pushingAttendance ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Pushing...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>Push Attendance</span>
-                </>
-              )}
-            </button>
-
-            <button onClick={saveMileageData} disabled={saving} className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed">
-              {saving ? 'Saving...' : 'Save Report'}
-            </button>
+              <button
+                onClick={saveMileageData}
+                disabled={saving}
+                className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all disabled:opacity-70"
+              >
+                {saving ? 'Saving...' : 'Save Report'}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Tabs: compact - only show All here per request */}
-        <div className="mb-4">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1 rounded-md text-sm ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-gray-50 text-slate-700'}`}>
-              All
-            </button>
-          </div>
-        </div>
 
-        {/* Search bar */}
+        {/* Search bar (Styled to match DailyReporting) */}
         <div className="mb-6 max-w-md">
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by Vehicle Code or Vehicle Type..."
-              className="pl-10 pr-10 py-2.5 rounded-xl bg-white/50 border border-white/60 text-sm w-full text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm backdrop-blur-sm"
+              placeholder="Search vehicles..."
+              className="pl-9 pr-4 py-2 rounded-xl bg-white/50 border border-white/60 text-sm w-full text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm backdrop-blur-sm"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             )}
@@ -1461,142 +1389,187 @@ export default function MileageReport() {
 
         {/* Upload Modal */}
         {showUploadModal && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
-            <div className="w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
-              {uploadMode === 'choose' && (
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-4">Upload Mileage Report</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
-                      <div className="flex items-center space-x-3">
-                        <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                        <div>
-                          <div className="font-semibold">Upload Excel / CSV</div>
-                          <div className="text-xs text-slate-500">Choose a file to import</div>
-                        </div>
-                      </div>
-                    </div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-all animate-in fade-in duration-200">
+            <div className="w-full max-w-4xl bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-indigo-500/20 border border-white/50 overflow-hidden transform transition-all scale-100 opacity-100">
 
-                    <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
-                      <div className="flex items-center space-x-3">
-                        <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                        <div>
-                          <div className="font-semibold">Paste Manually</div>
-                          <div className="text-xs text-slate-500">Paste data from spreadsheet</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex justify-end">
-                    <button onClick={handleCloseUploadModal} className="px-4 py-2 rounded bg-gray-50 border text-sm">Cancel</button>
-                  </div>
+              {/* Modal Header */}
+              <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 tracking-tight">
+                    {uploadMode === 'choose' && 'Import Mileage Data'}
+                    {uploadMode === 'file' && 'Upload Spreadsheet'}
+                    {uploadMode === 'paste' && 'Paste Data Grid'}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-0.5">Add vehicle mileage reports seamlessly</p>
                 </div>
-              )}
+                <button
+                  onClick={handleCloseUploadModal}
+                  className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
 
-              {uploadMode === 'file' && (
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
-                  <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
-                    <label className="block cursor-pointer">
-                      <div className="flex items-center justify-center space-x-3">
-                        <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                        <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
+              {/* Modal Content */}
+              <div className="p-8">
+                {uploadMode === 'choose' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button
+                      onClick={() => setUploadMode('file')}
+                      className="group flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-300 text-center bg-white"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-50 group-hover:bg-indigo-100 text-indigo-500 flex items-center justify-center mb-4 transition-colors">
+                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                       </div>
-                      <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
-                    </label>
-                    {selectedFileName && <div className="mt-3 text-xs text-slate-700">Selected: <strong>{selectedFileName}</strong></div>}
-                  </div>
+                      <h4 className="text-lg font-semibold text-slate-800 mb-1">Upload File</h4>
+                      <p className="text-sm text-slate-500 px-4">Import an Excel (.xlsx) or CSV file directly</p>
+                    </button>
 
-                  {previewRows && previewRows.length > 0 && (
-                    <div className="mt-4 border rounded p-2 bg-white">
-                      <div className="text-sm font-semibold mb-2">Preview (first {previewRows.length} rows)</div>
-                      <div className="overflow-auto max-h-36">
-                        <table className="min-w-full text-xs">
-                          <thead className="text-left text-gray-500">
-                            <tr>
-                              {mileageHeaders.map((h) => (
-                                <th key={h} className="pr-4">{getHeaderLabel(h)}</th>
+                    <button
+                      onClick={() => { initPasteGrid(10); setUploadMode('paste') }}
+                      className="group flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-300 text-center bg-white"
+                    >
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-500 flex items-center justify-center mb-4 transition-colors">
+                        <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                      </div>
+                      <h4 className="text-lg font-semibold text-slate-800 mb-1">Paste Manually</h4>
+                      <p className="text-sm text-slate-500 px-4">Copy data from Excel/Sheets and paste directly</p>
+                    </button>
+                  </div>
+                )}
+
+                {uploadMode === 'file' && (
+                  <div className="space-y-6">
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}
+                      className="relative group cursor-pointer"
+                    >
+                      <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setUploadMode('choose'); setShowUploadModal(false) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                      <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-indigo-200 group-hover:border-indigo-400 rounded-3xl bg-indigo-50/30 group-hover:bg-indigo-50/60 transition-all">
+                        <div className="w-20 h-20 bg-white rounded-full shadow-lg shadow-indigo-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                          <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                        </div>
+                        <p className="text-xl font-bold text-slate-800 mb-2">Drop your spreadsheet here</p>
+                        <p className="text-sm text-slate-500 max-w-sm text-center">Support for .xlsx, .xls, and .csv files.</p>
+                        <button className="mt-6 px-6 py-2 bg-white text-indigo-600 font-semibold rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all text-sm">Browse Files</button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2">
+                      <button onClick={() => setUploadMode('choose')} className="text-sm font-medium text-slate-500 hover:text-slate-800 px-4 py-2 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        Back to options
+                      </button>
+                    </div>
+
+                    {previewRows && previewRows.length > 0 && (
+                      <div className="mt-4 border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+                        <div className="text-sm font-semibold mb-3 text-slate-700">Preview (first {previewRows.length} rows)</div>
+                        <div className="overflow-auto max-h-36 custom-scrollbar">
+                          <table className="min-w-full text-xs">
+                            <thead className="text-left text-slate-500 bg-slate-50 border-b border-slate-100">
+                              <tr>
+                                {mileageHeaders.map((h) => (
+                                  <th key={h} className="px-3 py-2 font-medium">{getHeaderLabel(h)}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {previewRows.map((r, i) => (
+                                <tr key={i} className="hover:bg-slate-50/50">
+                                  {mileageHeaders.map((h) => (
+                                    <td key={h} className="px-3 py-2 text-slate-600">{r[h] || ''}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {uploadMode === 'paste' && (
+                  <div className="space-y-6">
+                    <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-inner">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="bg-slate-100 border-b border-slate-200">
+                              <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-12 text-center border-r border-slate-200">#</th>
+                              {mileageHeaders.map((h, ci) => (
+                                <th key={ci} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left border-r border-slate-200 min-w-[140px] whitespace-nowrap">{getHeaderLabel(h)}</th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody>
-                            {previewRows.map((r, i) => (
-                              <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
-                                {mileageHeaders.map((h) => (
-                                  <td key={h} className="pr-4">{r[h] || ''}</td>
+                          <tbody className="bg-white divide-y divide-slate-100">
+                            {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
+                              <tr key={ri} className="group hover:bg-indigo-50/20 transition-colors">
+                                <td className="px-2 py-2 text-xs font-medium text-slate-400 text-center border-r border-slate-100 bg-slate-50/50">{ri + 1}</td>
+                                {row.map((cell, ci) => (
+                                  <td key={ci} className="p-0 border-r border-slate-100 relative">
+                                    <input
+                                      value={cell ?? ''}
+                                      onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
+                                      onFocus={() => setPasteStart({ r: ri, c: ci })}
+                                      onPaste={(e) => handleGridPaste(e, ri, ci)}
+                                      className="w-full h-full px-4 py-3 text-sm bg-transparent border-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 rounded-none transition-all font-mono text-slate-700 placeholder-slate-300"
+                                      placeholder="-"
+                                    />
+                                  </td>
                                 ))}
                               </tr>
-                            ))}
+                            )) : null}
                           </tbody>
                         </table>
                       </div>
                     </div>
-                  )}
 
-                  <div className="mt-4 flex justify-end">
-                    <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded bg-gray-50 border text-sm">Close</button>
-                  </div>
-                </div>
-              )}
+                    {pasteNotice && (
+                      <div className="flex justify-center">
+                        <div className="inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 shadow-sm border border-emerald-200 animate-fade-in-up">
+                          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          {pasteNotice}
+                        </div>
+                      </div>
+                    )}
 
-              {uploadMode === 'paste' && (
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold">Paste Data</h3>
-                    <button onClick={handleCloseUploadModal} className="text-slate-500 hover:text-slate-700">Close ✕</button>
-                  </div>
+                    <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setUploadMode('choose')} className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors px-2">Back</button>
+                        <div className="h-4 w-px bg-slate-200"></div>
+                        <button onClick={() => initPasteGrid(10)} className="text-sm font-medium text-slate-500 hover:text-rose-600 transition-colors px-2">Reset Grid</button>
+                      </div>
 
-                  <div className="overflow-auto border rounded mb-3 max-h-64">
-                    <table className="min-w-full table-fixed border-collapse text-sm">
-                      <thead className="bg-gray-100 sticky top-0 shadow-sm">
-                        <tr>
-                          <th className="px-2 py-1 border text-xs">#</th>
-                          {mileageHeaders.map((h, ci) => (
-                            <th key={ci} className="px-2 py-1 border text-xs text-left">{getHeaderLabel(h)}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
-                          <tr key={ri} className={`${ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-t`}>
-                            <td className="px-2 py-1 border text-xs">{ri + 1}</td>
-                            {row.map((cell, ci) => (
-                              <td key={ci} className="px-1 py-1 border">
-                                <input value={cell ?? ''}
-                                  onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
-                                  onFocus={() => setPasteStart({ r: ri, c: ci })}
-                                  onPaste={(e) => handleGridPaste(e, ri, ci)}
-                                  className="w-full p-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                              </td>
-                            ))}
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan={mileageHeaders.length + 1} className="p-4 text-center text-slate-500">Empty grid. Paste data or use clipboard.</td>
-                          </tr>
-                        )}
-                        {pasteNotice && (
-                          <tr>
-                            <td colSpan={mileageHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const txt = await navigator.clipboard.readText()
+                              const fakeEvent = { clipboardData: { getData: () => txt }, preventDefault: () => { } }
+                              handleGridPaste(fakeEvent, pasteStart.r || 0, pasteStart.c || 0)
+                            } catch { /* ignore */ }
+                          }}
+                          className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold shadow-sm flex items-center gap-2 group"
+                        >
+                          <svg className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                          Paste Clipboard
+                        </button>
 
-                  <div className="flex items-center space-x-2 mb-3">
-                    <button onClick={() => initPasteGrid(5)} className="px-2 py-1 rounded bg-gray-50 border text-sm">Reset Grid</button>
+                        <button
+                          onClick={() => { applyPasteGrid(); handleCloseUploadModal() }}
+                          className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm font-bold flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          Apply Data
+                        </button>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="flex justify-end space-x-2 mt-2">
-                    <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200 text-sm">Cancel</button>
-                    <button onClick={() => { applyPasteGrid(); handleCloseUploadModal() }} className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm">Apply Paste</button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1673,223 +1646,248 @@ export default function MileageReport() {
           )}
         </div>
       </div>
-      {/* Transfer Review Modal - Dual Source */}
-      {showTransferReview && (pendingTransfer?.length > 0 || pendingVehicleRecords?.length > 0) && (
-        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto transition-all">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-4/5 p-6 my-8 shadow-2xl border border-white/60">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold">Review Data Transfer (Dual Source)</h3>
-              <button onClick={() => setShowTransferReview(false)} className="text-slate-500">Close</button>
-            </div>
-
-            {/* Daily Reporting Data */}
-            {pendingTransfer && pendingTransfer.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-blue-700 mb-3 pb-2 border-b border-blue-200">📊 Daily Reporting Data (Mileage & IG Time)</h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs">
-                    <thead className="text-left text-gray-600 bg-blue-50">
-                      <tr>
-                        <th className="px-2 py-2">#</th>
-                        <th className="px-2 py-2">Vehicle Code</th>
-                        <th className="px-2 py-2">Mileage</th>
-                        <th className="px-2 py-2">IG Time</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingTransfer.map((it, i) => (
-                        <tr key={i} className={`${i % 2 ? 'bg-blue-50' : ''}`}>
-                          <td className="px-2 py-1">{i + 1}</td>
-                          <td className="px-2 py-1 font-medium">{it.vehicle_code || it.reg_no || '—'}</td>
-                          <td className="px-2 py-1">{it.mileage || '—'}</td>
-                          <td className="px-2 py-1">{it.ignition_time || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Vehicle Records Data */}
-            {pendingVehicleRecords && pendingVehicleRecords.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-purple-700 mb-3 pb-2 border-b border-purple-200">🚗 Vehicle Records Data (Type & Usage)</h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs">
-                    <thead className="text-left text-gray-600 bg-purple-50">
-                      <tr>
-                        <th className="px-2 py-2">#</th>
-                        <th className="px-2 py-2">Reg No</th>
-                        <th className="px-2 py-2">Vehicle Code</th>
-                        <th className="px-2 py-2">Vehicle Type</th>
-                        <th className="px-2 py-2">Used For</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingVehicleRecords.map((it, i) => (
-                        <tr key={i} className={`${i % 2 ? 'bg-purple-50' : ''}`}>
-                          <td className="px-2 py-1">{i + 1}</td>
-                          <td className="px-2 py-1 font-medium">{it.reg_no || '—'}</td>
-                          <td className="px-2 py-1">{it.vehicle_code || '—'}</td>
-                          <td className="px-2 py-1">{it.vehicle_type || '—'}</td>
-                          <td className="px-2 py-1">{it.used_for || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Info Note */}
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 mb-4">
-              <strong>ℹ️ How Reconciliation Works:</strong> Records are merged by Vehicle Code. Daily Reporting creates rows with Mileage & IG Time. Vehicle Records enriches those rows with Type & Usage. If Vehicle Records arrives first, it's stored temporarily until matching Daily Reporting data arrives.
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button onClick={() => { setShowTransferReview(false); setPendingTransfer(null); setPendingVehicleRecords([]) }} className="px-3 py-2 rounded bg-gray-50 border text-sm">Dismiss</button>
-              {hasProposedUsedFor ? (
-                <button onClick={() => { openUsedForModal(); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Process Used For</button>
-              ) : (
-                <button onClick={() => { setRows(prev => mergePendingToRows(prev)); localStorage.removeItem('mileageReportTransfer'); setPendingTransfer(null); setPendingVehicleRecords([]); setTransferApplied(true); setShowTransferReview(false) }} className="px-3 py-2 rounded bg-purple-600 text-white text-sm">Confirm & Apply</button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Used For Modal - Top Level */}
       {showUsedForModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-3/4 p-6 max-h-[80vh] overflow-hidden shadow-2xl border border-white/60 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Used For - Grid View</h3>
-              <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-all animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-indigo-500/20 border border-white/50 overflow-hidden transform transition-all scale-100 opacity-100 flex flex-col max-h-[85vh]">
+
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Used For Specification</h3>
+                <p className="text-sm text-slate-500 mt-0.5">Define usage purposes for active vehicles</p>
+              </div>
+              <button
+                onClick={() => { setShowUsedForModal(false); setActiveTab('all') }}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
 
+            {/* Error Message */}
             {usedForSaveError && (
-              <div className="mb-3 text-sm text-red-700">{usedForSaveError}</div>
+              <div className="px-8 pt-4 pb-0">
+                <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-xl flex items-center text-sm">
+                  <svg className="w-5 h-5 mr-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  {usedForSaveError}
+                </div>
+              </div>
             )}
 
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-2 py-2">SR</th>
-                    <th className="px-2 py-2">Vehicle Code</th>
-                    <th className="px-2 py-2">Type of Vehicle</th>
-                    <th className="px-2 py-2">Used For</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usedForGrid.map((r, idx) => (
-                    <tr key={idx} className={`${idx % 2 ? 'bg-gray-50' : ''}`}>
-                      <td className="px-2 py-1">{r.sr || idx + 1}</td>
-                      <td className="px-2 py-1"><input value={r.vehicle_code} onChange={(e) => updateUsedForCell(idx, 'vehicle_code', e.target.value)} className="p-1 text-sm border rounded" /></td>
-                      <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateUsedForCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
-                      <td className="px-2 py-1">
-                        {r.options && r.options.length > 1 ? (
-                          <>
-                            <select value={r.used_for || ''} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded w-full">
-                              <option value="">-- Select --</option>
-                              {r.options.map((opt) => (
-                                <option key={opt} value={opt}>{opt}</option>
-                              ))}
-                            </select>
-                            <div className="text-xs text-slate-400 italic mt-1">Choose one of the options</div>
-                            {r.used_for_option_valid === false && (
-                              <div className="text-xs text-red-600 mt-1">Value must be one of the allowed options</div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <input list={r.options && r.options.length ? `usedfor-list-${idx}` : undefined} value={r.used_for || ''} onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)} className="p-1 text-sm border rounded w-full" />
-
-                            {r.options && r.options.length > 0 && (
-                              <datalist id={`usedfor-list-${idx}`}>
-                                {r.options.map((opt) => (
-                                  <option key={opt} value={opt} />
-                                ))}
-                              </datalist>
-                            )}
-
-                            {r.options && r.options.length > 0 && (
-                              <div className="text-xs text-slate-400 italic mt-1">Options: {r.options.join(', ')}</div>
-                            )}
-
-                            {r.used_for_source === 'suggested' && (
-                              <div className="text-xs text-slate-400 italic mt-1">Suggested based on selected vehicle type</div>
-                            )}
-
-                            {r.used_for_source === 'user' && r.options && r.options.length > 0 && r.options.indexOf((r.used_for || '').toString()) === -1 && (
-                              <div className="text-xs text-amber-600 italic mt-1">Custom value (not in options)</div>
-                            )}
-
-                            {r.used_for_valid === false && (
-                              <div className="text-xs text-red-600 mt-1">Max 100 chars</div>
-                            )}
-                          </>
-                        )}
-                      </td>
+            {/* Modal Content - Scrollable Grid */}
+            <div className="p-8 overflow-y-auto custom-scrollbar">
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-inner">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-16 text-center border-r border-slate-200">SR</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left border-r border-slate-200">Vehicle Code</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left border-r border-slate-200">Type</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left">Used For</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-100">
+                    {usedForGrid.map((r, idx) => (
+                      <tr key={idx} className="group hover:bg-indigo-50/10 transition-colors">
+                        <td className="px-4 py-3 text-xs font-medium text-slate-400 text-center border-r border-slate-100 bg-slate-50/50">{r.sr || idx + 1}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
+                          <input
+                            value={r.vehicle_code}
+                            onChange={(e) => updateUsedForCell(idx, 'vehicle_code', e.target.value)}
+                            className="w-full bg-transparent border-none text-sm font-mono text-slate-700 focus:ring-0 p-0"
+                            placeholder="-"
+                          />
+                        </td>
+                        <td className="px-4 py-3 border-r border-slate-100">
+                          <input
+                            value={r.vehicle_type}
+                            onChange={(e) => updateUsedForCell(idx, 'vehicle_type', e.target.value)}
+                            className="w-full bg-transparent border-none text-sm text-slate-600 focus:ring-0 p-0"
+                            placeholder="-"
+                          />
+                        </td>
+                        <td className="px-4 py-3 relative">
+                          <div className="relative">
+                            {r.options && r.options.length > 1 ? (
+                              <div className="relative">
+                                <select
+                                  value={r.used_for || ''}
+                                  onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)}
+                                  className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none transition-shadow"
+                                >
+                                  <option value="">-- Select Purpose --</option>
+                                  {r.options.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                                {r.used_for_option_valid === false && (
+                                  <p className="text-xs text-rose-500 mt-1 flex items-center">
+                                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    Invalid selection
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                <input
+                                  list={r.options && r.options.length ? `usedfor-list-${idx}` : undefined}
+                                  value={r.used_for || ''}
+                                  onChange={(e) => updateUsedForCell(idx, 'used_for', e.target.value)}
+                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder-slate-400"
+                                  placeholder="Enter purpose..."
+                                />
+
+                                {r.options && r.options.length > 0 && (
+                                  <datalist id={`usedfor-list-${idx}`}>
+                                    {r.options.map((opt) => (
+                                      <option key={opt} value={opt} />
+                                    ))}
+                                  </datalist>
+                                )}
+
+                                { /* Validation / Info messages */}
+                                <div className="mt-1 space-y-0.5">
+                                  {r.used_for_source === 'suggested' && (
+                                    <p className="text-[10px] text-blue-600 font-medium flex items-center">
+                                      <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      Suggested for {r.vehicle_type}
+                                    </p>
+                                  )}
+
+                                  {r.used_for_source === 'user' && r.options && r.options.length > 0 && r.options.indexOf((r.used_for || '').toString()) === -1 && (
+                                    <p className="text-[10px] text-amber-600 font-medium flex items-center">
+                                      <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                      Custom value
+                                    </p>
+                                  )}
+
+                                  {r.used_for_valid === false && (
+                                    <p className="text-[10px] text-rose-600 font-medium">Max 100 characters</p>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setShowUsedForModal(false); setActiveTab('all') }} className="px-3 py-2 bg-gray-50 border rounded">Cancel</button>
-              <button onClick={saveUsedForGrid} className="px-3 py-2 bg-sky-600 text-white rounded">Save</button>
+            {/* Modal Footer */}
+            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={() => { setShowUsedForModal(false); setActiveTab('all') }}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveUsedForGrid}
+                className="px-6 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm font-bold"
+              >
+                Save Changes
+              </button>
             </div>
+
           </div>
         </div>
       )}
 
       {/* Threshold Modal - Top Level */}
       {showThresholdModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
-          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl w-11/12 md:w-3/4 p-6 max-h-[80vh] overflow-hidden shadow-2xl border border-white/60 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Threshold - Grid View</h3>
-              <button onClick={() => { setShowThresholdModal(false); setActiveTab('all') }} className="text-slate-500">Close</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-all animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-indigo-500/20 border border-white/50 overflow-hidden transform transition-all scale-100 opacity-100 flex flex-col max-h-[85vh]">
+
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Threshold Configuration</h3>
+                <p className="text-sm text-slate-500 mt-0.5">Set operational limits for vehicle types</p>
+              </div>
+              <button
+                onClick={() => { setShowThresholdModal(false); setActiveTab('all') }}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
 
-            <div className="overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-2 py-2">SR</th>
-                    <th className="px-2 py-2">Type of Vehicle</th>
-                    <th className="px-2 py-2">Threshold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {thresholdGrid.map((r, idx) => (
-                    <tr key={idx} className={`${idx % 2 ? 'bg-gray-50' : ''}`}>
-                      <td className="px-2 py-1">{r.sr || idx + 1}</td>
-                      <td className="px-2 py-1"><input value={r.vehicle_type} onChange={(e) => updateThresholdCell(idx, 'vehicle_type', e.target.value)} className="p-1 text-sm border rounded" /></td>
-                      <td className="px-2 py-1">
-                        <div className="flex items-center space-x-2">
-                          <input value={r.threshold} onChange={(e) => updateThresholdCell(idx, 'threshold', e.target.value)} type="number" step="any" min="0" className="p-1 text-sm border rounded w-28" />
-                          {r.threshold_unit === 'hrs' && (
-                            <div className="text-xs text-slate-600">hrs</div>
-                          )}
-                        </div>
-                        {!r.threshold_valid && (
-                          <div className="text-xs text-red-600 mt-1">Enter a valid non-negative number</div>
-                        )}
-                      </td>
+            {/* Modal Content */}
+            <div className="p-8 overflow-y-auto custom-scrollbar">
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-inner">
+                <table className="min-w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-16 text-center border-r border-slate-200">SR</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left border-r border-slate-200">Type of Vehicle</th>
+                      <th className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left">Threshold (hrs)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-100">
+                    {thresholdGrid.map((r, idx) => (
+                      <tr key={idx} className="group hover:bg-indigo-50/10 transition-colors">
+                        <td className="px-4 py-3 text-xs font-medium text-slate-400 text-center border-r border-slate-100 bg-slate-50/50">{r.sr || idx + 1}</td>
+                        <td className="px-4 py-3 border-r border-slate-100">
+                          <input
+                            value={r.vehicle_type}
+                            onChange={(e) => updateThresholdCell(idx, 'vehicle_type', e.target.value)}
+                            className="w-full bg-transparent border-none text-sm text-slate-700 focus:ring-0 p-0"
+                            placeholder="-"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              value={r.threshold}
+                              onChange={(e) => updateThresholdCell(idx, 'threshold', e.target.value)}
+                              type="number"
+                              step="any"
+                              min="0"
+                              className="w-32 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono"
+                              placeholder="0.00"
+                            />
+                            {r.threshold_unit === 'hrs' && (
+                              <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">hrs</span>
+                            )}
+                          </div>
+                          {!r.threshold_valid && (
+                            <p className="text-xs text-rose-500 mt-1 flex items-center font-medium">
+                              <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              Must be a positive number
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => { setShowThresholdModal(false); setActiveTab('all') }} className="px-3 py-2 bg-gray-50 border rounded">Cancel</button>
-              <button onClick={saveThresholdGrid} className="px-3 py-2 bg-sky-600 text-white rounded">Save</button>
+            {/* Modal Footer */}
+            <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={() => { setShowThresholdModal(false); setActiveTab('all') }}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveThresholdGrid}
+                className="px-6 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm font-bold"
+              >
+                Save Limits
+              </button>
             </div>
+
           </div>
         </div>
       )}
