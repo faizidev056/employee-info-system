@@ -166,37 +166,67 @@ export default function HRTab() {
     // Aggregate check-in and check-out rows separately and merge them
     const map = new Map()
 
+    const getKey = (r, idx, prefix) => {
+      // Prioritize CNIC if valid (length > 4 is a heuristic check)
+      if (r.cnic && String(r.cnic).trim().length > 4) return String(r.cnic).trim()
+      // Then Username if valid
+      if (r.username && String(r.username).trim().length > 1) return String(r.username).trim()
+      // Then SR
+      if (r.sr) return `sr-${r.sr}`
+      // Fallback
+      return `${prefix}-${idx}`
+    }
+
     // Process check-in rows
     checkinRows.forEach((r, idx) => {
-      const key = r.username || r.sr || r.cnic || `checkin-${idx}`
+      const key = getKey(r, idx, 'checkin')
+
       const existing = map.get(key) || {
-        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '',
-        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '',
-        presentFlag: false, absentFlag: false, manual: false
+        _key: key,
+        sr: r.sr || '',
+        username: r.username || '',
+        cnic: r.cnic || '',
+        uc_ward: r.uc_ward || '',
+        last_check_in_ts: 0,
+        last_check_out_ts: 0,
+        last_check_in: '',
+        last_check_out: '',
+        presentFlag: false,
+        absentFlag: false,
+        manual: false
       }
+
       const dt = r.datetime || ''
       const type = (r.type || '').toLowerCase()
 
+      // Update basic info if missing
+      if (!existing.username && r.username) existing.username = r.username
+      if (!existing.cnic && r.cnic) existing.cnic = r.cnic
+      if (!existing.uc_ward && r.uc_ward) existing.uc_ward = r.uc_ward
+
       // Check if type explicitly marks as Absent
-      if (type.includes('absent')) {
+      // Also check check_in value for explicit absent marker
+      const checkInVal = (r.check_in || '').toString().trim().toUpperCase()
+      if (type.includes('absent') || checkInVal === 'A' || checkInVal === 'ABSENT' || checkInVal === 'LEAVE' || checkInVal === 'L') {
         existing.absentFlag = true
+        // If explicitly absent, ensure we don't accidentally mark present
+        if (checkInVal === 'A' || checkInVal === 'ABSENT') existing.presentFlag = false
+      } else {
+        // Inherently present if in Check-In list (unless absent)
+        existing.presentFlag = true
+        // If no timestamp and no existing check-in string, set a default
+        if (!existing.last_check_in) existing.last_check_in = 'Checked In'
       }
 
       // determine check-in timestamp
       let parsedIn = 0
       if (r.check_in) parsedIn = Date.parse(r.check_in) || 0
       else if (type.includes('in') || type.includes('check-in') || type.includes('checkin')) parsedIn = Date.parse(dt) || 0
-      else if (type.includes('present')) {
-        existing.presentFlag = true
-        parsedIn = Date.parse(dt) || 0
-      }
+      else if (dt) parsedIn = Date.parse(dt) || 0
 
       if (parsedIn && parsedIn > (existing.last_check_in_ts || 0)) {
         existing.last_check_in_ts = parsedIn
         existing.last_check_in = r.check_in || dt || new Date(parsedIn).toISOString()
-      } else if (type.includes('present') && !existing.last_check_in_ts) {
-        existing.presentFlag = true
-        existing.last_check_in = existing.last_check_in || 'Present'
       }
 
       map.set(key, existing)
@@ -204,30 +234,53 @@ export default function HRTab() {
 
     // Process check-out rows
     checkoutRows.forEach((r, idx) => {
-      const key = r.username || r.sr || r.cnic || `checkout-${idx}`
+      const key = getKey(r, idx, 'checkout')
+
       const existing = map.get(key) || {
-        _key: key, sr: r.sr || '', username: r.username || '', cnic: r.cnic || '', uc_ward: r.uc_ward || '',
-        last_check_in_ts: 0, last_check_out_ts: 0, last_check_in: '', last_check_out: '',
-        presentFlag: false, absentFlag: false, manual: false
+        _key: key,
+        sr: r.sr || '',
+        username: r.username || '',
+        cnic: r.cnic || '',
+        uc_ward: r.uc_ward || '',
+        last_check_in_ts: 0,
+        last_check_out_ts: 0,
+        last_check_in: '',
+        last_check_out: '',
+        presentFlag: false,
+        absentFlag: false,
+        manual: false
       }
+
       const dt = r.datetime || ''
       const type = (r.type || '').toLowerCase()
+
+      // Update basic info if missing
+      if (!existing.username && r.username) existing.username = r.username
+      if (!existing.cnic && r.cnic) existing.cnic = r.cnic
+      if (!existing.uc_ward && r.uc_ward) existing.uc_ward = r.uc_ward
+
+      // Check if type explicitly marks as Absent
+      // Also check check_out value for explicit absent marker
+      const checkOutVal = (r.check_out || '').toString().trim().toUpperCase()
+      if (type.includes('absent') || checkOutVal === 'A' || checkOutVal === 'ABSENT' || checkOutVal === 'LEAVE' || checkOutVal === 'L') {
+        existing.absentFlag = true
+        // If explicitly absent, ensure we don't accidentally mark present
+        if (checkOutVal === 'A' || checkOutVal === 'ABSENT') existing.presentFlag = false
+      } else {
+        // Only mark as present if we actually have a check-out timestamp or value
+        existing.presentFlag = true
+        if (!existing.last_check_out) existing.last_check_out = 'Checked Out'
+      }
 
       // determine check-out timestamp
       let parsedOut = 0
       if (r.check_out) parsedOut = Date.parse(r.check_out) || 0
       else if (type.includes('out') || type.includes('check-out') || type.includes('checkout')) parsedOut = Date.parse(dt) || 0
-      else if (type.includes('present')) {
-        // also treat 'present' in checkout tab as a valid checkout
-        parsedOut = Date.parse(dt) || 0
-      }
+      else if (dt) parsedOut = Date.parse(dt) || 0
 
       if (parsedOut && parsedOut > (existing.last_check_out_ts || 0)) {
         existing.last_check_out_ts = parsedOut
         existing.last_check_out = r.check_out || dt || new Date(parsedOut).toISOString()
-      } else if (type.includes('present') && !existing.last_check_out_ts) {
-        // if just 'present' marker but no valid timestamp
-        existing.last_check_out = existing.last_check_out || 'Present'
       }
 
       map.set(key, existing)
@@ -238,11 +291,14 @@ export default function HRTab() {
       const outTs = e.last_check_out_ts || 0
 
       let status = 'Absent'
-      // if explicit absent marker -> mark Absent (takes priority)
-      if (e.absentFlag) status = 'Absent'
-      // if explicit present marker without timestamps -> mark Present
-      else if (e.presentFlag && inTs === 0 && outTs === 0) status = 'Present'
-      else if (inTs && (!outTs || inTs > outTs)) status = 'Present'
+
+      if (e.absentFlag) {
+        status = 'Absent'
+      } else if (e.presentFlag) {
+        status = 'Present'
+      } else if (inTs || outTs) {
+        status = 'Present'
+      }
 
       // Apply manual override if present
       if (attendanceOverrides && attendanceOverrides[e._key] !== undefined) {
@@ -278,16 +334,41 @@ export default function HRTab() {
 
   const getCheckInStatus = (a) => {
     // Return P if check-in exists (either has timestamp, check-in data, or check_in column from upload), otherwise -
+    const val = (a.check_in || a.last_check_in || '').toString().trim()
+    const upper = val.toUpperCase()
+
+    if (upper === 'A' || upper === 'ABSENT') return 'A'
+    if (upper === 'L' || upper === 'LEAVE') return 'L'
+    if (upper === 'P' || upper === 'PRESENT') return 'P'
+
     const inTs = a.last_check_in_ts || 0
-    const checkInData = a.check_in || ''
-    return (inTs > 0 || a.last_check_in || checkInData) ? 'P' : '-'
+    if (inTs > 0) return 'P'
+
+    return val ? 'P' : '-'
   }
 
   const getCheckOutStatus = (a) => {
-    // Return P if check-out exists (either has timestamp, check-out data, or check_out column from upload), otherwise -
+    // Return P if check-out exists (either has timestamp, check-out data, or check_out column from upload)
+    const val = (a.check_out || a.last_check_out || '').toString().trim()
+    const upper = val.toUpperCase()
+
+    if (upper === 'A' || upper === 'ABSENT') return 'A'
+    if (upper === 'L' || upper === 'LEAVE') return 'L'
+    if (upper === 'P' || upper === 'PRESENT') return 'P'
+
     const outTs = a.last_check_out_ts || 0
-    const checkOutData = a.check_out || ''
-    return (outTs > 0 || a.last_check_out || checkOutData) ? 'P' : '-'
+    if (outTs > 0) return 'P'
+
+    // If they have checked in but not checked out, mark checkout as 'A'
+    const hasCheckIn = (a.last_check_in_ts > 0) || (a.last_check_in && a.last_check_in.trim() !== '') || (a.check_in && a.check_in.trim() !== '')
+    const checkInVal = (a.check_in || a.last_check_in || '').toString().trim().toUpperCase()
+    const isCheckInAbsent = checkInVal === 'A' || checkInVal === 'ABSENT' || checkInVal === 'LEAVE' || checkInVal === 'L'
+
+    if (hasCheckIn && !val && !isCheckInAbsent) {
+      return 'A'
+    }
+
+    return val ? 'P' : '-'
   }
 
   const getStatusColor = (letter) => {
@@ -317,8 +398,9 @@ export default function HRTab() {
       // Use attendanceRows if they exist (uploaded directly to Attendance tab), otherwise compute from check-in/check-out
       const isAttendanceRowsMode = attendanceRows && attendanceRows.length > 0
       const dataToUse = isAttendanceRowsMode ? attendanceRows : computeAttendance()
-      // If using attendanceRows directly, push all. Otherwise, filter by pushAll or manual flag
-      const toPush = isAttendanceRowsMode ? dataToUse : dataToUse.filter(a => pushAll || a.manual)
+
+      // Push all records in the view (effectively 'Push All' is always true for the new UI)
+      const toPush = dataToUse
       if (!toPush.length) {
         setPushResult({ success: 0, failed: 0, message: 'No changes to push.' })
         setPushing(false)
@@ -407,24 +489,42 @@ export default function HRTab() {
         const statusType = rawStatus.toUpperCase()
 
         console.log(`📝 Processing ${worker.full_name}: status="${rawStatus}"`)
-        // Direct check for single letters to preserve exact input
-        if (statusType === 'P' || statusType === 'L' || statusType === 'A') {
-          mapped = statusType
+
+        // 1. Check computed flags first (most reliable from computeAttendance)
+        if (a.absentFlag) {
+          mapped = 'A'
         }
-        // Then check for full words
-        else if (statusType.includes('PRESENT')) {
+        else if (a.presentFlag) {
           mapped = 'P'
         }
-        else if (statusType.includes('LEAVE')) {
-          mapped = 'L'
+        // 2. Direct check for single letters/words in type/status column
+        else if (statusType === 'P' || statusType === 'L' || statusType === 'A') {
+          mapped = statusType
         }
         else if (statusType.includes('ABSENT')) {
           mapped = 'A'
         }
-        // If no recognizable status, check if check_in or check_out exists
-        else if (a.check_in || a.last_check_in) {
-          mapped = 'P'  // If there's a check-in, mark as present
-          console.log(`✅ No type specified, but check-in found, marking as Present`)
+        else if (statusType.includes('LEAVE')) {
+          mapped = 'L'
+        }
+        else if (statusType.includes('PRESENT')) {
+          mapped = 'P'
+        }
+        // 3. Last resort: check if content exists in check-in/check-out fields
+        else {
+          const checkInVal = (a.check_in || a.last_check_in || '').toString().trim().toUpperCase()
+          const checkOutVal = (a.check_out || a.last_check_out || '').toString().trim().toUpperCase()
+
+          if (checkInVal === 'A' || checkInVal === 'ABSENT' || checkOutVal === 'A' || checkOutVal === 'ABSENT') {
+            mapped = 'A'
+          }
+          else if (checkInVal === 'L' || checkInVal === 'LEAVE' || checkOutVal === 'L' || checkOutVal === 'LEAVE') {
+            mapped = 'L'
+          }
+          else if (checkInVal || checkOutVal) {
+            mapped = 'P'
+            console.log(`✅ No type specified, but check-in found ("${checkInVal}"/"${checkOutVal}"), marking as Present`)
+          }
         }
 
         console.log(`   -> Mapped to: ${mapped}`)
@@ -504,38 +604,37 @@ export default function HRTab() {
     const sheet = wb.Sheets[first]
     const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
 
-    if (active === 'attendance') {
-      // For attendance tab, parse with all attendance columns
-      // Create a smarter column mapper that tries to match columns by keywords
-      const json_keys = json.length > 0 ? Object.keys(json[0]) : []
+    // Create a smarter column mapper that tries to match columns by keywords
+    const json_keys = json.length > 0 ? Object.keys(json[0]) : []
 
-      // Find which actual column index matches expected headers
-      const findColumnIndex = (keywords) => {
-        for (let i = 0; i < json_keys.length; i++) {
-          const key = json_keys[i].toLowerCase()
-          for (const kw of keywords) {
-            if (key.includes(kw.toLowerCase())) {
-              return i
-            }
+    // Find which actual column index matches expected headers
+    const findColumnIndex = (keywords) => {
+      for (let i = 0; i < json_keys.length; i++) {
+        const key = json_keys[i].toLowerCase()
+        for (const kw of keywords) {
+          if (key.includes(kw.toLowerCase())) {
+            return i
           }
         }
-        return -1
       }
+      return -1
+    }
 
+    const getValueByIndex = (row, idx) => {
+      if (idx >= 0 && idx < json_keys.length) {
+        return (row[json_keys[idx]] || '').toString().trim()
+      }
+      return ''
+    }
+
+    if (active === 'attendance') {
       const checkInIdx = findColumnIndex(['check-in', 'checkin', 'check in'])
       const checkOutIdx = findColumnIndex(['check-out', 'checkout', 'check out'])
       const typeIdx = findColumnIndex(['attendance type', 'attendance_type'])
       const fatherIdx = findColumnIndex(['father', 'husband'])
       const designationIdx = findColumnIndex(['designation'])
-      const ucwardIdx = findColumnIndex(['uc', 'ward'])
-      const attendancePointIdx = findColumnIndex(['attendance point'])
-
-      const getValueByIndex = (row, idx) => {
-        if (idx >= 0 && idx < json_keys.length) {
-          return (row[json_keys[idx]] || '').toString().trim()
-        }
-        return ''
-      }
+      const ucwardIdx = findColumnIndex(['uc', 'ward', 'union'])
+      const attendancePointIdx = findColumnIndex(['attendance point', 'point'])
 
       const normalized = json.map((r) => ({
         sr: r.sr || r.SR || r['SR'] || r['Sr'] || '',
@@ -543,7 +642,7 @@ export default function HRTab() {
         father_name: fatherIdx >= 0 ? getValueByIndex(r, fatherIdx) : (r['father_name'] || r['father/husband'] || r['Father/Husband'] || r['FATHER/HUSBAND'] || ''),
         cnic: r.cnic || r.CNIC || r['CNIC'] || '',
         designation: designationIdx >= 0 ? getValueByIndex(r, designationIdx) : (r.designation || r.Designation || r['DESIGNATION'] || ''),
-        uc_ward: ucwardIdx >= 0 ? getValueByIndex(r, ucwardIdx) : (r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || r['UC/WARD'] || ''),
+        uc_ward: ucwardIdx >= 0 ? getValueByIndex(r, ucwardIdx) : (r['uc/ward'] || r['UC/WARD'] || r.uc_ward || r.UC || r.ward || r.Ward || r['UC/WARD'] || ''),
         attendance_point: attendancePointIdx >= 0 ? getValueByIndex(r, attendancePointIdx) : (r['attendance_point'] || r['Attendance Point'] || r['ATTENDANCE POINT'] || ''),
         check_in: checkInIdx >= 0 ? getValueByIndex(r, checkInIdx) : (r['check-in'] || r['Check-In'] || r['CHECK-IN'] || ''),
         check_out: checkOutIdx >= 0 ? getValueByIndex(r, checkOutIdx) : (r['check-out'] || r['Check-Out'] || r['CHECK-OUT'] || ''),
@@ -552,14 +651,20 @@ export default function HRTab() {
       setPreviewRows(normalized.slice(0, 6))
       setAttendanceRows(normalized)
     } else {
-      // For check-in/check-out tabs, use original template
+      // For check-in/check-out tabs, use smarter matching too
+      const srIdx = findColumnIndex(['sr', 'serial', 'emp id', 'employee id'])
+      const nameIdx = findColumnIndex(['user name', 'username', 'name', 'employee name'])
+      const cnicIdx = findColumnIndex(['cnic', 'identity'])
+      const ucwardIdx = findColumnIndex(['uc', 'ward', 'union'])
+      const datetimeIdx = findColumnIndex(['date', 'time', 'datetime'])
+
       const normalized = json.map((r) => ({
-        sr: r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || '',
-        username: r.username || r.Username || r['User Name'] || r.name || r.Name || '',
-        cnic: r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || '',
-        uc_ward: r['uc/ward'] || r.uc_ward || r.UC || r.ward || r.Ward || '',
+        sr: srIdx >= 0 ? getValueByIndex(r, srIdx) : (r.sr || r.SR || r['SR'] || r['Sr'] || r['sr#'] || r.employee_id || r.employeeId || ''),
+        username: nameIdx >= 0 ? getValueByIndex(r, nameIdx) : (r.username || r.Username || r['User Name'] || r.name || r.Name || ''),
+        cnic: cnicIdx >= 0 ? getValueByIndex(r, cnicIdx) : (r.cnic || r.CNIC || r['CNIC'] || r.cnicNumber || r['Cnic'] || ''),
+        uc_ward: ucwardIdx >= 0 ? getValueByIndex(r, ucwardIdx) : (r['uc/ward'] || r['UC/WARD'] || r.uc_ward || r.UC || r.ward || r.Ward || ''),
         type: r.type || r.Type || (r.check_in ? 'Check-In' : r.check_out ? 'Check-Out' : '') || '',
-        datetime: r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || ''
+        datetime: datetimeIdx >= 0 ? getValueByIndex(r, datetimeIdx) : (r['date&time'] || r.datetime || r['date_time'] || r.date || r.Date || '')
       }))
       setPreviewRows(normalized.slice(0, 6))
       setRows(normalized)
@@ -843,8 +948,6 @@ export default function HRTab() {
         </div>
 
         <div className="flex items-center space-x-3 pr-2">
-          <button onClick={downloadTemplate} className="px-4 py-2 rounded-xl bg-slate-700/10 text-slate-700 hover:bg-slate-700/20 text-sm font-medium transition-all border border-slate-700/5">Template</button>
-
           <button onClick={() => { setUploadMode('choose'); setShowUploadModal(true) }} className="px-4 py-2 rounded-xl bg-white/80 text-slate-700 hover:bg-white border border-white/60 shadow-sm text-sm font-medium transition-all backdrop-blur-sm">Upload Report</button>
 
           <button onClick={() => {
@@ -862,23 +965,42 @@ export default function HRTab() {
 
           {active === 'attendance' && (
             <div className="flex items-center space-x-3 pl-3 border-l border-slate-200/50">
-              <label className="inline-flex items-center text-sm font-medium text-slate-700 cursor-pointer">
-                <input type="checkbox" checked={pushAll} onChange={(e) => setPushAll(e.target.checked)} className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30" />
-                <span>Push all</span>
-              </label>
-
-              <button onClick={() => pushAttendanceToWorkerManager()} disabled={pushing} className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 text-sm font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed">
-                {pushing ? 'Pushing...' : 'Push Updates'}
-              </button>
-
               {pushedData.length > 0 && (
                 <button
                   onClick={() => setShowPushedDataModal(true)}
-                  className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 text-sm font-medium transition-all"
+                  className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 transition-all font-medium text-xs flex flex-col items-center justify-center w-10 h-10 shadow-sm"
+                  title={`View Push History (${pushedData.length} records)`}
                 >
-                  History ({pushedData.length})
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  {pushedData.length > 0 && <span className="absolute top-0 right-0 -mt-1 -mr-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center border-2 border-white">{pushedData.length}</span>}
                 </button>
               )}
+
+              <div className="relative group">
+                {pushing && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+                  </span>
+                )}
+                <button
+                  onClick={() => pushAttendanceToWorkerManager()}
+                  disabled={pushing}
+                  className={`p-3 rounded-full shadow-lg transition-all duration-300 relative overflow-hidden group/btn ${pushing
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    : 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 active:scale-95 border border-white/20'
+                    }`}
+                  title="Push Attendance Data"
+                >
+                  <div className={`transition-transform duration-700 ${pushing ? 'animate-spin' : 'group-hover/btn:rotate-180'}`}>
+                    {pushing ? (
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    ) : (
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                    )}
+                  </div>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -917,151 +1039,160 @@ export default function HRTab() {
 
       {showUploadModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm transition-all">
-          <div className="w-full max-w-3xl bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/50 overflow-hidden">
-            {uploadMode === 'choose' && (
-              <div className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Upload Report</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => setUploadMode('file')}>
-                    <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-slate-700" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M7 10l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      <div>
-                        <div className="font-semibold">Upload Excel / CSV</div>
-                        <div className="text-xs text-slate-500">Choose a file to import (XLSX/CSV)</div>
-                      </div>
-                    </div>
-                  </div>
+          <div className="w-full max-w-4xl bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-indigo-500/20 border border-white/50 overflow-hidden transform transition-all scale-100 opacity-100">
 
-                  <div className="p-4 border rounded hover:shadow-lg cursor-pointer" onClick={() => { initPasteGrid(8); setUploadMode('paste') }}>
-                    <div className="flex items-center space-x-3">
-                      <svg className="w-8 h-8 text-yellow-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      <div>
-                        <div className="font-semibold">Paste Manually</div>
-                        <div className="text-xs text-slate-500">Open an editable spreadsheet-like grid to paste data</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex justify-end">
-                  <button onClick={handleCloseUploadModal} className="px-4 py-2 rounded bg-gray-50 border">Cancel</button>
-                </div>
+            {/* Modal Header */}
+            <div className="px-8 py-5 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">
+                  {uploadMode === 'choose' && 'Import Data'}
+                  {uploadMode === 'file' && 'Upload Spreadsheet'}
+                  {uploadMode === 'paste' && 'Paste Data Grid'}
+                </h3>
+                <p className="text-sm text-slate-500 mt-0.5">Add records to your report seamlessly</p>
               </div>
-            )}
+              <button
+                onClick={handleCloseUploadModal}
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
 
-            {uploadMode === 'file' && (
-              <div className="p-4">
-                <h3 className="text-lg font-semibold mb-3">Upload Excel / CSV</h3>
-                <div className="p-4 border-2 border-dashed rounded bg-gray-50 text-center hover:border-sky-300"
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}>
-                  <label className="block cursor-pointer">
-                    <div className="flex items-center justify-center space-x-3">
-                      <svg className="w-6 h-6 text-slate-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 3h8v4H8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      <div className="text-sm text-slate-600">Drop a file here or click to browse</div>
+            {/* Modal Content */}
+            <div className="p-8">
+              {uploadMode === 'choose' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <button
+                    onClick={() => setUploadMode('file')}
+                    className="group flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all duration-300 text-center bg-white"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 group-hover:bg-indigo-100 text-indigo-500 flex items-center justify-center mb-4 transition-colors">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                     </div>
-                    <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setShowUploadModal(false); setUploadMode('choose') }} className="hidden" />
-                  </label>
-                  {selectedFileName && <div className="mt-3 text-xs text-slate-700">Selected: <strong>{selectedFileName}</strong></div>}
-                </div>
+                    <h4 className="text-lg font-semibold text-slate-800 mb-1">Upload File</h4>
+                    <p className="text-sm text-slate-500 px-4">Import an Excel (.xlsx) or CSV file directly into the table</p>
+                  </button>
 
-                {previewRows && previewRows.length > 0 && (
-                  <div className="mt-4 border rounded p-2 bg-white">
-                    <div className="text-sm font-semibold mb-2">Preview (first {previewRows.length} rows)</div>
-                    <div className="overflow-auto max-h-36">
-                      <table className="min-w-full text-xs">
-                        <thead className="text-left text-gray-500">
-                          <tr>
-                            {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h) => (
-                              <th key={h} className="pr-4">{getHeaderLabel(h)}</th>
+                  <button
+                    onClick={() => { initPasteGrid(10); setUploadMode('paste') }}
+                    className="group flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-300 text-center bg-white"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 text-emerald-500 flex items-center justify-center mb-4 transition-colors">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-slate-800 mb-1">Paste Manually</h4>
+                    <p className="text-sm text-slate-500 px-4">Copy data from Excel/Sheets and paste directly into a grid</p>
+                  </button>
+                </div>
+              )}
+
+              {uploadMode === 'file' && (
+                <div className="space-y-6">
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0]; if (f) handleDropFile(f); }}
+                    className="relative group cursor-pointer"
+                  >
+                    <input type="file" accept=".xlsx, .xls, .csv" onChange={async (e) => { await handleFile(e); setUploadMode('choose'); setShowUploadModal(false) }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-indigo-200 group-hover:border-indigo-400 rounded-3xl bg-indigo-50/30 group-hover:bg-indigo-50/60 transition-all">
+                      <div className="w-20 h-20 bg-white rounded-full shadow-lg shadow-indigo-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                      </div>
+                      <p className="text-xl font-bold text-slate-800 mb-2">Drop your spreadsheet here</p>
+                      <p className="text-sm text-slate-500 max-w-sm text-center">Support for .xlsx, .xls, and .csv files. Data will be automatically mapped to columns.</p>
+                      <button className="mt-6 px-6 py-2 bg-white text-indigo-600 font-semibold rounded-xl border border-indigo-100 shadow-sm hover:shadow-md transition-all text-sm">Browse Files</button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button onClick={() => setUploadMode('choose')} className="text-sm font-medium text-slate-500 hover:text-slate-800 px-4 py-2 hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                      Back to options
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {uploadMode === 'paste' && (
+                <div className="space-y-6">
+                  <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-inner">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-slate-200">
+                            <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-12 text-center border-r border-slate-200">#</th>
+                            {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h, ci) => (
+                              <th key={ci} className="px-4 py-3 text-xs font-bold text-slate-600 uppercase tracking-wider text-left border-r border-slate-200 min-w-[140px] whitespace-nowrap">{getHeaderLabel(h)}</th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody>
-                          {previewRows.map((r, i) => (
-                            <tr key={i} className={`${i % 2 ? 'bg-gray-50' : ''}`}>
-                              {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h) => (
-                                <td key={h} className="pr-4">{r[h] || ''}</td>
+                        <tbody className="bg-white divide-y divide-slate-100">
+                          {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
+                            <tr key={ri} className="group hover:bg-indigo-50/20 transition-colors">
+                              <td className="px-2 py-2 text-xs font-medium text-slate-400 text-center border-r border-slate-100 bg-slate-50/50">{ri + 1}</td>
+                              {row.map((cell, ci) => (
+                                <td key={ci} className="p-0 border-r border-slate-100 relative">
+                                  <input
+                                    value={cell ?? ''}
+                                    onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
+                                    onFocus={() => setPasteStart({ r: ri, c: ci })}
+                                    onPaste={(e) => handleGridPaste(e, ri, ci)}
+                                    className="w-full h-full px-4 py-3 text-sm bg-transparent border-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 rounded-none transition-all font-mono text-slate-700 placeholder-slate-300"
+                                    placeholder="-"
+                                  />
+                                </td>
                               ))}
                             </tr>
-                          ))}
+                          )) : null}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                )}
 
-                <div className="mt-4 flex justify-end">
-                  <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded bg-gray-50 border">Close</button>
+                  {pasteNotice && (
+                    <div className="flex justify-center">
+                      <div className="inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 shadow-sm border border-emerald-200 animate-fade-in-up">
+                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        {pasteNotice}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setUploadMode('choose')} className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors px-2">Back</button>
+                      <div className="h-4 w-px bg-slate-200"></div>
+                      <button onClick={() => initPasteGrid(10, templateHeaders.length)} className="text-sm font-medium text-slate-500 hover:text-rose-600 transition-colors px-2">Reset Grid</button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const txt = await navigator.clipboard.readText()
+                            const fakeEvent = { clipboardData: { getData: () => txt }, preventDefault: () => { } }
+                            handleGridPaste(fakeEvent, pasteStart.r || 0, pasteStart.c || 0)
+                          } catch { /* ignore */ }
+                        }}
+                        className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-semibold shadow-sm flex items-center gap-2 group"
+                      >
+                        <svg className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        Paste Clipboard
+                      </button>
+
+                      <button
+                        onClick={() => { applyPasteGrid(); handleCloseUploadModal() }}
+                        className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all text-sm font-bold flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Apply Data
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {uploadMode === 'paste' && (
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold">Paste Data (Spreadsheet)</h3>
-                  <button onClick={handleCloseUploadModal} className="text-slate-500 hover:text-slate-700">Close ✕</button>
-                </div>
-
-                <div className="overflow-auto border rounded mb-3 max-h-64">
-                  <table className="min-w-full table-fixed border-collapse text-sm">
-                    <thead className="bg-gray-100 sticky top-0 shadow-sm">
-                      <tr>
-                        <th className="px-2 py-1 border text-xs">#</th>
-                        {(active === 'attendance' ? attendanceHeaders : templateHeaders).map((h, ci) => (
-                          <th key={ci} className="px-2 py-1 border text-xs text-left">{getHeaderLabel(h)}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pasteGrid && pasteGrid.length ? pasteGrid.map((row, ri) => (
-                        <tr key={ri} className={`${ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-t`}>
-                          <td className="px-2 py-1 border text-xs">{ri + 1}</td>
-                          {row.map((cell, ci) => (
-                            <td key={ci} className="px-1 py-1 border">
-                              <input value={cell ?? ''}
-                                onChange={(e) => handleGridCellChange(ri, ci, e.target.value)}
-                                onFocus={() => setPasteStart({ r: ri, c: ci })}
-                                onPaste={(e) => handleGridPaste(e, ri, ci)}
-                                className="w-full p-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-sky-300" />
-                            </td>
-                          ))}
-                        </tr>
-                      )) : (
-                        <tr>
-                          <td colSpan={templateHeaders.length + 1} className="p-4 text-center text-slate-500">Empty grid. Use "Paste from Clipboard" or paste into any cell.</td>
-                        </tr>
-                      )}
-                      {pasteNotice && (
-                        <tr>
-                          <td colSpan={templateHeaders.length + 1} className="p-2 text-center text-sky-700 text-xs">{pasteNotice}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex items-center space-x-2 mb-3">
-                  <button onClick={() => initPasteGrid(5, templateHeaders.length)} className="px-2 py-1 rounded bg-gray-50 border text-sm">Reset Grid</button>
-                  <button onClick={async () => {
-                    try {
-                      const txt = await navigator.clipboard.readText()
-                      const fakeEvent = { clipboardData: { getData: () => txt }, preventDefault: () => { } }
-                      handleGridPaste(fakeEvent, pasteStart.r || 0, pasteStart.c || 0)
-                    } catch {
-                      // ignore
-                    }
-                  }} className="px-2 py-1 rounded bg-gray-50 border text-sm">Paste from Clipboard (auto)</button>
-                </div>
-
-                <div className="flex justify-end space-x-2 mt-2">
-                  <button onClick={handleCloseUploadModal} className="px-3 py-1 rounded-md bg-gray-50 text-slate-700 border border-gray-200">Cancel</button>
-                  <button onClick={() => { applyPasteGrid(); handleCloseUploadModal() }} className="px-3 py-1 rounded-md bg-emerald-600 text-white">Apply Paste</button>
-                </div>
-              </div>
-            )}
-
+              )}
+            </div>
           </div>
         </div>
       )}
