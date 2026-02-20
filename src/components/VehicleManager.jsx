@@ -670,7 +670,7 @@ export default function VehicleManager() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <VehicleAttendance />
+                            <VehicleAttendance darkMode={darkMode} />
                         </motion.div>
                     )}
 
