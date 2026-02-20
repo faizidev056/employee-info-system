@@ -8,13 +8,14 @@ const STATUS_LABEL = {
     'L': 'Leave'
 }
 
-export default function PrivateHRAttendance({ workers, externalMonth, externalSearch }) {
+export default function PrivateHRAttendance({ workers, externalMonth, externalSearch, darkMode }) {
     const month = externalMonth || new Date().toISOString().slice(0, 7)
     const searchQuery = externalSearch || ''
     const [attendance, setAttendance] = useState({})
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [statusModal, setStatusModal] = useState({ show: false, message: '', type: 'loading' })
+    const [focusDay, setFocusDay] = useState(() => new Date().getDate())
 
     const activeWorkers = useMemo(() => workers.filter(w => w.status === 'Active' || !w.status), [workers])
 
@@ -36,11 +37,28 @@ export default function PrivateHRAttendance({ workers, externalMonth, externalSe
         try {
             setLoading(true)
             const { data, error } = await supabase
-                .from('attendance_monthly')
+                .from('private_attendance_monthly')
                 .select('*')
                 .eq('month', month)
 
-            if (error) throw error
+            if (error) {
+                // FALLBACK: If private_attendance_monthly doesn't exist yet, 
+                // developers might still be using attendance_monthly despite the constraint risk
+                console.warn('Private attendance table not found, trying fallback...', error.message)
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from('attendance_monthly')
+                    .select('*')
+                    .eq('month', month)
+
+                if (fallbackError) throw fallbackError
+
+                const attendanceMap = {}
+                fallbackData.forEach(record => {
+                    attendanceMap[record.worker_id] = record.attendance_json || {}
+                })
+                setAttendance(attendanceMap)
+                return
+            }
 
             const attendanceMap = {}
             data.forEach(record => {
@@ -75,27 +93,41 @@ export default function PrivateHRAttendance({ workers, externalMonth, externalSe
     const saveAttendance = async () => {
         try {
             setSaving(true)
-            setStatusModal({ show: true, message: 'Saving attendance data...', type: 'loading' })
+            setStatusModal({ show: true, message: 'Archiving Private Logs...', type: 'loading' })
 
             const upserts = Object.entries(attendance).map(([workerId, json]) => ({
                 worker_id: parseInt(workerId),
                 month: month,
-                attendance_json: json
+                attendance_json: json,
+                updated_at: new Date().toISOString()
             }))
 
-            for (const item of upserts) {
-                const { error } = await supabase
-                    .from('attendance_monthly')
-                    .upsert(item, { onConflict: ['worker_id', 'month'] })
-
-                if (error) throw error
+            if (upserts.length === 0) {
+                setStatusModal({ show: true, message: 'No modifications to commit', type: 'info' })
+                setTimeout(() => setStatusModal(prev => ({ ...prev, show: false })), 1500)
+                return
             }
 
-            setStatusModal({ show: true, message: 'Attendance saved successfully', type: 'success' })
+            // Attempt to save to the specific private table first
+            const { error } = await supabase
+                .from('private_attendance_monthly')
+                .upsert(upserts, { onConflict: ['worker_id', 'month'] })
+
+            if (error) {
+                console.warn('Save to dedicated private table failed, trying fallback table...', error.message)
+                // Fallback to shared table (might fail if foreign key constraint exists)
+                const { error: fallbackError } = await supabase
+                    .from('attendance_monthly')
+                    .upsert(upserts, { onConflict: ['worker_id', 'month'] })
+
+                if (fallbackError) throw fallbackError
+            }
+
+            setStatusModal({ show: true, message: 'Private attendance archived successfully', type: 'success' })
             setTimeout(() => setStatusModal({ show: false, message: '', type: 'loading' }), 2000)
         } catch (err) {
             console.error('Error saving attendance:', err)
-            setStatusModal({ show: true, message: 'Failed to save attendance', type: 'error' })
+            setStatusModal({ show: true, message: 'Database Write Failed: Check system logs', type: 'error' })
             setTimeout(() => setStatusModal({ show: false, message: '', type: 'loading' }), 3000)
         } finally {
             setSaving(false)
@@ -113,92 +145,149 @@ export default function PrivateHRAttendance({ workers, externalMonth, externalSe
 
     return (
         <div className="space-y-6">
-            <div className="bg-white/60 backdrop-blur-2xl border border-white/80 rounded-[2rem] overflow-hidden shadow-2xl shadow-indigo-900/5">
-                <div className="p-6 border-b border-white/40 bg-white/40 flex justify-between items-center">
+            <div className={`backdrop-blur-xl border rounded-[2rem] overflow-hidden shadow-2xl relative transition-all duration-300 ${darkMode ? 'bg-white/[0.02] border-white/10 shadow-black/20' : 'bg-white/40 border-white/60 shadow-indigo-100/10'}`}>
+                <div className={`p-8 border-b flex justify-between items-center ${darkMode ? 'border-white/10' : 'border-gray-100/50'}`}>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">Attendance Sheet</h3>
-                        <p className="text-xs text-slate-500">Tap cells to toggle status (P/A/L)</p>
+                        <h3 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Private Attendance Grid</h3>
+                        <p className={`text-xs font-semibold mt-0.5 opacity-60 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Interactive monthly presence tracking for secure personnel</p>
                     </div>
                     <button
                         onClick={saveAttendance}
                         disabled={saving || loading}
-                        className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50"
+                        className={`px-8 py-3 rounded-2xl text-sm font-bold text-white shadow-lg transition-all ${saving
+                            ? 'bg-slate-400 cursor-not-allowed shadow-none'
+                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 active:translate-y-0.5 shadow-purple-600/20'}`}
                     >
-                        {saving ? 'Saving...' : 'Save Changes'}
+                        {saving ? 'Archiving...' : 'Save Changes'}
                     </button>
                 </div>
 
-                <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100">
-                                <th className="px-4 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-50 z-20 w-48 border-r">Employee Name</th>
-                                {[...Array(daysInMonth)].map((_, i) => (
-                                    <th key={i} className="px-2 py-4 text-center text-[10px] font-bold text-slate-500 border-r min-w-[40px]">{i + 1}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100/60">
-                            {filteredWorkers.map((worker) => (
-                                <tr key={worker.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-4 py-3 sticky left-0 bg-white z-10 border-r shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-900 truncate max-w-[180px]">{worker.full_name}</span>
-                                            <span className="text-[9px] text-slate-400 font-medium uppercase">{worker.employee_code || worker.cnic?.slice(-4)}</span>
-                                        </div>
-                                    </td>
-                                    {[...Array(daysInMonth)].map((_, i) => {
-                                        const day = i + 1
-                                        const status = (attendance[worker.id] && attendance[worker.id][day]) || 'A'
-                                        return (
-                                            <td key={i} className="p-1 border-r text-center">
-                                                <button
-                                                    onClick={() => toggleCell(worker.id, day)}
-                                                    className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${getStatusColor(status)} hover:scale-110 active:scale-95 shadow-sm`}
-                                                >
-                                                    {status}
-                                                </button>
+                <div className="p-8 flex-1 overflow-hidden flex flex-col min-h-[500px]">
+                    <div className={`rounded-2xl border flex-1 overflow-auto custom-scrollbar transition-all ${darkMode ? 'bg-[#0a0f18] border-white/5 shadow-inner' : 'bg-white border-slate-200 shadow-2xl shadow-indigo-100/10'}`}>
+                        <div className="min-w-max">
+                            <table className="w-full text-[11px] border-separate border-spacing-0">
+                                <thead className="sticky top-0 z-40">
+                                    <tr className={`${darkMode ? 'bg-slate-900/90' : 'bg-slate-50/90'} backdrop-blur-md`}>
+                                        <th className={`p-4 text-left sticky left-0 top-0 z-50 w-10 font-black border-b border-r transition-colors ${darkMode ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>#</th>
+                                        <th className={`p-4 text-left sticky left-[2.5rem] top-0 z-50 w-44 font-black border-b border-r transition-colors ${darkMode ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>EMPLOYEE NAME</th>
+                                        <th className={`p-4 text-left sticky left-[13.5rem] top-0 z-50 w-32 font-black border-b border-r transition-colors ${darkMode ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>DEPT</th>
+                                        <th className={`p-4 text-left sticky left-[21.5rem] top-0 z-50 w-28 font-black border-b border-r transition-colors ${darkMode ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>CODE</th>
+                                        <th className={`p-4 text-left sticky left-[28.5rem] top-0 z-50 w-36 font-black border-b border-r shadow-[4px_0_8px_-2px_rgba(0,0,0,0.05)] transition-colors ${darkMode ? 'bg-slate-900 border-white/10 text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>CNIC</th>
+                                        {[...Array(daysInMonth)].map((_, i) => (
+                                            <th key={i}
+                                                onClick={() => setFocusDay(i + 1)}
+                                                className={`px-1 py-4 text-center w-10 cursor-pointer transition-all border-b border-l border-dashed ${i + 1 === focusDay
+                                                    ? (darkMode ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-indigo-50 text-indigo-600 border-indigo-200')
+                                                    : (darkMode ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500')}`}>
+                                                {i + 1}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className={`${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={daysInMonth + 5} className="p-32 text-center">
+                                                <div className="w-10 h-10 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+                                                <p className="font-bold text-[10px] uppercase tracking-widest opacity-40">Decrypting Logs...</p>
                                             </td>
-                                        )
-                                    })}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {filteredWorkers.length === 0 && (
-                        <div className="py-20 text-center text-slate-400 font-medium italic">No active employees found to display.</div>
-                    )}
+                                        </tr>
+                                    ) : (
+                                        filteredWorkers.map((worker) => (
+                                            <tr key={worker.id} className={`${darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-indigo-50/20'} transition-all group`}>
+                                                <td className={`p-4 sticky left-0 z-10 border-r border-b transition-colors text-center font-bold opacity-30 ${darkMode ? 'bg-[#0a0f18] text-white border-white/5' : 'bg-white text-slate-900 border-slate-100'}`}>
+                                                    {filteredWorkers.indexOf(worker) + 1}
+                                                </td>
+                                                <td className={`p-4 sticky left-[2.5rem] z-10 border-r border-b transition-colors ${darkMode ? 'bg-[#0a0f18] text-white border-white/5' : 'bg-white text-slate-900 border-slate-100'}`}>
+                                                    <span className="text-xs font-black truncate block w-36">{worker.full_name}</span>
+                                                </td>
+                                                <td className={`p-4 sticky left-[13.5rem] z-10 border-r border-b transition-colors ${darkMode ? 'bg-[#0a0f18] text-indigo-400 border-white/5' : 'bg-white text-indigo-600 border-slate-100'}`}>
+                                                    <span className="text-[9px] font-bold uppercase truncate block w-24 tracking-tighter">{worker.designation || 'Staff'}</span>
+                                                </td>
+                                                <td className={`p-4 sticky left-[21.5rem] z-10 border-r border-b transition-colors ${darkMode ? 'bg-[#0a0f18] text-slate-500 border-white/5' : 'bg-white text-slate-400 border-slate-100'}`}>
+                                                    <span className="font-mono text-[10px] font-bold tracking-tighter truncate block w-20">{worker.employee_code || '-'}</span>
+                                                </td>
+                                                <td className={`p-4 sticky left-[28.5rem] z-10 border-r border-b transition-colors shadow-[4px_0_8px_-2px_rgba(0,0,0,0.05)] ${darkMode ? 'bg-[#0a0f18] text-slate-400 border-white/5' : 'bg-white text-slate-500 border-slate-100'}`}>
+                                                    <span className="font-mono text-[10px] truncate block w-28 uppercase">{worker.cnic || '-'}</span>
+                                                </td>
+                                                {[...Array(daysInMonth)].map((_, i) => {
+                                                    const day = i + 1
+                                                    const status = (attendance[worker.id] && attendance[worker.id][day]) || 'A'
+                                                    const isFocus = day === focusDay
+                                                    return (
+                                                        <td key={i} className={`p-1 text-center border-l border-b border-transparent transition-all ${isFocus ? (darkMode ? 'bg-purple-500/5' : 'bg-indigo-50/30') : ''}`}>
+                                                            <motion.button
+                                                                whileHover={{ scale: 1.15, zIndex: 10 }}
+                                                                whileTap={{ scale: 0.9 }}
+                                                                onClick={() => toggleCell(worker.id, day)}
+                                                                className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all shadow-sm flex items-center justify-center ${status === 'P'
+                                                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30 ring-2 ring-emerald-500/20'
+                                                                    : status === 'L'
+                                                                        ? 'bg-amber-500 text-white shadow-amber-500/30 ring-2 ring-amber-500/20'
+                                                                        : darkMode ? 'bg-rose-500/20 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-300 border border-rose-100 hover:border-rose-300'}`}
+                                                            >
+                                                                {status}
+                                                            </motion.button>
+                                                        </td>
+                                                    )
+                                                })}
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                            {filteredWorkers.length === 0 && !loading && (
+                                <div className="py-24 text-center">
+                                    <p className="font-bold text-[10px] uppercase tracking-[0.3em] opacity-20">No matching personnel records found</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Legend & Help Footer */}
+                    <div className={`mt-6 p-6 rounded-2xl border flex flex-wrap items-center gap-8 ${darkMode ? 'bg-slate-900/40 border-white/5' : 'bg-slate-50 border-slate-100'}`}>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-md bg-emerald-500 shadow-md shadow-emerald-500/20 font-black text-[8px] text-white flex items-center justify-center">P</div>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Present</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded-md font-black text-[8px] flex items-center justify-center border ${darkMode ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-rose-50 text-rose-300 border-rose-200'}`}>A</div>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Absent</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-md bg-amber-500 shadow-md shadow-amber-500/20 font-black text-[8px] text-white flex items-center justify-center">L</div>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Leave</span>
+                        </div>
+
+                    </div>
                 </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center gap-6 px-4">
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-emerald-500"></div>
-                    <span className="text-xs font-bold text-slate-600">P - Present</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-rose-500"></div>
-                    <span className="text-xs font-bold text-slate-600">A - Absent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-amber-500"></div>
-                    <span className="text-xs font-bold text-slate-600">L - Leave</span>
-                </div>
-            </div>
-
-            {/* Status Modal */}
+            {/* Global Status Notification Portal */}
             <AnimatePresence>
                 {statusModal.show && (
-                    <div className="fixed inset-0 flex items-center justify-center z-[100] px-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setStatusModal({ ...statusModal, show: false })} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white rounded-2xl p-8 shadow-2xl max-w-sm w-full text-center">
-                            {statusModal.type === 'loading' && <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />}
-                            {statusModal.type === 'success' && <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">✓</div>}
-                            {statusModal.type === 'error' && <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">✕</div>}
-                            <p className="text-slate-900 font-bold">{statusModal.message}</p>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 30 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 30 }}
+                            className={`max-w-sm w-full p-10 rounded-[2.5rem] shadow-2xl border flex flex-col items-center text-center ${darkMode ? 'bg-slate-900 border-white/10 shadow-black' : 'bg-white border-slate-100'}`}
+                        >
+                            <div className="mb-6">
+                                {statusModal.type === 'loading' && <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />}
+                                {statusModal.type === 'success' && <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 shadow-inner text-xl">✓</div>}
+                                {statusModal.type === 'error' && <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500 shadow-inner text-xl">✕</div>}
+                                {statusModal.type === 'info' && <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500 shadow-inner text-xl">i</div>}
+                            </div>
+                            <h3 className={`text-lg font-black mb-2 uppercase tracking-tighter ${darkMode ? 'text-white' : 'text-slate-900'}`}>{statusModal.type}</h3>
+                            <p className={`text-sm font-medium ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>{statusModal.message}</p>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

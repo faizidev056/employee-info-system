@@ -405,12 +405,7 @@ const VehicleAttendance = ({ darkMode }) => {
                         <div className={`w-4 h-4 rounded-md font-black text-[8px] flex items-center justify-center border ${darkMode ? 'bg-rose-500/20 text-rose-600 border-rose-500/30' : 'bg-rose-50 text-rose-300 border-rose-200'}`}>A</div>
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Absent</span>
                     </div>
-                    <div className="flex items-center gap-2 ml-auto">
-                        <svg className="w-4 h-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span className={`text-[9px] font-bold uppercase tracking-[0.1em] italic opacity-40 ${darkMode ? 'text-slate-200' : 'text-slate-900'}`}>
-                            Pro-Tip: Click a day column header to focus that date's metrics (Mileage/Ignition)
-                        </span>
-                    </div>
+
                 </div>
             </div>
 

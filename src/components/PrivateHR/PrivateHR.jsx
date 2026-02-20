@@ -266,7 +266,7 @@ export default function PrivateHR() {
             {activeTab === 'registration' && <PrivateHRRegistration supabase={supabase} />}
             {activeTab === 'directory' && <PrivateHRDirectory externalSearch={searchQuery} externalMonth={monthFilter} />}
             {activeTab === 'hr' && <PrivateHRRecords externalSearch={searchQuery} externalMonth={monthFilter} />}
-            {activeTab === 'attendance' && <PrivateHRAttendance workers={workers} externalMonth={monthFilter} externalSearch={searchQuery} />}
+            {activeTab === 'attendance' && <PrivateHRAttendance workers={workers} externalMonth={monthFilter} externalSearch={searchQuery} darkMode={darkMode} />}
             {activeTab === 'terminated' && <PrivateHRTerminated externalSearch={searchQuery} externalMonth={monthFilter} />}
           </div>
 
