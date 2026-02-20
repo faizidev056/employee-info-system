@@ -225,7 +225,7 @@ const VehicleAttendance = () => {
                                         </td>
                                         <td className="px-8 py-5 text-center">
                                             <span className={`font-mono text-sm font-bold ${displayMileage !== undefined && displayMileage !== null ? 'text-slate-700' : 'text-slate-300'}`}>
-                                                {displayMileage !== undefined && displayMileage !== null ? `${displayMileage || '0.00'} Km` : '—'}
+                                                {displayMileage !== undefined && displayMileage !== null ? (displayMileage || '0.00') : '—'}
                                             </span>
                                         </td>
                                         <td className="px-8 py-5 text-center">
