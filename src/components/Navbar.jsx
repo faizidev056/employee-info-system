@@ -223,8 +223,8 @@ export default function Navbar() {
 
             <div className="text-xs font-mono text-slate-400 px-2" aria-live="polite">{timeString}</div>
 
-            {/* Dark Mode Toggle - Hidden on Suthra Punjab HR as per request */}
-            {location.pathname !== '/workers' && (
+            {/* Dark Mode Toggle - Hidden on Suthra Punjab HR, Daily Report, Private HR and Vehicle Reg as per request */}
+            {location.pathname !== '/workers' && location.pathname !== '/daily-report' && location.pathname !== '/private-hr' && location.pathname !== '/vehicle-registration' && (
               <button
                 onClick={() => setIsDark(!isDark)}
                 className="p-2.5 rounded-2xl hover:bg-emerald-500/10 text-slate-500 hover:text-emerald-700 transition-all duration-300 relative group overflow-hidden border border-transparent hover:border-emerald-500/10"
@@ -404,8 +404,8 @@ export default function Navbar() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {/* Mobile Dark Mode Toggle - Hidden on Suthra Punjab HR as per request */}
-                    {location.pathname !== '/workers' && (
+                    {/* Mobile Dark Mode Toggle - Hidden on Suthra Punjab HR, Daily Report, Private HR and Vehicle Reg as per request */}
+                    {location.pathname !== '/workers' && location.pathname !== '/daily-report' && location.pathname !== '/private-hr' && location.pathname !== '/vehicle-registration' && (
                       <button
                         onClick={() => setIsDark(!isDark)}
                         className="p-2.5 rounded-xl bg-emerald-500/5 text-slate-500 transition-all"
