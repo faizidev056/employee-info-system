@@ -6,7 +6,18 @@ import SidebarDashboard from './SidebarDashboard'
 
 export default function DailyReport() {
   const [activeSubTab, setActiveSubTab] = useState('hr')
-  const darkMode = false // Dark mode removed as per request
+  // Sync with global theme from document element
+  const [darkMode, setDarkMode] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  )
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   // Menu items for the sidebar
   const menuItems = [

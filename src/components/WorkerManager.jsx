@@ -24,8 +24,18 @@ export default function WorkerManager() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeDropdown, setActiveDropdown] = useState(null)
-  // Dark mode state: default false (White) as requested
-  const darkMode = false
+  // Sync with global theme from document element
+  const [darkMode, setDarkMode] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  )
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const [salaryTrend, setSalaryTrend] = useState([])
   const [dashStats, setDashStats] = useState({

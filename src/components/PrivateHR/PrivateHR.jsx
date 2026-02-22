@@ -14,7 +14,18 @@ export default function PrivateHR() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [workers, setWorkers] = useState([])
   const [loading, setLoading] = useState(false)
-  const darkMode = false // Dark mode toggle removed as per request
+  // Sync with global theme from document element
+  const [darkMode, setDarkMode] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  )
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7))

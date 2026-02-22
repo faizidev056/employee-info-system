@@ -16,7 +16,18 @@ export default function VehicleManager() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
-    const darkMode = false // Constant false as requested
+    // Sync with global theme from document element
+    const [darkMode, setDarkMode] = useState(() =>
+        document.documentElement.classList.contains('dark')
+    )
+
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setDarkMode(document.documentElement.classList.contains('dark'))
+        })
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+        return () => observer.disconnect()
+    }, [])
 
     // Directory filter state
     const [searchQuery, setSearchQuery] = useState('')
