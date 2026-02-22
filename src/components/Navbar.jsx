@@ -256,21 +256,9 @@ export default function Navbar() {
                 aria-expanded={userMenuOpen}
                 aria-haspopup="true"
                 title={`${user.name} — ${user.email}`}
-                className="flex items-center space-x-2 px-3 py-2 rounded-full hover:bg-emerald-500/5 transition-all hover:shadow-sm border border-transparent hover:border-emerald-500/10"
+                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-emerald-500/5 transition-all hover:shadow-sm border border-transparent hover:border-emerald-500/10 text-slate-400 hover:text-emerald-600"
               >
-                <div className="w-9 h-9 rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
-                      {(() => {
-                        const parts = (user.name || '').split(' ').filter(Boolean)
-                        return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
-                      })()}
-                    </div>
-                  )}
-                </div>
-                <svg className={`w-4 h-4 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 transition-transform duration-300 ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
@@ -383,17 +371,10 @@ export default function Navbar() {
               <div className="border-t border-emerald-500/10 px-4 py-3 mt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-white shadow-md overflow-hidden">
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
-                          {(() => {
-                            const parts = (user.name || '').split(' ').filter(Boolean)
-                            return (parts.length === 0 ? 'AU' : (parts.length === 1 ? parts[0].slice(0, 2) : (parts[0][0] + parts[1][0]))).toUpperCase()
-                          })()}
-                        </div>
-                      )}
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-600 shadow-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-slate-900">{user.name}</div>
