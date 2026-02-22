@@ -263,10 +263,7 @@ const RegistrationForm = () => {
             exit={{ opacity: 0, y: -20 }}
             className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
         >
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                <h2 className="text-xl font-semibold text-slate-800">Vehicle Registration Form</h2>
-                <p className="text-sm text-slate-500 mt-1">Enter the details of the new vehicle</p>
-            </div>
+
 
             {lastRegistered && (
                 <div className="p-4 m-6 bg-green-50 border border-green-200 rounded-lg">

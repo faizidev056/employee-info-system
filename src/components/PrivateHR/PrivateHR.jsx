@@ -153,12 +153,7 @@ export default function PrivateHR() {
                         value={monthFilter}
                         onChange={(e) => setMonthFilter(e.target.value)}
                       />
-                      <div className="flex items-center gap-2 px-3 py-1 bg-purple-50/50 backdrop-blur-sm border border-purple-100/60 rounded-lg shadow-sm">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse"></div>
-                        <span className="text-purple-700 text-[10px] font-bold uppercase tracking-wider">
-                          SECURE ACCESS ACTIVE
-                        </span>
-                      </div>
+
                     </div>
                   </div>
                 </div>

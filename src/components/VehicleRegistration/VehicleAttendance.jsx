@@ -237,36 +237,24 @@ const VehicleAttendance = ({ darkMode }) => {
 
             {/* Header Control Panel */}
             <div className={`p-8 border-b flex flex-col xl:flex-row justify-between items-center gap-6 ${darkMode ? 'border-white/10' : 'border-gray-100/50'}`}>
-                <div className="flex items-center gap-5 text-left w-full xl:w-auto">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-xl shadow-indigo-500/20 flex items-center justify-center text-white">
-                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Fleet Attendance Grid</h2>
-                        <p className={`text-xs font-semibold mt-0.5 opacity-60 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Synchronized monthly operational tracking</p>
-                    </div>
+                {/* Search Field (Left Side) */}
+                <div className="relative group w-full md:w-72">
+                    <input
+                        type="text"
+                        placeholder="Filter by code, owner, reg..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={`pl-10 pr-4 py-2.5 rounded-xl text-xs w-full transition-all border ${darkMode
+                            ? 'bg-slate-900/40 border-white/10 text-white placeholder-slate-600 focus:border-indigo-500/50'
+                            : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 shadow-sm'}`}
+                    />
+                    <svg className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
-                    {/* Search Field */}
-                    <div className="relative group flex-1 md:flex-none md:w-56">
-                        <input
-                            type="text"
-                            placeholder="Filter by code, owner, reg..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={`pl-10 pr-4 py-2.5 rounded-xl text-xs w-full transition-all border ${darkMode
-                                ? 'bg-slate-900/40 border-white/10 text-white placeholder-slate-600 focus:border-indigo-500/50'
-                                : 'bg-white border-slate-200 text-slate-700 placeholder-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 shadow-sm'}`}
-                        />
-                        <svg className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </div>
-
+                {/* Right Side Group (Month + Actions) */}
+                <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-end">
                     {/* Month Selection */}
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Month:</span>
@@ -281,7 +269,7 @@ const VehicleAttendance = ({ darkMode }) => {
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 ml-auto">
+                    <div className="flex gap-2">
                         <button
                             onClick={loadData}
                             className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${darkMode
