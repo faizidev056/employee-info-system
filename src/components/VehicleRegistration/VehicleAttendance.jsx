@@ -257,7 +257,7 @@ const VehicleAttendance = ({ darkMode }) => {
                 <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-end">
                     {/* Month Selection */}
                     <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Month:</span>
+
                         <input
                             type="month"
                             value={month}
