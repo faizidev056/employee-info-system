@@ -15,6 +15,18 @@ const Home = () => {
     const location = useLocation();
     const [showSplash, setShowSplash] = useState(true);
     const [hoveredId, setHoveredId] = useState(null);
+    const [darkMode, setDarkMode] = useState(() =>
+        document.documentElement.classList.contains('dark')
+    );
+
+    // Sync with global dark mode toggle
+    useEffect(() => {
+        const observer = new MutationObserver(() => {
+            setDarkMode(document.documentElement.classList.contains('dark'));
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
 
     // Reset splash whenever the location key changes (navigating to dashboard)
     useEffect(() => {
@@ -70,7 +82,7 @@ const Home = () => {
     ];
 
     return (
-        <div className="relative h-screen overflow-hidden bg-[#F0FDF4]">
+        <div className={`relative h-full overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#0d1117]' : 'bg-[#F0FDF4]'}`}>
             <AnimatePresence>
                 {showSplash && (
                     <motion.div
@@ -198,12 +210,12 @@ const Home = () => {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: showSplash ? 0 : 1, y: showSplash ? -20 : 0 }}
                     transition={{ delay: 0.2 }}
-                    className="text-center mb-20"
+                    className="text-center mb-12"
                 >
-                    <h2 className="text-emerald-800/40 font-bold tracking-[0.8em] uppercase text-[10px] mb-4">
+                    <h2 className={`font-bold tracking-[0.8em] uppercase text-[10px] mb-4 transition-colors duration-300 ${darkMode ? 'text-emerald-400/40' : 'text-emerald-800/40'}`}>
                         Tehsil Haroonabad
                     </h2>
-                    <h1 className="text-4xl md:text-7xl font-black text-slate-900 mb-6 tracking-tighter uppercase italic">
+                    <h1 className={`text-4xl md:text-7xl font-black mb-6 tracking-tighter uppercase italic transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         Suthra <span className="text-emerald-500">Punjab</span>
                     </h1>
                     <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent mx-auto"></div>
@@ -233,9 +245,11 @@ const Home = () => {
                                     group relative w-28 h-28 md:w-36 md:h-36 
                                     rounded-[3rem] flex items-center justify-center 
                                     transition-all duration-500 ease-out
-                                    bg-white/40 backdrop-blur-xl border border-white/60
-                                    hover:border-emerald-500/30 hover:scale-110 active:scale-95
-                                    shadow-xl shadow-emerald-900/5
+                                    backdrop-blur-xl hover:border-emerald-500/30 hover:scale-110 active:scale-95
+                                    ${darkMode
+                                        ? 'bg-white/5 border border-white/10 shadow-xl shadow-black/20'
+                                        : 'bg-white/40 border border-white/60 shadow-xl shadow-emerald-900/5'
+                                    }
                                 `}
                                 style={{
                                     boxShadow: hoveredId === card.id
@@ -252,7 +266,7 @@ const Home = () => {
                                 <card.icon className={`
                                     w-12 h-12 md:w-16 md:h-16 
                                     transition-all duration-500
-                                    ${hoveredId === card.id ? `text-${card.color}-600` : 'text-slate-400 group-hover:text-emerald-600'}
+                                    ${hoveredId === card.id ? `text-${card.color}-${darkMode ? '400' : '600'}` : `${darkMode ? 'text-slate-500' : 'text-slate-400'} group-hover:text-emerald-500`}
                                     group-hover:drop-shadow-[0_0_20px_rgba(16,185,129,0.2)]
                                 `} />
 
@@ -273,29 +287,14 @@ const Home = () => {
                             </motion.button>
 
                             {/* Static Code Label */}
-                            <span className="mt-8 text-[10px] font-bold text-emerald-900/30 tracking-[0.5em] uppercase">
+                            <span className={`mt-8 text-[10px] font-bold tracking-[0.5em] uppercase transition-colors duration-300 ${darkMode ? 'text-emerald-400/30' : 'text-emerald-900/30'}`}>
                                 {card.id}
                             </span>
                         </div>
                     ))}
                 </div>
 
-                {/* Sign Out Section */}
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: showSplash ? 0 : 1 }}
-                    transition={{ delay: 1 }}
-                    className="mt-20 text-center"
-                >
-                    <button
-                        onClick={handleSignOut}
-                        className="group flex items-center gap-3 px-10 py-3.5 rounded-full bg-emerald-900/5 hover:bg-red-500/5 border border-emerald-900/10 hover:border-red-500/20 transition-all duration-500 shadow-sm"
-                    >
-                        <ArrowRightOnRectangleIcon className="w-5 h-5 text-emerald-900/30 group-hover:text-red-500 transition-colors" />
-                        <span className="text-[10px] font-bold text-emerald-900/40 group-hover:text-red-500 tracking-[0.3em] uppercase transition-colors">Terminate Session</span>
-                    </button>
-                    <p className="mt-6 text-[8px] text-emerald-900/20 font-bold tracking-[0.5em] uppercase">Secure PITB Infrastructure</p>
-                </motion.div>
+
             </motion.div>
 
             <style>{`
