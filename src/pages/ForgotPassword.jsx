@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -16,13 +17,13 @@ const ForgotPassword = () => {
 
         try {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://suthra-punjab-management.netlify.app/reset-password',
+                redirectTo: `${window.location.origin}/reset-password`,
             });
 
             if (error) {
                 setError(error.message);
             } else {
-                setMessage('Password reset link sent! Please check your email.');
+                setMessage('Password reset link sent! Please check your email inbox.');
             }
         } catch (error) {
             setError(error.message);
@@ -32,53 +33,61 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Animated Background Blobs */}
-            <div className="absolute top-0 -left-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-            <div className="absolute top-40 -right-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-            <div className="absolute -bottom-8 left-20 w-80 h-80 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+            {/* Mesh Gradient Background */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-200/40 rounded-full blur-[120px] animate-pulse" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-200/40 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-sky-200/30 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }} />
+            </div>
 
-            {/* Main Content */}
-            <div className="relative z-10 w-full max-w-md animate-fade-in">
-                {/* Card Container */}
-                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100/50 backdrop-blur-sm hover:shadow-3xl transition-shadow duration-500">
-
-                    {/* Top Blue Gradient Section */}
-                    <div className="h-28 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 relative overflow-hidden shadow-lg">
-                        <div className="absolute inset-0 opacity-10">
-                            <svg className="w-full h-full" viewBox="0 0 400 100" preserveAspectRatio="none">
-                                <defs>
-                                    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                                        <circle cx="20" cy="20" r="1" fill="white" opacity="0.5" />
-                                    </pattern>
-                                </defs>
-                                <rect width="400" height="100" fill="url(#dots)" />
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="relative z-10 w-full max-w-[440px]"
+            >
+                {/* Logo Section */}
+                <div className="text-center mb-8">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl shadow-emerald-500/10 mb-6 border border-emerald-50"
+                    >
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-inner">
+                            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                             </svg>
                         </div>
-                    </div>
+                    </motion.div>
+                    <motion.h1
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="text-3xl font-bold text-slate-900 tracking-tight mb-2"
+                    >
+                        Reset Access
+                    </motion.h1>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="text-slate-500 font-medium px-4"
+                    >
+                        Enter your email to receive recovery instructions
+                    </motion.p>
+                </div>
 
-                    {/* Content Section */}
-                    <div className="px-8 py-10">
-
-                        {/* Logo and Title */}
-                        <div className="text-center mb-10 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-                            <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-50 mb-4 transform -mt-16 border-4 border-white shadow-2xl hover:scale-105 transition-transform duration-300">
-                                <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                                </svg>
-                            </div>
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Forgot Password?</h1>
-                            <p className="text-gray-500 text-sm font-medium leading-relaxed">No worries, we'll send you reset instructions</p>
-                        </div>
-
-                        {/* Form */}
-                        <form onSubmit={handleResetPassword} className="space-y-5 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-
-                            {/* Email Input */}
+                {/* Card Container */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] p-8 md:p-10">
+                    <form onSubmit={handleResetPassword} className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700 ml-1">Registered Email</label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <svg className="w-5 h-5 text-blue-400 group-focus-within:text-blue-600 group-focus-within:scale-110 transition-all duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-emerald-500 text-slate-400">
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                                     </svg>
                                 </div>
                                 <input
@@ -87,124 +96,86 @@ const ForgotPassword = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                     placeholder="Enter your email"
-                                    className="w-full pl-12 pr-4 py-3.5 bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-3 focus:ring-blue-200/50 transition-all duration-300 font-medium shadow-sm hover:shadow-md"
+                                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border-0 rounded-[1.25rem] text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all duration-300 font-medium outline-none border border-transparent focus:border-emerald-500/30"
                                 />
                             </div>
-
-                            {/* Success Message */}
-                            {message && (
-                                <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex items-center gap-3 animate-in fade-in shadow-md">
-                                    <div className="flex-shrink-0">
-                                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-sm text-green-700 font-medium">{message}</p>
-                                </div>
-                            )}
-
-                            {/* Error Message */}
-                            {error && (
-                                <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 animate-in fade-in shadow-md">
-                                    <div className="flex-shrink-0">
-                                        <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-sm text-red-700 font-medium">{error}</p>
-                                </div>
-                            )}
-
-                            {/* Reset Password Button */}
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full py-3.5 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-2xl hover:from-blue-700 hover:via-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-300/50 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center gap-2 group relative overflow-hidden"
-                                style={{ backgroundSize: '200% 200%' }}
-                            >
-                                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-                                <div className="relative flex items-center justify-center gap-2">
-                                    {loading ? (
-                                        <>
-                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            <span>Sending...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="font-semibold">Send Reset Link</span>
-                                            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                            </svg>
-                                        </>
-                                    )}
-                                </div>
-                            </button>
-
-                            {/* Back to Login */}
-                            <div className="text-center mt-6">
-                                <Link
-                                    to="/login"
-                                    className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-700 transition-all group"
-                                >
-                                    <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                    </svg>
-                                    Back to Login
-                                </Link>
-                            </div>
-                        </form>
-
-                        {/* Footer */}
-                        <div className="mt-8 pt-6 border-t border-gray-100">
-                            <p className="text-center text-xs text-gray-500 font-medium">
-                                Remember your password? <Link to="/login" className="text-blue-600 hover:underline">Sign in</Link>
-                            </p>
                         </div>
+
+                        <AnimatePresence mode="wait">
+                            {message && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-3 overflow-hidden"
+                                >
+                                    <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs font-bold text-emerald-700 leading-tight">{message}</p>
+                                </motion.div>
+                            )}
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="p-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center gap-3 overflow-hidden"
+                                >
+                                    <svg className="w-5 h-5 text-rose-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-xs font-bold text-rose-600 leading-tight">{error}</p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[1.25rem] shadow-xl shadow-emerald-500/20 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed group"
+                        >
+                            <div className="flex items-center justify-center gap-2">
+                                {loading ? (
+                                    <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <span>Send Recovery Link</span>
+                                        <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                    </>
+                                )}
+                            </div>
+                        </button>
+                    </form>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center gap-2">
+                        <Link
+                            to="/login"
+                            className="flex items-center gap-2 text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-all group"
+                        >
+                            <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Return to Login
+                        </Link>
                     </div>
                 </div>
 
-                {/* Trust Badge */}
-                <div className="mt-8 text-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                    <p className="text-gray-500 text-xs font-semibold flex items-center justify-center gap-2 uppercase tracking-wide">
-                        <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        <span>Secure & encrypted connection</span>
-                    </p>
-                </div>
-            </div>
-
-            {/* Add to global styles for animation */}
-            <style>{`
-                @keyframes blob {
-                    0%, 100% { transform: translate(0, 0) scale(1); }
-                    33% { transform: translate(30px, -50px) scale(1.1); }
-                    66% { transform: translate(-20px, 20px) scale(0.9); }
-                }
-                @keyframes fade-in {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-blob {
-                    animation: blob 7s infinite;
-                }
-                .animate-fade-in {
-                    animation: fade-in 0.8s ease-out forwards;
-                    opacity: 0;
-                }
-                .animation-delay-2000 {
-                    animation-delay: 2s;
-                }
-                .animation-delay-4000 {
-                    animation-delay: 4s;
-                }
-                .shadow-3xl {
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-                }
-            `}</style>
+                {/* Secure Badge */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8 }}
+                    className="mt-8 flex items-center justify-center gap-2"
+                >
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                        Identity Verification Required
+                    </span>
+                </motion.div>
+            </motion.div>
         </div>
     );
 };
