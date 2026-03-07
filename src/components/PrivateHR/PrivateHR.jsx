@@ -114,10 +114,10 @@ export default function PrivateHR() {
                     {activeTab === 'terminated' && 'Terminated Files'}
                   </h1>
                   <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {activeTab === 'dashboard' && 'Insights from the private personnel repository'}
-                    {activeTab === 'directory' && 'Quick access to all employee profiles'}
-                    {activeTab === 'hr' && 'Manage status, history and documentation'}
-                    {activeTab === 'terminated' && 'Historical records of former staff'}
+                    {activeTab === 'dashboard' && ''}
+                    {activeTab === 'directory' && ''}
+                    {activeTab === 'hr' && ''}
+                    {activeTab === 'terminated' && ''}
                   </p>
                 </motion.div>
 

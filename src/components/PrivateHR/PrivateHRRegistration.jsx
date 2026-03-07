@@ -131,7 +131,7 @@ export default function PrivateHRRegistration({ supabase, darkMode }) {
                 <h1 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                   Personnel Registration
                 </h1>
-                <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Private Workforce Secure Entry</p>
+
               </div>
             </div>
           </div>
