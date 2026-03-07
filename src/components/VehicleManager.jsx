@@ -187,12 +187,12 @@ export default function VehicleManager() {
     }
 
     const pageSubtitle = {
-        dashboard: 'Real-time fleet insights and analytics',
+        dashboard: '',
         registration: 'Register a new vehicle into the fleet',
-        directory: 'Browse registered vehicles — Read only',
-        records: 'Edit vehicle data · Manage status · View history',
-        terminated: 'History of decommissioned vehicles',
-        attendance: 'Mark and track daily fleet attendance',
+        directory: '',
+        records: '',
+        terminated: '',
+        attendance: '',
     }
 
     const searchPlaceholder = {
@@ -569,9 +569,7 @@ export default function VehicleManager() {
                                             <h2 className={`text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                                                 New Vehicle
                                             </h2>
-                                            <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                Complete the fleet registration profile
-                                            </p>
+
                                         </div>
                                     </div>
 
