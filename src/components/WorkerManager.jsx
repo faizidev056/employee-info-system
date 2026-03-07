@@ -842,11 +842,11 @@ export default function WorkerManager() {
                     {activeTab === 'attendance' && 'Overall Attendance'}
                   </h1>
                   <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {activeTab === 'dashboard' && 'Real-time insights and performance metrics'}
-                    {activeTab === 'workers' && 'Manage and view all worker profiles'}
-                    {activeTab === 'hr' && 'Comprehensive employee records and actions'}
-                    {activeTab === 'terminated' && 'History of former employees'}
-                    {activeTab === 'attendance' && 'Monthly attendance sheets — click a cell to toggle (P/A/L) for the current month.'}
+                    {activeTab === 'dashboard' && ''}
+                    {activeTab === 'workers' && ''}
+                    {activeTab === 'hr' && ''}
+                    {activeTab === 'terminated' && ''}
+                    {activeTab === 'attendance' && ''}
                   </p>
                 </motion.div>
 
@@ -1129,7 +1129,7 @@ export default function WorkerManager() {
                     </div>
                     <div>
                       <h2 className={`text-3xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>New Employee</h2>
-                      <p className={`text-sm mt-1 font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Complete the onboarding profile</p>
+
                     </div>
                   </div>
 
