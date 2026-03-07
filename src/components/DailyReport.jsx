@@ -62,9 +62,7 @@ export default function DailyReport() {
               <h1 className={`text-3xl font-semibold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                 {activeSubTab === 'hr' ? 'HR Daily Reports' : 'Fleet Operations'}
               </h1>
-              <p className={`text-sm mt-1 transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {activeSubTab === 'hr' ? 'Manage daily attendance logs and staff reporting' : 'Track vehicle mileage and daily fleet metrics'}
-              </p>
+
             </motion.div>
 
             {/* Theme Toggle Removed as per request */}
