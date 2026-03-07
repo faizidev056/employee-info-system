@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+// using external lock icon from nounproject
+const logoUrl = 'https://static.thenounproject.com/png/3627272-200.png';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -54,28 +56,19 @@ const Login = () => {
                         transition={{ delay: 0.2, duration: 0.5 }}
                         className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl shadow-emerald-500/10 mb-6 border border-emerald-50"
                     >
-                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-inner">
-                            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
+                        <div className="w-12 h-12">
+                            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
                         </div>
                     </motion.div>
                     <motion.h1
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-3xl font-bold text-slate-900 tracking-tight mb-2"
+                        className="text-3xl font-bold text-slate-700 tracking-tight mb-2"
                     >
-                        Personnel Portal
+                        Employee Portal
                     </motion.h1>
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="text-slate-500 font-medium"
-                    >
-                        Sign in to manage fleet and human resources
-                    </motion.p>
+
                 </div>
 
                 {/* Login Card */}
@@ -101,12 +94,7 @@ const Login = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between px-1">
-                                <label className="text-sm font-semibold text-slate-700">Password</label>
-                                <Link to="/forgot-password" size="sm" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
-                                    Forgot?
-                                </Link>
-                            </div>
+                            <label className="text-sm font-semibold text-slate-700">Password</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-emerald-500 text-slate-400">
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,6 +125,11 @@ const Login = () => {
                                         </svg>
                                     )}
                                 </button>
+                            </div>
+                            <div className="text-right">
+                                <Link to="/forgot-password" size="sm" className="text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
+                                    Forgot?
+                                </Link>
                             </div>
                         </div>
 
@@ -179,13 +172,13 @@ const Login = () => {
                     <div className="mt-10 pt-8 border-t border-slate-100">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <p className="text-sm text-slate-500 font-medium text-center sm:text-left">
-                                New to the platform?
+                                Don't have an account? Sign up now.
                             </p>
                             <Link
                                 to="/signup"
                                 className="px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl transition-all text-sm border border-slate-100"
                             >
-                                Request Access
+                                Sign Up
                             </Link>
                         </div>
                     </div>
@@ -202,7 +195,7 @@ const Login = () => {
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        SSL Secured Infrastructure
+                        Encrypted &amp; Secure Access
                     </span>
                 </motion.div>
             </motion.div>

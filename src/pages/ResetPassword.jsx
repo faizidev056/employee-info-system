@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+// using external lock icon from nounproject
+const logoUrl = 'https://static.thenounproject.com/png/3627272-200.png';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -78,7 +80,7 @@ const ResetPassword = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-3xl font-bold text-slate-900 tracking-tight mb-2"
+                        className="text-3xl font-bold text-slate-700 tracking-tight mb-2"
                     >
                         Update Password
                     </motion.h1>
