@@ -5,6 +5,11 @@
 @layer base {
   body {
     @apply bg-[#FAFAFA] text-slate-900 antialiased;
+
+/* hide the decorative stack icon in the sidebar header */
+.group\/sidebar .w-8 {
+  display: none !important;
+}
   }
 }
 
