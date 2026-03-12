@@ -14,8 +14,64 @@ import Attendance from './Attendance'
 import SidebarDashboard from './SidebarDashboard'
 import StatCard from './StatCard'
 import ChartCard from './ChartCard'
-import RoundChart from './RoundChart'
 import { getAutocompleteToken } from '../lib/utils'
+import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell, PieChart, Pie } from 'recharts'
+
+// ── CUSTOM DASHBOARD COMPONENTS ───────
+
+const ModernStatCard = ({ label, value, trend, trendType, darkMode }) => (
+    <div className={`p-6 flex flex-col justify-between transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-100'} border-r last:border-r-0`}>
+        <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
+        <div className="flex items-center gap-3">
+            <span className={`text-2xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{value}</span>
+            {trend && (
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trendType === 'up'
+                    ? 'bg-emerald-500/10 text-emerald-500'
+                    : 'bg-rose-500/10 text-rose-500'
+                    }`}>
+                    {trendType === 'up' ? '+' : '-'}{trend}%
+                </div>
+            )}
+        </div>
+    </div>
+)
+
+const CategoryMixItem = ({ label, count, total, color, darkMode }) => {
+    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0
+    return (
+        <div className="flex items-center justify-between group py-1.5 border-b last:border-0 border-slate-100/5 transition-all hover:translate-x-1">
+            <div className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full shadow-sm shadow-black/20" style={{ backgroundColor: color }} />
+                <span className={`text-[11px] font-bold truncate max-w-[140px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+            </div>
+            <div className="flex items-center gap-3">
+                <span className={`text-[10px] font-black tabular-nums ${darkMode ? 'text-white' : 'text-slate-900'}`}>{count}</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                    {percentage}%
+                </span>
+            </div>
+        </div>
+    )
+}
+
+const CategoryTooltip = ({ active, payload, darkMode }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload
+        return (
+            <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${darkMode ? 'bg-slate-900/90 border-white/10' : 'bg-white/90 border-slate-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{data.name}</p>
+                </div>
+                <div className="flex items-end gap-2">
+                    <span className={`text-2xl font-black leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>{data.value}</span>
+                    <span className={`text-[10px] font-bold mb-1 ${darkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>Staff</span>
+                </div>
+            </div>
+        )
+    }
+    return null
+}
 
 export default function WorkerManager() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -803,6 +859,28 @@ export default function WorkerManager() {
   const activeEmployees = useMemo(() => workers.filter(w => w.status === 'Active').length, [workers])
   const totalSalary = useMemo(() => workers.reduce((acc, w) => acc + (w.status === 'Active' ? (w.salary || 0) : 0), 0), [workers])
 
+  const staffByDesignation = useMemo(() => {
+    const activeStaff = workers.filter(w => w.status === 'Active')
+    const counts = activeStaff.reduce((acc, w) => {
+      const desig = w.designation || 'General Staff'
+      acc[desig] = (acc[desig] || 0) + 1
+      return acc
+    }, {})
+    
+    const colors = [
+      '#06b6d4', '#0891b2', '#0e7490', '#22d3ee', '#67e8f9', 
+      '#3b82f6', '#4f46e5', '#8b5cf6', '#6366f1'
+    ]
+
+    return Object.entries(counts)
+      .map(([name, value], index) => ({ 
+        name, 
+        value, 
+        fill: colors[index % colors.length] 
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [workers])
+
   const formatSalary = (num) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
     if (num >= 1000) return `${(num / 1000).toFixed(1)}K`
@@ -1015,91 +1093,133 @@ export default function WorkerManager() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
               className="space-y-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <RoundChart
-                  title="Total HR"
-                  value={Number(totalEmployees).toLocaleString()}
-                  subtext="Employees"
-                  data={[{ name: 'Total HR', value: 100, fill: '#6366f1' }]}
-                  type="radial"
-                  darkMode={darkMode}
-                />
-
-                <RoundChart
-                  title="Active HR"
-                  value={Number(activeEmployees).toLocaleString()}
-                  subtext={`${totalEmployees > 0 ? ((activeEmployees / totalEmployees) * 100).toFixed(1) : 0}% Active`}
-                  data={[{ name: 'Active', value: totalEmployees > 0 ? (activeEmployees / totalEmployees) * 100 : 0, fill: '#10b981' }]}
-                  type="radial"
-                  darkMode={darkMode}
-                />
-
-                <RoundChart
-                  title="Total Salary"
-                  value={formatSalary(totalSalary)}
-                  subtext="PKR Monthly"
-                  data={[{ name: 'Budget', value: 100, fill: '#f43f5e' }]}
-                  type="radial"
-                  darkMode={darkMode}
-                />
-
-                <RoundChart
-                  title="Salary by Attendance"
-                  value={formatSalary(totalSalary * (dashStats.attendanceRate > 0 ? dashStats.attendanceRate / 100 : 1))}
-                  subtext="Est. Payout"
-                  data={dashStats.salaryByAttendanceData.length > 0 ? dashStats.salaryByAttendanceData : [{ name: 'Pending', value: 100, fill: '#64748b' }]}
-                  type="pie"
-                  darkMode={darkMode}
-                />
+              {/* ─── HIGHER LEVEL METRICS ─── */}
+              <div className={`rounded-[2rem] border overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/5'}`}>
+                <ModernStatCard label="Total Workforce" value={totalEmployees} trend="1.5" trendType="up" darkMode={darkMode} />
+                <ModernStatCard label="Active Personnel" value={activeEmployees} trend="2.1" trendType="up" darkMode={darkMode} />
+                <ModernStatCard label="Current Payroll" value={formatSalary(totalSalary)} trend="1.2" trendType="up" darkMode={darkMode} />
+                <ModernStatCard label="Avg. Attendance" value={`${dashStats.attendanceRate.toFixed(1)}%`} trend="0.8" trendType="up" darkMode={darkMode} />
               </div>
 
-              <section className="mt-2">
-                <div className={`border rounded-2xl overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-white/5 border-white/6' : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50'
-                  }`}>
-                  <div className={`px-6 py-4 border-b flex items-center justify-between ${darkMode ? 'border-white/6' : 'border-slate-100'}`}>
-                    <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-800'}`}>Recent Activities</h3>
-                    <motion.button
-                      onClick={() => handleTabChange('workers')}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className={`p-1.5 rounded-lg transition-all ${darkMode ? 'hover:bg-white/5 text-slate-400 hover:text-white' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-900'}`}
-                      title="View Recently Active Staff"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </motion.button>
+              {/* ─── CORE INTELLIGENCE ─── */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div className={`xl:col-span-12 p-8 rounded-[2rem] border transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/10'}`}>
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 className={`text-sm font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Staff Composition</h3>
+                      <p className={`text-[10px] font-bold mt-1 ${darkMode ? 'text-slate-600' : 'text-slate-400'}`}>Real-time workforce distribution</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${darkMode ? 'bg-cyan-500/10 text-cyan-400' : 'bg-cyan-50 text-cyan-600'}`}>
+                        {activeEmployees} Active Employees
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+                    {/* Pie Chart Section */}
+                    <div className="md:col-span-5 relative h-[300px]">
+                      <div className="h-full w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={staffByDesignation}
+                              innerRadius={85}
+                              outerRadius={115}
+                              paddingAngle={5}
+                              dataKey="value"
+                              stroke="none"
+                            >
+                              {staffByDesignation.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                              ))}
+                            </Pie>
+                            <Tooltip content={<CategoryTooltip darkMode={darkMode} />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+                        <span className={`text-3xl font-black tracking-tighter ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeEmployees}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Staff</span>
+                      </div>
+                    </div>
+
+                    {/* Analysis List Section */}
+                    <div className="md:col-span-7 flex flex-col h-full justify-center">
+                      <div className={`rounded-2xl p-6 ${darkMode ? 'bg-white/5 border border-white/5' : 'bg-slate-50/50 border border-slate-100'}`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Role Breakdown</h4>
+                        </div>
+                        <div className="space-y-1.5 max-h-[200px] overflow-y-auto custom-scrollbar pr-3">
+                          {staffByDesignation.map((item, i) => (
+                            <CategoryMixItem
+                              key={item.name}
+                              label={item.name}
+                              count={item.value}
+                              total={activeEmployees}
+                              color={item.fill}
+                              darkMode={darkMode}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between px-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className={`text-[9px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Top Designation</p>
+                            <h5 className={`text-xs font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{staffByDesignation[0]?.name || 'N/A'}</h5>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setActiveTab('workers')}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${darkMode ? 'hover:bg-white/5 text-slate-500 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}
+                        >
+                          View Registry
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RECENT ACTIVITIES */}
+              <section>
+                <div className={`border rounded-[2rem] overflow-hidden transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/5'}`}>
+                  <div className={`px-8 py-6 border-b border-transparent flex items-center justify-between ${darkMode ? 'border-white/5' : 'border-slate-50'}`}>
+                    <h3 className={`text-sm font-black uppercase tracking-[0.2em] ${darkMode ? 'text-white' : 'text-slate-900'}`}>Recently Active Staff</h3>
+                    <button onClick={() => setActiveTab('workers')} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-500 hover:text-slate-900'}`}>Full Log</button>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className={`text-xs uppercase font-medium ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
-                        <tr>
-                          <th className="px-6 py-3 text-left">Employee</th>
-                          <th className="px-6 py-3 text-left">Role</th>
-                          <th className="px-6 py-3 text-center">Status</th>
-                          <th className="px-6 py-3 text-right">Date</th>
+                    <table className="w-full text-left text-sm border-separate border-spacing-0">
+                      <thead>
+                        <tr className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50/50'}`}>
+                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Employee</th>
+                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Designation</th>
+                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Status</th>
+                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest text-right ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Registered</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
                         {workers.slice(0, 5).map(worker => (
-                          <tr key={worker.id} className={`transition-colors border-b last:border-0 ${darkMode ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-100'}`}>
-                            <td className={`px-6 py-3 font-normal ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>{worker.full_name}</td>
-                            <td className={`px-6 py-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{worker.designation}</td>
-                            <td className="px-6 py-3 text-center">
-                              <span className={`inline-flex items-center justify-center w-20 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all ${worker.status === 'Active'
-                                ? (darkMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
-                                : (darkMode ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-rose-50 text-rose-700 border-rose-200')
-                                }`}>
+                          <tr key={worker.id} className={`group transition-all ${darkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50/80'}`}>
+                            <td className={`px-8 py-4 font-bold text-xs ${darkMode ? 'text-white' : 'text-slate-900'}`}>{worker.full_name}</td>
+                            <td className={`px-8 py-4 text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{worker.designation}</td>
+                            <td className="px-8 py-4">
+                              <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${worker.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
+                                <span className={`w-1 h-1 rounded-full ${worker.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                                 {worker.status}
-                              </span>
+                              </div>
                             </td>
-                            <td className={`px-6 py-3 text-right font-mono text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                              {new Date(worker.created_at || worker.joining_date).toLocaleDateString()}
-                            </td>
+                            <td className={`px-8 py-4 text-right text-[11px] font-bold tabular-nums ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{new Date(worker.created_at || worker.joining_date).toLocaleDateString()}</td>
                           </tr>
                         ))}
                       </tbody>
