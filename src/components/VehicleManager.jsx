@@ -10,6 +10,64 @@ import VehicleTerminated from './VehicleTerminated'
 import RegistrationForm from './VehicleRegistration/RegistrationForm'
 import VehicleAttendance from './VehicleRegistration/VehicleAttendance'
 
+import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell, PieChart, Pie } from 'recharts'
+
+// ── CUSTOM DASHBOARD COMPONENTS (REFERENCING PROVIDED UI) ───────
+
+const ModernStatCard = ({ label, value, trend, trendType, darkMode }) => (
+    <div className={`p-6 flex flex-col justify-between transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-100'} border-r last:border-r-0`}>
+        <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
+        <div className="flex items-center gap-3">
+            <span className={`text-2xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{value}</span>
+            {trend && (
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trendType === 'up'
+                    ? 'bg-emerald-500/10 text-emerald-500'
+                    : 'bg-rose-500/10 text-rose-500'
+                    }`}>
+                    {trendType === 'up' ? '+' : '-'}{trend}%
+                </div>
+            )}
+        </div>
+    </div>
+)
+
+const CategoryMixItem = ({ label, count, total, color, darkMode }) => {
+    const percentage = ((count / total) * 100).toFixed(1)
+    return (
+        <div className="flex items-center justify-between group py-1.5 border-b last:border-0 border-slate-100/5 transition-all hover:translate-x-1">
+            <div className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full shadow-sm shadow-black/20" style={{ backgroundColor: color }} />
+                <span className={`text-[11px] font-bold truncate max-w-[140px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+            </div>
+            <div className="flex items-center gap-3">
+                <span className={`text-[10px] font-black tabular-nums ${darkMode ? 'text-white' : 'text-slate-900'}`}>{count}</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+                    {percentage}%
+                </span>
+            </div>
+        </div>
+    )
+}
+
+const CategoryTooltip = ({ active, payload, darkMode }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload
+        return (
+            <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${darkMode ? 'bg-slate-900/90 border-white/10' : 'bg-white/90 border-slate-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{data.name}</p>
+                </div>
+                <div className="flex items-end gap-2">
+                    <span className={`text-2xl font-black leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>{data.value}</span>
+                    <span className={`text-[10px] font-bold mb-1 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Units</span>
+                </div>
+            </div>
+        )
+    }
+    return null
+}
+
 export default function VehicleManager() {
     const [activeTab, setActiveTab] = useState('dashboard')
     const [vehicles, setVehicles] = useState([])
@@ -106,6 +164,39 @@ export default function VehicleManager() {
     const totalVehicles = useMemo(() => vehicles.length, [vehicles])
     const activeVehicles = useMemo(() => vehicles.filter(v => v.status === 'Active').length, [vehicles])
     const terminatedVehicles = useMemo(() => vehicles.filter(v => v.status === 'Terminated').length, [vehicles])
+
+    // new registrations metric for dashboard
+    const newRegistrationsThisMonth = useMemo(() => {
+        const now = new Date()
+        return vehicles.filter(v => {
+            if (!v.joining_date) return false
+            const d = new Date(v.joining_date)
+            return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+        }).length
+    }, [vehicles])
+
+    // deployed vehicles grouped by type (active only) - enhanced for chart
+    const deployedByType = useMemo(() => {
+        const activeVehs = vehicles.filter(v => v.status === 'Active')
+        const counts = activeVehs.reduce((acc, v) => {
+            const type = v.type || 'Unclassified'
+            acc[type] = (acc[type] || 0) + 1
+            return acc
+        }, {})
+        
+        const colors = [
+            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', 
+            '#10b981', '#06b6d4', '#3b82f6', '#4f46e5', '#7c3aed'
+        ]
+
+        return Object.entries(counts)
+            .map(([type, count], index) => ({ 
+                name: type, 
+                value: count, 
+                fill: colors[index % colors.length] 
+            }))
+            .sort((a, b) => b.value - a.value)
+    }, [vehicles])
 
     // ── Filtered counts for badge ──────────────────
     const filteredDirectory = useMemo(() => {
@@ -393,148 +484,230 @@ export default function VehicleManager() {
                     ════════════════════════════════════════ */}
                     {activeTab === 'dashboard' && (
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, y: 30 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="space-y-6"
+                            transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                            className="space-y-8"
                         >
-                            {/* Stat cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <RoundChart
-                                    title="Total Fleet"
-                                    value={String(totalVehicles)}
-                                    subtext="Vehicles"
-                                    data={[{ name: 'Total', value: 100, fill: '#6366f1' }]}
-                                    type="radial"
+                            {/* ─── OVERVIEW HEADER ─── */}
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <h2 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Overview</h2>
+                                <div className="flex items-center gap-3">
+                                    <div className={`flex p-1 rounded-xl items-center ${darkMode ? 'bg-slate-900 border border-white/5' : 'bg-white border border-slate-200/60 shadow-sm'}`}>
+                                        {['Weekly', 'Monthly', 'Yearly'].map(tab => (
+                                            <button
+                                                key={tab}
+                                                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${tab === 'Weekly'
+                                                    ? (darkMode ? 'bg-slate-800 text-white shadow-lg shadow-black/20' : 'bg-slate-50 text-slate-900 shadow-sm')
+                                                    : (darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                                                    }`}
+                                            >
+                                                {tab}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-[11px] font-bold transition-all ${darkMode ? 'bg-slate-900 border-white/5 text-slate-400 hover:text-white' : 'bg-white border-slate-200/60 text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md'}`}>
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>
+                                        Filter
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* ─── TOP STAT ROW ─── */}
+                            <div className={`rounded-2xl border overflow-hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/10'}`}>
+                                <ModernStatCard
+                                    label="Total Fleet"
+                                    value={totalVehicles}
+                                    trend="2.5"
+                                    trendType="up"
                                     darkMode={darkMode}
                                 />
-                                <RoundChart
-                                    title="Active Fleet"
-                                    value={String(activeVehicles)}
-                                    subtext={`${totalVehicles > 0 ? ((activeVehicles / totalVehicles) * 100).toFixed(1) : 0}% Active`}
-                                    data={[{ name: 'Active', value: totalVehicles > 0 ? (activeVehicles / totalVehicles) * 100 : 0, fill: '#10b981' }]}
-                                    type="radial"
+                                <ModernStatCard
+                                    label="Active Units"
+                                    value={activeVehicles}
+                                    trend="9.5"
+                                    trendType="up"
                                     darkMode={darkMode}
                                 />
-                                <RoundChart
-                                    title="Terminated"
-                                    value={String(terminatedVehicles)}
-                                    subtext="Decommissioned"
-                                    data={[{ name: 'Terminated', value: totalVehicles > 0 ? (terminatedVehicles / totalVehicles) * 100 : 0, fill: '#f43f5e' }]}
-                                    type="radial"
+                                <ModernStatCard
+                                    label="Terminated"
+                                    value={terminatedVehicles}
+                                    trend="1.6"
+                                    trendType="down"
                                     darkMode={darkMode}
                                 />
-                                <RoundChart
-                                    title="Fleet Health"
-                                    value={totalVehicles > 0 ? `${((activeVehicles / totalVehicles) * 100).toFixed(0)}%` : '0%'}
-                                    subtext="Operational Rate"
-                                    data={
-                                        activeVehicles > 0 || terminatedVehicles > 0
-                                            ? [
-                                                { name: 'Active', value: activeVehicles, fill: '#10b981' },
-                                                { name: 'Terminated', value: terminatedVehicles, fill: '#1e293b' },
-                                            ]
-                                            : [{ name: 'Pending', value: 100, fill: '#64748b' }]
-                                    }
-                                    type="pie"
+                                <ModernStatCard
+                                    label="New Registrations"
+                                    value={newRegistrationsThisMonth}
                                     darkMode={darkMode}
                                 />
                             </div>
 
-                            {/* Recent Activity Table */}
-                            <section className="mt-2">
-                                <div className={`border rounded-2xl overflow-hidden transition-colors duration-300 ${darkMode
-                                    ? 'bg-white/5 border-white/6'
-                                    : 'bg-white border-slate-200 shadow-xl shadow-slate-200/50'
-                                    }`}>
-                                    <div className={`px-6 py-4 border-b flex items-center justify-between ${darkMode ? 'border-white/6' : 'border-slate-100'
-                                        }`}>
-                                        <h3 className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-800'}`}>
-                                            Recent Fleet Activities
-                                        </h3>
-                                        <motion.button
-                                            onClick={() => handleTabChange('directory')}
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
-                                            className={`p-1.5 rounded-lg transition-all ${darkMode
-                                                ? 'hover:bg-white/5 text-slate-400 hover:text-white'
-                                                : 'hover:bg-slate-50 text-slate-500 hover:text-slate-900'
-                                                }`}
-                                            title="View Vehicle Directory"
-                                        >
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </motion.button>
+                            {/* ─── MAIN CONTENT ─── */}
+                            <div className="space-y-8">
+                                <div className={`rounded-3xl border overflow-hidden transition-all duration-500 flex flex-col ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/10'}`}>
+                                    <div className="p-6 pb-2 flex items-center justify-between">
+                                        <div>
+                                            <h3 className={`text-sm font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Fleet Intelligence</h3>
+                                            <p className={`text-[10px] font-bold mt-1 uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Active Deployment Mix</p>
+                                        </div>
+                                        <div className={`px-2.5 py-1 rounded-xl border flex items-center gap-2 ${darkMode ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-100 text-emerald-600'}`}>
+                                            <span className="text-[9px] font-black uppercase tracking-tighter">Live: {activeVehicles} Units</span>
+                                        </div>
                                     </div>
 
+                                    <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                                        {/* Graph Section */}
+                                        <div className="md:col-span-5 relative flex items-center justify-center">
+                                            <div className="h-[220px] w-full">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={deployedByType}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={60}
+                                                            outerRadius={85}
+                                                            paddingAngle={4}
+                                                            dataKey="value"
+                                                            stroke="none"
+                                                            animationBegin={0}
+                                                            animationDuration={1200}
+                                                        >
+                                                            {deployedByType.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip content={<CategoryTooltip darkMode={darkMode} />} />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+                                                <span className={`text-xl font-black tracking-tighter ${darkMode ? 'text-white' : 'text-slate-900'}`}>{deployedByType[0]?.value || 0}</span>
+                                                <span className={`text-[8px] font-bold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{deployedByType[0]?.name.split(' ')[0] || 'Top'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Analysis Section */}
+                                        <div className="md:col-span-7 flex flex-col h-full justify-center">
+                                            <div className={`rounded-2xl p-4 ${darkMode ? 'bg-white/5 border border-white/5' : 'bg-slate-50/50 border border-slate-100'}`}>
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h4 className={`text-[9px] font-black uppercase tracking-[0.15em] ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Composition Analysis</h4>
+                                                </div>
+                                                <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar pr-2">
+                                                    {deployedByType.map((item, i) => (
+                                                        <CategoryMixItem 
+                                                            key={item.name}
+                                                            label={item.name}
+                                                            count={item.value}
+                                                            total={activeVehicles}
+                                                            color={item.fill}
+                                                            darkMode={darkMode}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 flex items-center justify-between px-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                                        <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-[8px] font-bold uppercase tracking-wider ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Primary Category</p>
+                                                        <h5 className={`text-[11px] font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{deployedByType[0]?.name || 'N/A'}</h5>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setActiveTab('directory')} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/5 text-slate-500 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* BREAKDOWN CHART */}
+                                <div className={`p-8 rounded-2xl border transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl shadow-black/40' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/10'}`}>
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className={`text-sm font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Fleet Breakdown</h3>
+                                        <button className={`${darkMode ? 'text-slate-600' : 'text-slate-300'}`}>
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" /></svg>
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-6 mb-10 overflow-x-auto no-scrollbar">
+                                        {['Heavy', 'Transport', 'Logistics', 'Backup'].map((label, i) => (
+                                            <div key={label} className="flex items-center gap-2 flex-shrink-0">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${i === 0 ? 'bg-indigo-600' : i === 1 ? 'bg-indigo-400' : i === 2 ? 'bg-sky-400' : 'bg-indigo-100'}`} />
+                                                <span className={`text-[10px] font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="h-[280px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={[
+                                                { name: 'Mon', h: 12000, t: 8000, l: 5000, b: 2000 },
+                                                { name: 'Tue', h: 10000, t: 7000, l: 4000, b: 1500 },
+                                                { name: 'Wed', h: 15000, t: 9000, l: 6000, b: 3000 },
+                                                { name: 'Thu', h: 11000, t: 8500, l: 5500, b: 2500 },
+                                                { name: 'Fri', h: 14000, t: 10000, l: 7000, b: 3500 },
+                                                { name: 'Sat', h: 9000, t: 6000, l: 3000, b: 1000 },
+                                                { name: 'Sun', h: 13000, t: 9500, l: 6500, b: 2800 },
+                                            ]}>
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: darkMode ? '#475569' : '#94a3b8' }} dy={10} />
+                                                <Tooltip
+                                                    cursor={{ fill: 'transparent' }}
+                                                    contentStyle={{
+                                                        backgroundColor: darkMode ? '#0f172a' : '#ffffff',
+                                                        borderRadius: '12px',
+                                                        border: 'none',
+                                                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                                                        fontSize: '11px',
+                                                        fontWeight: '700'
+                                                    }}
+                                                />
+                                                <Bar dataKey="h" stackId="a" fill="#4f46e5" radius={[0, 0, 0, 0]} barSize={40} />
+                                                <Bar dataKey="t" stackId="a" fill="#6366f1" />
+                                                <Bar dataKey="l" stackId="a" fill="#38bdf8" />
+                                                <Bar dataKey="b" stackId="a" fill={darkMode ? '#1e293b' : '#f1f5f9'} radius={[8, 8, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* PRESERVED: RECENT ACTIVITIES */}
+                            <section>
+                                <div className={`border rounded-2xl overflow-hidden transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5 shadow-2xl' : 'bg-white border-slate-200/60 shadow-xl shadow-slate-200/5'}`}>
+                                    <div className="px-8 py-6 border-b border-transparent flex items-center justify-between">
+                                        <h3 className={`text-sm font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>Recent Fleet Activities</h3>
+                                        <button onClick={() => handleTabChange('directory')} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-500 hover:text-slate-900'}`}>Full Log</button>
+                                    </div>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm">
-                                            <thead className={`text-xs uppercase font-medium ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-50 text-slate-500'
-                                                }`}>
-                                                <tr>
-                                                    <th className="px-6 py-3 text-left">Vehicle Code</th>
-                                                    <th className="px-6 py-3 text-left">Type</th>
-                                                    <th className="px-6 py-3 text-left">Owner</th>
-                                                    <th className="px-6 py-3 text-center">Status</th>
-                                                    <th className="px-6 py-3 text-right">Registered</th>
+                                        <table className="w-full text-left text-sm border-separate border-spacing-0">
+                                            <thead>
+                                                <tr className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50/50'}`}>
+                                                    <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Vehicle Code</th>
+                                                    <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Type</th>
+                                                    <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Status</th>
+                                                    <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest text-right ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Registered</th>
                                                 </tr>
                                             </thead>
                                             <tbody className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-slate-100'}`}>
-                                                {loading ? (
-                                                    <tr>
-                                                        <td colSpan={5} className="px-6 py-10 text-center">
-                                                            <div className="flex justify-center">
-                                                                <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                                                {vehicles.slice(0, 5).map(v => (
+                                                    <tr key={v.id} className={`group transition-all ${darkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50/80'}`}>
+                                                        <td className={`px-8 py-4 font-bold text-xs ${darkMode ? 'text-white' : 'text-slate-900'}`}>{v.vehicle_code}</td>
+                                                        <td className={`px-8 py-4 text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{v.type}</td>
+                                                        <td className="px-8 py-4">
+                                                            <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${v.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
+                                                                <span className={`w-1 h-1 rounded-full ${v.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                                                {v.status}
                                                             </div>
                                                         </td>
+                                                        <td className={`px-8 py-4 text-right text-[11px] font-bold tabular-nums ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{v.joining_date ? new Date(v.joining_date).toLocaleDateString() : '—'}</td>
                                                     </tr>
-                                                ) : vehicles.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan={5} className={`px-6 py-10 text-center text-sm ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                                            No vehicles registered yet.
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    vehicles.slice(0, 6).map((v) => (
-                                                        <tr key={v.id} className={`transition-colors border-b last:border-0 ${darkMode
-                                                            ? 'hover:bg-white/5 border-white/5'
-                                                            : 'hover:bg-slate-50 border-slate-100'
-                                                            }`}>
-                                                            <td className={`px-6 py-3 font-mono font-bold text-xs ${darkMode ? 'text-emerald-400' : 'text-slate-700'}`}>
-                                                                {v.vehicle_code || '—'}
-                                                            </td>
-                                                            <td className={`px-6 py-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                                {v.type || '—'}
-                                                            </td>
-                                                            <td className={`px-6 py-3 font-normal ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                                                                {v.owned_by || v.owned_by_type || '—'}
-                                                            </td>
-                                                            <td className="px-6 py-3 text-center">
-                                                                <span className={`inline-flex items-center justify-center w-20 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all ${v.status === 'Active'
-                                                                    ? darkMode
-                                                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                                    : v.status === 'Terminated'
-                                                                        ? darkMode
-                                                                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                                                                        : darkMode
-                                                                            ? 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                                                                            : 'bg-slate-50 text-slate-500 border-slate-200'
-                                                                    }`}>
-                                                                    {v.status || 'Unknown'}
-                                                                </span>
-                                                            </td>
-                                                            <td className={`px-6 py-3 text-right font-mono text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                                                {v.joining_date
-                                                                    ? new Date(v.joining_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: '2-digit' })
-                                                                    : '—'}
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
