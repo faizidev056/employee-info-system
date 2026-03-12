@@ -183,17 +183,17 @@ export default function VehicleManager() {
             acc[type] = (acc[type] || 0) + 1
             return acc
         }, {})
-        
+
         const colors = [
-            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', 
+            '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b',
             '#10b981', '#06b6d4', '#3b82f6', '#4f46e5', '#7c3aed'
         ]
 
         return Object.entries(counts)
-            .map(([type, count], index) => ({ 
-                name: type, 
-                value: count, 
-                fill: colors[index % colors.length] 
+            .map(([type, count], index) => ({
+                name: type,
+                value: count,
+                fill: colors[index % colors.length]
             }))
             .sort((a, b) => b.value - a.value)
     }, [vehicles])
@@ -596,7 +596,7 @@ export default function VehicleManager() {
                                                 </div>
                                                 <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar pr-2">
                                                     {deployedByType.map((item, i) => (
-                                                        <CategoryMixItem 
+                                                        <CategoryMixItem
                                                             key={item.name}
                                                             label={item.name}
                                                             count={item.value}
