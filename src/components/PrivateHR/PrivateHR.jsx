@@ -13,57 +13,57 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, Cell, PieChart, Pie
 // ── CUSTOM DASHBOARD COMPONENTS ───────
 
 const ModernStatCard = ({ label, value, trend, trendType, darkMode }) => (
-    <div className={`p-6 flex flex-col justify-between transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-100'} border-r last:border-r-0`}>
-        <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
-        <div className="flex items-center gap-3">
-            <span className={`text-2xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{value}</span>
-            {trend && (
-                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trendType === 'up'
-                    ? 'bg-emerald-500/10 text-emerald-500'
-                    : 'bg-rose-500/10 text-rose-500'
-                    }`}>
-                    {trendType === 'up' ? '+' : '-'}{trend}%
-                </div>
-            )}
+  <div className={`p-6 flex flex-col justify-between transition-all duration-300 ${darkMode ? 'bg-slate-900 border-white/5' : 'bg-white border-slate-100'} border-r last:border-r-0`}>
+    <span className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{label}</span>
+    <div className="flex items-center gap-3">
+      <span className={`text-2xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>{value}</span>
+      {trend && (
+        <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${trendType === 'up'
+          ? 'bg-emerald-500/10 text-emerald-500'
+          : 'bg-rose-500/10 text-rose-500'
+          }`}>
+          {trendType === 'up' ? '+' : '-'}{trend}%
         </div>
+      )}
     </div>
+  </div>
 )
 
 const CategoryMixItem = ({ label, count, total, color, darkMode }) => {
-    const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0
-    return (
-        <div className="flex items-center justify-between group py-1.5 border-b last:border-0 border-slate-100/5 transition-all hover:translate-x-1">
-            <div className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full shadow-sm shadow-black/20" style={{ backgroundColor: color }} />
-                <span className={`text-[11px] font-bold truncate max-w-[140px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
-            </div>
-            <div className="flex items-center gap-3">
-                <span className={`text-[10px] font-black tabular-nums ${darkMode ? 'text-white' : 'text-slate-900'}`}>{count}</span>
-                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
-                    {percentage}%
-                </span>
-            </div>
-        </div>
-    )
+  const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0
+  return (
+    <div className="flex items-center justify-between group py-1.5 border-b last:border-0 border-slate-100/5 transition-all hover:translate-x-1">
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-1.5 rounded-full shadow-sm shadow-black/20" style={{ backgroundColor: color }} />
+        <span className={`text-[11px] font-bold truncate max-w-[140px] ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>{label}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className={`text-[10px] font-black tabular-nums ${darkMode ? 'text-white' : 'text-slate-900'}`}>{count}</span>
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+          {percentage}%
+        </span>
+      </div>
+    </div>
+  )
 }
 
 const CategoryTooltip = ({ active, payload, darkMode }) => {
-    if (active && payload && payload.length) {
-        const data = payload[0].payload
-        return (
-            <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${darkMode ? 'bg-slate-900/90 border-white/10' : 'bg-white/90 border-slate-200'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
-                    <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{data.name}</p>
-                </div>
-                <div className="flex items-end gap-2">
-                    <span className={`text-2xl font-black leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>{data.value}</span>
-                    <span className={`text-[10px] font-bold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Staff</span>
-                </div>
-            </div>
-        )
-    }
-    return null
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${darkMode ? 'bg-slate-900/90 border-white/10' : 'bg-white/90 border-slate-200'}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
+          <p className={`text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{data.name}</p>
+        </div>
+        <div className="flex items-end gap-2">
+          <span className={`text-2xl font-black leading-none ${darkMode ? 'text-white' : 'text-slate-900'}`}>{data.value}</span>
+          <span className={`text-[10px] font-bold mb-1 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`}>Staff</span>
+        </div>
+      </div>
+    )
+  }
+  return null
 }
 
 export default function PrivateHR() {
@@ -126,17 +126,17 @@ export default function PrivateHR() {
       acc[desig] = (acc[desig] || 0) + 1
       return acc
     }, {})
-    
+
     const colors = [
-      '#8b5cf6', '#6366f1', '#ec4899', '#f43f5e', '#f59e0b', 
+      '#8b5cf6', '#6366f1', '#ec4899', '#f43f5e', '#f59e0b',
       '#10b981', '#06b6d4', '#3b82f6', '#4f46e5'
     ]
 
     return Object.entries(counts)
-      .map(([name, value], index) => ({ 
-        name, 
-        value, 
-        fill: colors[index % colors.length] 
+      .map(([name, value], index) => ({
+        name,
+        value,
+        fill: colors[index % colors.length]
       }))
       .sort((a, b) => b.value - a.value)
   }, [workers])
@@ -329,7 +329,7 @@ export default function PrivateHR() {
                             <h5 className={`text-xs font-black ${darkMode ? 'text-white' : 'text-slate-900'}`}>{staffByDesignation[0]?.name || 'N/A'}</h5>
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => setActiveTab('directory')}
                           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${darkMode ? 'hover:bg-white/5 text-slate-500 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-900'}`}
                         >

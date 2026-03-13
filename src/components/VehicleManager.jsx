@@ -98,9 +98,7 @@ export default function VehicleManager() {
     // Terminated filter state
     const [terminatedSearchQuery, setTerminatedSearchQuery] = useState('')
 
-    const supabaseConfigured = Boolean(
-        import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
-    )
+
 
     const [searchParams, setSearchParams] = useSearchParams()
 
@@ -746,14 +744,7 @@ export default function VehicleManager() {
                                         </div>
                                     </div>
 
-                                    {!supabaseConfigured && (
-                                        <div className="flex items-center gap-3 px-5 py-2.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500">
-                                                Database Offline
-                                            </span>
-                                        </div>
-                                    )}
+
                                 </div>
 
                                 {/* Form card */}
