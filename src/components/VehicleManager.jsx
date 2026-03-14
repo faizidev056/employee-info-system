@@ -698,7 +698,7 @@ export default function VehicleManager() {
                                                         <td className={`px-8 py-4 font-bold text-xs ${darkMode ? 'text-white' : 'text-slate-900'}`}>{v.vehicle_code}</td>
                                                         <td className={`px-8 py-4 text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{v.type}</td>
                                                         <td className="px-8 py-4">
-                                                            <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${v.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
+                                                            <div className={`inline-flex items-center justify-center gap-2 w-24 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${v.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
                                                                 <span className={`w-1 h-1 rounded-full ${v.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                                                                 {v.status}
                                                             </div>
