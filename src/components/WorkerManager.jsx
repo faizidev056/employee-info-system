@@ -1204,7 +1204,7 @@ export default function WorkerManager() {
                         <tr className={`${darkMode ? 'bg-slate-800/50' : 'bg-slate-50/50'}`}>
                           <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Employee</th>
                           <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Designation</th>
-                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Status</th>
+                          <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest text-center ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Status</th>
                           <th className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest text-right ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>Registered</th>
                         </tr>
                       </thead>
@@ -1213,9 +1213,8 @@ export default function WorkerManager() {
                           <tr key={worker.id} className={`group transition-all ${darkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50/80'}`}>
                             <td className={`px-8 py-4 font-bold text-xs ${darkMode ? 'text-white' : 'text-slate-900'}`}>{worker.full_name}</td>
                             <td className={`px-8 py-4 text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{worker.designation}</td>
-                            <td className="px-8 py-4">
-                              <div className={`inline-flex items-center justify-center gap-2 w-24 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${worker.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
-                                <span className={`w-1 h-1 rounded-full ${worker.status === 'Active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                            <td className="px-8 py-4 text-center">
+                              <div className={`inline-flex items-center justify-center w-20 px-2 py-0.5 rounded-full text-[9px] font-medium uppercase tracking-tighter ${worker.status === 'Active' ? 'text-emerald-500 bg-emerald-500/10' : 'text-rose-500 bg-rose-500/10'}`}>
                                 {worker.status}
                               </div>
                             </td>
