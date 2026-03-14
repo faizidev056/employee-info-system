@@ -117,7 +117,7 @@ export default function MileageReport() {
     const staged = []
     const seen = new Set()
     vehicleRecords.forEach(item => {
-      const regNo = (item.reg_no || item.vehicle_code || '').toString()
+      const regNo = (item.vehicle_code || item.reg_no || '').toString()
       if (!regNo || seen.has(regNo)) return
       seen.add(regNo)
       const vehicleType = (item.vehicle_type || '').toString()
@@ -127,7 +127,7 @@ export default function MileageReport() {
       if (!candidate && suggestion) candidate = suggestion
       staged.push({
         reg_no: regNo,
-        vehicle_code: item.vehicle_code || regNo,
+        vehicle_code: regNo,
         vehicle_type: vehicleType,
         used_for: candidate,
         options,
@@ -142,13 +142,13 @@ export default function MileageReport() {
     const staged = []
     const seen = new Set()
     vehicleRecords.forEach(item => {
-      const regNo = (item.reg_no || item.vehicle_code || '').toString()
+      const regNo = (item.vehicle_code || item.reg_no || '').toString()
       if (!regNo || seen.has(regNo)) return
       seen.add(regNo)
       const vehicleType = (item.vehicle_type || '').toString()
       const def = getThresholdForType(vehicleType)
       if (def) {
-        staged.push({ reg_no: regNo, vehicle_code: item.vehicle_code || regNo, vehicle_type: vehicleType, threshold: def.value, unit: def.unit || '' })
+        staged.push({ reg_no: regNo, vehicle_code: regNo, vehicle_type: vehicleType, threshold: def.value, unit: def.unit || '' })
       }
     })
     return staged
@@ -161,36 +161,56 @@ export default function MileageReport() {
     const updates = {}
 
     const isLikelyCode = (v) => {
-      if (!v) return false
+      if (v === undefined || v === null) return false
       const s = v.toString().trim()
-      // treat as code if contains letters or hyphens (e.g., HND-DT-004) or at least 3 chars
-      return /[A-Za-z\-]/.test(s) || s.length >= 3
+      return s.length > 0 // Any non-empty string is a potential code
     }
 
     if (dailyReportingData && dailyReportingData.length > 0) {
       dailyReportingData.forEach(item => {
-        const key = (item.vehicle_code || item.reg_no || '').toString()
-        if (!key) return
-        updates[key] = updates[key] || { reg_no: key }
-        if (item.mileage !== undefined) updates[key].mileage = item.mileage || ''
-        if (item.ignition_time !== undefined) updates[key].ignition_time = item.ignition_time || ''
+        const code = (item.vehicle_code || item.reg_no || '').toString().trim()
+        if (!code) return
+        
+        updates[code] = {
+          ...updates[code],
+          reg_no: item.reg_no || code,
+          vehicle_code: item.vehicle_code || code,
+          mileage: item.mileage !== undefined ? item.mileage : (updates[code]?.mileage || ''),
+          ignition_time: item.ignition_time !== undefined ? item.ignition_time : (updates[code]?.ignition_time || '')
+        }
       })
     }
 
     if (vehicleRecordsData && vehicleRecordsData.length > 0) {
       vehicleRecordsData.forEach(item => {
-        const key = (item.reg_no || item.vehicle_code || '').toString()
-        if (!key) return
-        updates[key] = updates[key] || { reg_no: key }
-        if (item.vehicle_type) updates[key].vehicle_type = item.vehicle_type
-        // Do NOT apply used_for here — must come through Used For modal
+        const code = (item.vehicle_code || item.reg_no || '').toString().trim()
+        if (!code) return
+        updates[code] = {
+          ...updates[code],
+          reg_no: item.reg_no || item.vehicle_code || code,
+          vehicle_code: item.vehicle_code || item.reg_no || code,
+          vehicle_type: item.vehicle_type || updates[code]?.vehicle_type
+        }
       })
     }
 
+    // Aggressive normalization (removes all non-alphanumeric chars)
+    const norm = (s) => (s || '').toString().replace(/[^A-Za-z0-9]/g, '').toLowerCase()
+
     Object.keys(updates).forEach(k => {
       const u = updates[k]
-      const norm = (s) => (s || '').toString().trim().toLowerCase()
-      const idx = copy.findIndex(r => norm(r.reg_no) === norm(k) || norm(r.vehicle_code) === norm(k) || (u.vehicle_code && (norm(r.reg_no) === norm(u.vehicle_code) || norm(r.vehicle_code) === norm(u.vehicle_code))))
+      const kNorm = norm(k)
+      const uCodeNorm = norm(u.vehicle_code)
+      const uRegNorm = norm(u.reg_no)
+
+      const idx = copy.findIndex(r => {
+        const rReg = norm(r.reg_no)
+        const rCode = norm(r.vehicle_code)
+        return rReg === kNorm || rCode === kNorm || 
+               (uCodeNorm && (rReg === uCodeNorm || rCode === uCodeNorm)) ||
+               (uRegNorm && (rReg === uRegNorm || rCode === uRegNorm))
+      })
+
       if (idx >= 0) {
         // prefer existing reg_no/vehicle_code if they look like codes; otherwise, accept update
         const regNoToSet = isLikelyCode(copy[idx].reg_no) ? copy[idx].reg_no : (isLikelyCode(u.reg_no) ? u.reg_no : copy[idx].reg_no)
@@ -198,10 +218,12 @@ export default function MileageReport() {
 
         copy[idx] = {
           ...copy[idx],
-          reg_no: regNoToSet || copy[idx].reg_no || '',
-          vehicle_code: vehicleCodeToSet || copy[idx].vehicle_code || '',
+          reg_no: vehicleCodeToSet || regNoToSet || copy[idx].reg_no || '',
+          vehicle_code: vehicleCodeToSet || regNoToSet || copy[idx].vehicle_code || '',
           vehicle_type: u.vehicle_type || copy[idx].vehicle_type || '',
+          // Overwrite with whatever is provided (including empty or zero)
           mileage: u.mileage !== undefined ? u.mileage : copy[idx].mileage,
+          // Overwrite with whatever is provided (including empty or '00:00:00')
           ignition_time: u.ignition_time !== undefined ? u.ignition_time : copy[idx].ignition_time
         }
       } else {
@@ -276,7 +298,7 @@ export default function MileageReport() {
 
           grid.push({
             sr: idx + 1,
-            reg_no: v.reg_no || vehicleCode,
+            reg_no: vehicleCode,
             vehicle_code: vehicleCode,
             vehicle_type: vehicleType,
             used_for: displayVal,
@@ -419,24 +441,22 @@ export default function MileageReport() {
         if (existingIdx >= 0) {
           // sanitize numeric-looking codes to avoid accidentally storing indices
           const looksLikeCode = (v) => v && (/[A-Za-z\-]/.test(v.toString()) || v.toString().length >= 3)
-          const finalReg = looksLikeCode(regNoCandidate) ? regNoCandidate : (looksLikeCode(copy[existingIdx].reg_no) ? copy[existingIdx].reg_no : (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : copy[existingIdx].reg_no))
-          const finalCode = looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(copy[existingIdx].vehicle_code) ? copy[existingIdx].vehicle_code : (looksLikeCode(regNoCandidate) ? regNoCandidate : copy[existingIdx].vehicle_code))
+          const finalIdentifier = (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(regNoCandidate) ? regNoCandidate : (copy[existingIdx].vehicle_code || copy[existingIdx].reg_no)))
 
           copy[existingIdx] = {
             ...copy[existingIdx],
-            reg_no: finalReg || copy[existingIdx].reg_no || '',
-            vehicle_code: finalCode || copy[existingIdx].vehicle_code || '',
+            reg_no: finalIdentifier || '',
+            vehicle_code: finalIdentifier || '',
             vehicle_type: finalVehicleType || copy[existingIdx].vehicle_type || '',
             used_for: finalUsedFor || copy[existingIdx].used_for || ''
           }
         } else {
           // ensure both reg_no and vehicle_code fields are populated wherever possible (sanitized)
           const looksLikeCode = (v) => v && (/[A-Za-z\-]/.test(v.toString()) || v.toString().length >= 3)
-          const finalRegNo = looksLikeCode(regNoCandidate) ? regNoCandidate : (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : '')
-          const finalVehicleCode = looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(regNoCandidate) ? regNoCandidate : '')
+          const finalId = (looksLikeCode(vehicleCodeCandidate) ? vehicleCodeCandidate : (looksLikeCode(regNoCandidate) ? regNoCandidate : ''))
 
           // If no meaningful code present, try to update an existing row that has the same vehicle type and empty codes
-          if (!finalRegNo && !finalVehicleCode) {
+          if (!finalId) {
             const candidateIdx = copy.findIndex(r => (r.vehicle_type || '').toString().trim().toLowerCase() === (finalVehicleType || '').toString().trim().toLowerCase() && !(r.reg_no || r.vehicle_code))
             if (candidateIdx >= 0) {
               copy[candidateIdx] = {
@@ -448,36 +468,24 @@ export default function MileageReport() {
               // No code and no matching row by vehicle_type — skip creating a new row to avoid blank duplicates
               console.warn('Skipping Used For save for row without vehicle code:', g)
             }
-            return
-          }
+          } else {
+            // Check if this vehicle already exists in the copy to avoid duplicates
+            const norm = (s) => (s || '').toString().trim().toLowerCase()
+            const alreadyExists = copy.some(r => norm(r.reg_no) === norm(finalId) || norm(r.vehicle_code) === norm(finalId))
 
-          // If there's an existing row with the same vehicle_type but empty codes, update it instead of pushing
-          const candidateIdxByType = copy.findIndex(r => (r.vehicle_type || '').toString().trim().toLowerCase() === (finalVehicleType || '').toString().trim().toLowerCase() && !(r.reg_no || r.vehicle_code))
-          if (candidateIdxByType >= 0) {
-            copy[candidateIdxByType] = {
-              ...copy[candidateIdxByType],
-              reg_no: finalRegNo || copy[candidateIdxByType].reg_no || '',
-              vehicle_code: finalVehicleCode || copy[candidateIdxByType].vehicle_code || '',
-              vehicle_type: finalVehicleType || copy[candidateIdxByType].vehicle_type || '',
-              used_for: finalUsedFor || copy[candidateIdxByType].used_for || ''
+            if (!alreadyExists) {
+              copy.push({
+                sr: 0,
+                reg_no: finalId,
+                vehicle_code: finalId,
+                vehicle_type: finalVehicleType,
+                used_for: finalUsedFor,
+                mileage: '',
+                ignition_time: '',
+                threshold: '',
+                remarks: ''
+              })
             }
-            return
-          }
-
-          // avoid pushing duplicates if a similar row already exists (case/whitespace-insensitive)
-          const alreadyExists = copy.some(r => norm(r.reg_no) === norm(finalRegNo) || norm(r.vehicle_code) === norm(finalVehicleCode) || (finalRegNo && (norm(r.reg_no) === norm(finalRegNo) || norm(r.vehicle_code) === norm(finalRegNo))))
-          if (!alreadyExists) {
-            copy.push({
-              sr: 0,
-              reg_no: finalRegNo,
-              vehicle_code: finalVehicleCode,
-              vehicle_type: finalVehicleType,
-              used_for: finalUsedFor,
-              mileage: '',
-              ignition_time: '',
-              threshold: '',
-              remarks: ''
-            })
           }
         }
       })
@@ -668,12 +676,23 @@ export default function MileageReport() {
     }
 
     setRows(prev => {
-      const copy = prev.map((r, i) => {
-        const g = thresholdGrid[i]
-        if (!g) return r
-        // store numeric string or empty
-        return { ...r, vehicle_type: g.vehicle_type, threshold: g.threshold }
+      // Create a map for quick lookup: vehicle_type -> threshold
+      const typeThresholdMap = {}
+      thresholdGrid.forEach(g => {
+        if (g.vehicle_type) {
+          typeThresholdMap[g.vehicle_type.toString().trim().toLowerCase()] = g.threshold
+        }
       })
+
+      // Apply the map to all rows in the table
+      const copy = prev.map((r) => {
+        const typeKey = (r.vehicle_type || '').toString().trim().toLowerCase()
+        if (typeThresholdMap.hasOwnProperty(typeKey)) {
+          return { ...r, threshold: typeThresholdMap[typeKey] }
+        }
+        return r
+      })
+
       return copy.map((r, i) => ({ ...r, sr: i + 1 }))
     })
     setThresholdSaveError('')
@@ -694,45 +713,67 @@ export default function MileageReport() {
       try {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed)) {
-          setRows(parsed.map((r, i) => ({ ...r, sr: i + 1 })))
-          console.log('✅ Loaded mileageReportData from localStorage')
-        } else {
-          // fallback to server load
+            const initialRows = parsed.map((r, i) => ({ ...r, sr: i + 1 }))
+            setRows(initialRows)
+            
+            // Explicitly force a check for missing transfers when loading from cache
+            setTimeout(() => checkForTransfer(), 100)
+            console.log('✅ Loaded mileageReportData from localStorage and scheduled transfer check')
+          } else {
+            // fallback to server load
+            loadMileageData()
+          }
+        } catch (e) {
+          console.warn('Failed to parse mileageReportData, loading from server', e)
           loadMileageData()
         }
-      } catch (e) {
-        console.warn('Failed to parse mileageReportData, loading from server', e)
+      } else {
         loadMileageData()
       }
-    } else {
-      loadMileageData()
-    }
+    }, [])
 
-    checkForTransfer()
-  }, [])
-
-  // Listen for direct transfers and automatically apply them
-  useEffect(() => {
-    const handler = (e) => {
-      try {
-        const data = e?.detail || null
-        if (!data) return
-        const items = Array.isArray(data) ? data : [data]
-        const dailyReporting = items.filter(i => i.source === 'daily_reporting' || (i.source === undefined && i.mileage !== undefined))
-        const vehicleRecords = items.filter(i => i.source === 'vehicle_records' || i.source === undefined)
+    // Listen for direct transfers and automatically apply them
+    useEffect(() => {
+      const handler = (e) => {
+        try {
+          const data = (e && e.detail) ? e.detail : null
+          if (!data) return
+          const items = Array.isArray(data) ? data : [data]
+          const dailyReporting = items.filter(i => i.source === 'daily_reporting' || (i.source === undefined && i.mileage !== undefined))
+          const vehicleRecords = items.filter(i => i.source === 'vehicle_records' || i.source === undefined)
 
         if (dailyReporting.length > 0 || vehicleRecords.length > 0) {
           setRows(prev => mergeTransferredData(prev, dailyReporting, vehicleRecords))
-          // Automatically clear the transfer buffer once processed
-          localStorage.removeItem('mileageReportTransfer')
+          // We don't clear localStorage here to allow other tabs/refreshes to see it
         }
       } catch (err) {
         console.warn('mileageTransfer handler error', err)
       }
     }
 
+    const storageHandler = (e) => {
+      if (e.key === 'mileageReportTransfer' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue)
+          const items = Array.isArray(parsed) ? parsed : [parsed]
+          const daily = items.filter(i => i.source === 'daily_reporting' || !i.source)
+          const vehicles = items.filter(i => i.source === 'vehicle_records')
+          if (daily.length > 0 || vehicles.length > 0) {
+            setRows(prev => mergeTransferredData(prev, daily, vehicles))
+            // No longer clearing here to avoid race conditions with multiple tabs
+          }
+        } catch (err) {
+          console.error('Storage sync error', err)
+        }
+      }
+    }
+
     window.addEventListener('mileageTransfer', handler)
-    return () => window.removeEventListener('mileageTransfer', handler)
+    window.addEventListener('storage', storageHandler)
+    return () => {
+      window.removeEventListener('mileageTransfer', handler)
+      window.removeEventListener('storage', storageHandler)
+    }
   }, [])
 
   // Save rows to localStorage for debugging/inspection
@@ -767,17 +808,20 @@ export default function MileageReport() {
   }, [activeTab])
 
   const checkForTransfer = () => {
+    // Only call this manually if we want to force a check, 
+    // but typically the useEffect listeners handle this.
     const transferData = localStorage.getItem('mileageReportTransfer')
     if (transferData) {
       try {
         const parsed = JSON.parse(transferData)
         const items = Array.isArray(parsed) ? parsed : [parsed]
-
         const daily = items.filter(i => i.source === 'daily_reporting' || !i.source)
         const vehicles = items.filter(i => i.source === 'vehicle_records')
 
         if (daily.length > 0 || vehicles.length > 0) {
           setRows(prev => mergeTransferredData(prev, daily, vehicles))
+          // We only clear it if we are sure this is the primary consumption point
+          // In a multi-tab setup, clearing can be tricky. Let's keep it for now.
           localStorage.removeItem('mileageReportTransfer')
         }
       } catch (e) {
@@ -814,14 +858,17 @@ export default function MileageReport() {
         if (regNosToFetch.length > 0) {
           const { data: meta, error: metaErr } = await supabase
             .from('vehicle_registrations')
-            .select('reg_no, type, used_for')
-            .in('reg_no', regNosToFetch)
+            .select('id, reg_no, vehicle_code, type, used_for') // Added 'id' to select
+            .or(`reg_no.in.(${regNosToFetch.map(c => `"${c}"`).join(',')}),vehicle_code.in.(${regNosToFetch.map(c => `"${c}"`).join(',')})`)
 
           if (!metaErr && meta && meta.length) {
             const map = {}
-            meta.forEach(m => { map[m.reg_no] = m })
+            meta.forEach(m => {
+              if (m.reg_no) map[m.reg_no] = m
+              if (m.vehicle_code) map[m.vehicle_code] = m
+            })
             loadedRows = loadedRows.map(r => {
-              const m = map[r.reg_no]
+              const m = map[r.reg_no] || map[r.vehicle_code]
               if (!m) return r
               return {
                 ...r,
@@ -834,7 +881,52 @@ export default function MileageReport() {
       } catch (e) {
         console.warn('Failed to enrich mileage rows with vehicle metadata', e)
       }
-      setRows(loadedRows)
+      // Use functional update to ensure we don't clobber any 
+      // transfers that might have happened while loading
+      setRows(prev => {
+        // Find existing rows that have non-empty mileage/ig_time so we don't lose them
+        const unsavedMap = {}
+        prev.forEach(r => {
+          if (r.mileage || (r.ignition_time && r.ignition_time !== '00:00:00')) {
+            const key = (r.vehicle_code || r.reg_no || '').toString().trim().toLowerCase()
+            if (key) unsavedMap[key] = r
+          }
+        })
+
+        let updated = loadedRows.map(r => {
+          const key = (r.vehicle_code || r.reg_no || '').toString().trim().toLowerCase()
+          const unsaved = key ? unsavedMap[key] : null
+          if (unsaved) {
+            return {
+              ...r,
+              mileage: unsaved.mileage || r.mileage,
+              ignition_time: unsaved.ignition_time || r.ignition_time,
+              remarks: unsaved.remarks || r.remarks
+            }
+          }
+          return r
+        })
+
+        // IMPORTANT: We must merge any pending transfers from localStorage
+        // because the database might not have the absolute latest "pasted" data from Daily Reporting yet.
+        const transferData = localStorage.getItem('mileageReportTransfer')
+        if (transferData) {
+          try {
+            const parsed = JSON.parse(transferData)
+            const items = Array.isArray(parsed) ? parsed : [parsed]
+            const daily = items.filter(i => i.source === 'daily_reporting' || !i.source)
+            const vehicles = items.filter(i => i.source === 'vehicle_records')
+            
+            if (daily.length > 0 || vehicles.length > 0) {
+              updated = mergeTransferredData(updated, daily, vehicles)
+              // No longer clearing here to avoid race conditions
+            }
+          } catch (e) {
+            console.warn('Error merging transfers during load:', e)
+          }
+        }
+        return updated
+      })
       setSaveResult(null)
     } catch (err) {
       console.error('Load mileage data error', err)
@@ -1338,14 +1430,6 @@ export default function MileageReport() {
                   </div>
                 </button>
               </div>
-
-              <button
-                onClick={saveMileageData}
-                disabled={saving}
-                className="h-10 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 text-sm font-medium transition-all disabled:opacity-70"
-              >
-                {saving ? 'Saving...' : 'Save Report'}
-              </button>
             </div>
           </div>
         </div>
@@ -1613,19 +1697,21 @@ export default function MileageReport() {
                       </tr>
                     )
                   }
-
-                  return filteredRows.map((r, idx) => (
-                    <tr key={idx} className="hover:bg-white/40 transition-colors">
-                      <td className="px-3 py-2"><input value={r.sr || ''} readOnly className="w-full p-1.5 text-xs bg-transparent border-0 text-slate-500" /></td>
-                      <td className="px-3 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(idx, 'reg_no', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono font-medium text-slate-700" /></td>
-                      <td className="px-3 py-2"><input value={r.vehicle_type || ''} onChange={(e) => updateRowField(idx, 'vehicle_type', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
-                      <td className="px-3 py-2"><input value={r.used_for || ''} onChange={(e) => updateRowField(idx, 'used_for', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
-                      <td className="px-3 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(idx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
-                      <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(idx, 'ignition_time', e.target.value)} type="text" placeholder="00:00:00" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
-                      <td className="px-3 py-2"><input value={r.threshold || ''} onChange={(e) => updateRowField(idx, 'threshold', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
-                      <td className="px-3 py-2"><input value={r.remarks || ''} onChange={(e) => updateRowField(idx, 'remarks', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
-                    </tr>
-                  ))
+                  return filteredRows.map((r, filteredIdx) => {
+                    const actualIdx = rows.indexOf(r)
+                    return (
+                      <tr key={filteredIdx} className="hover:bg-white/40 transition-colors">
+                        <td className="px-3 py-2"><input value={r.sr || ''} readOnly className="w-full p-1.5 text-xs bg-transparent border-0 text-slate-500" /></td>
+                        <td className="px-3 py-2"><input value={r.reg_no || ''} onChange={(e) => updateRowField(actualIdx, 'reg_no', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono font-medium text-slate-700" /></td>
+                        <td className="px-3 py-2"><input value={r.vehicle_type || ''} onChange={(e) => updateRowField(actualIdx, 'vehicle_type', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                        <td className="px-3 py-2"><input value={r.used_for || ''} onChange={(e) => updateRowField(actualIdx, 'used_for', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                        <td className="px-3 py-2"><input value={r.mileage || ''} onChange={(e) => updateRowField(actualIdx, 'mileage', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono" /></td>
+                        <td className="px-3 py-2"><input value={r.ignition_time || ''} onChange={(e) => updateRowField(actualIdx, 'ignition_time', e.target.value)} type="text" placeholder="00:00:00" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400 font-mono" /></td>
+                        <td className="px-3 py-2"><input value={r.threshold || ''} onChange={(e) => updateRowField(actualIdx, 'threshold', e.target.value)} type="number" step="0.01" className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all font-mono" /></td>
+                        <td className="px-3 py-2"><input value={r.remarks || ''} onChange={(e) => updateRowField(actualIdx, 'remarks', e.target.value)} className="w-full p-1.5 text-xs bg-transparent border-b border-transparent focus:border-blue-500 focus:outline-none transition-all placeholder-slate-400" /></td>
+                      </tr>
+                    )
+                  })
                 })()}
               </tbody>
             </table>

@@ -1,0 +1,35 @@
+ISSUE REPORT: Mileage and Working Hours Syncing Failure
+
+### Objective:
+Automatically transfer "Mileage" and "Ignition Time" (Working Hours) data from the 'Daily Reporting' tab to the 'Mileage Report' tab in real-time.
+
+### Tech Stack:
+- React
+- Supabase (Database)
+- LocalStorage & Custom Events (Cross-tab/Cross-component synchronization)
+
+### Current Architecture & Data Flow:
+1. Data Entry: Users paste or upload data into DailyReporting.jsx. Vehicle identifiers can be license plates (e.g., "ABC 123") or internal vehicle codes (e.g., "HND-DT-001").
+2. Identification: DailyReporting.jsx attempts to "enrich" this data by looking up the internal vehicle_code in the 'vehicle_registrations' table in Supabase if only a registration number (reg_no) is provided.
+3. Sync Trigger: Upon applying data (pasting/uploading), an immediate broadcast is sent via:
+   - localStorage.setItem('mileageReportTransfer', JSON.stringify(data))
+   - window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: data }))
+4. Data Reception: MileageReport.jsx listens for these events (both 'storage' and 'mileageTransfer') and triggers a mergeTransferredData() function to update its local state (rows).
+5. Matching Logic: The matching engine normalizes identifiers by stripping all non-alphanumeric characters (e.g., "ABC 123" becomes "abc123") to handle inconsistent formatting (spaces, hyphens).
+
+### The Problem:
+Despite these mechanisms, when data is pasted into the Daily Reporting tab, the mileage and ignition time columns in the Mileage Report tab remain empty or do not update.
+
+### Key Files:
+1. src/components/DailyReport/Fleet/DailyReporting.jsx (Sender)
+2. src/components/DailyReport/Fleet/MileageReport.jsx (Receiver)
+
+### Attempted Solutions & Diagnostic Notes:
+- Identifier Normalization: Implemented to ignore formatting differences (spaces/hyphens).
+- Enrichment: Added code to lookup vehicle_codes in real-time to ensure tabs use common IDs.
+- Persistence: Removed logic that cleared localStorage prematurely to prevent race conditions.
+- Immediate Broadcast: Forced sync to trigger during the paste/apply action instead of waiting for React's background renders.
+- Merge Protection: Updated receiving logic to ensure server-loaded data doesn't overwrite fresh unsaved local data from transfers.
+
+### Question for debugging:
+Why is MileageReport.jsx failing to "catch" or correctly apply the data sent by DailyReporting.jsx even though the broadcast is triggered and identifiers are normalized? Are there specific React lifecycle issues or event-listener conflicts preventing the state update?

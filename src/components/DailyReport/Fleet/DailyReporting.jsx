@@ -52,26 +52,21 @@ export default function DailyReporting() {
 
   // Auto-sync rows to Mileage Report transfer buffer
   useEffect(() => {
-    if (rows.length > 0) {
+    if (rows && rows.length > 0) {
       const transferData = rows.map(row => ({
-        vehicle_code: row.reg_no,
+        // Prefer explicit vehicle_code, fallback to reg_no
+        vehicle_code: row.vehicle_code || row.reg_no,
+        reg_no: row.reg_no,
         mileage: row.mileage,
         ignition_time: row.ignition_time,
         source: 'daily_reporting'
       }))
 
-      const currentStored = localStorage.getItem('mileageReportTransfer')
-      const newJson = JSON.stringify(transferData)
-
-      if (currentStored !== newJson) {
-        localStorage.setItem('mileageReportTransfer', newJson)
-        window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
-      }
-    } else {
-      if (localStorage.getItem('mileageReportTransfer')) {
-        localStorage.removeItem('mileageReportTransfer')
-        window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: [] }))
-      }
+      const payload = JSON.stringify(transferData)
+      localStorage.setItem('mileageReportTransfer', payload)
+      // Broadcast for same-window active components
+      window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
+      console.log(`📡 Broadcasted sync for ${transferData.length} vehicles from Daily Reporting`)
     }
   }, [rows])
 
@@ -94,6 +89,27 @@ export default function DailyReporting() {
         ignition_time: r.ignition_time ? formatToHMS(r.ignition_time) : '00:00:00',
         fuel_allocated: r.fuel_allocated ? String(r.fuel_allocated) : ''
       }))
+
+      // Enrich with vehicle_code from registration for better syncing
+      try {
+        const regNos = [...new Set(loadedRows.map(r => r.reg_no).filter(Boolean))]
+        if (regNos.length > 0) {
+          const { data: vInfo } = await supabase
+            .from('vehicle_registrations')
+            .select('reg_no, vehicle_code')
+            .in('reg_no', regNos)
+
+          if (vInfo && vInfo.length > 0) {
+            const map = {}
+            vInfo.forEach(v => { map[v.reg_no.toLowerCase().trim()] = v.vehicle_code })
+            loadedRows.forEach(r => {
+              const key = (r.reg_no || '').toLowerCase().trim()
+              if (map[key]) r.vehicle_code = map[key]
+            })
+          }
+        }
+      } catch (e) { console.warn('Sync enrichment failed', e) }
+
       setRows(loadedRows)
       setSaveResult(null)
     } catch (err) {
@@ -103,13 +119,32 @@ export default function DailyReporting() {
     }
   }
 
-  const updateRowField = (idx, field, value) => {
+  const updateRowField = async (idx, field, value) => {
     setRows(prev => {
       const copy = [...prev]
       copy[idx] = { ...copy[idx], [field]: value }
       copy[idx].sr = idx + 1
       return copy
     })
+
+    // If reg_no changed, try to fetch the corresponding vehicle_code for sync
+    if (field === 'reg_no' && value) {
+      try {
+        const { data } = await supabase
+          .from('vehicle_registrations')
+          .select('vehicle_code')
+          .eq('reg_no', value.trim())
+          .single()
+        
+        if (data?.vehicle_code) {
+          setRows(prev => {
+            const copy = [...prev]
+            if (copy[idx]) copy[idx].vehicle_code = data.vehicle_code
+            return copy
+          })
+        }
+      } catch (e) { /* silent fail */ }
+    }
   }
 
   const getHeaderLabel = (key) => {
@@ -186,7 +221,21 @@ export default function DailyReporting() {
 
     const normalized = normalizeFleetRows(json)
     setPreviewRows(normalized.slice(0, 6))
-    setRows(normalized)
+    
+    // Enrich with codes before setting
+    const enriched = await enrichRowsWithCodes(normalized)
+    setRows(enriched)
+    
+    // Immediate sync
+    const transferData = enriched.map(row => ({
+      vehicle_code: row.vehicle_code || row.reg_no,
+      reg_no: row.reg_no,
+      mileage: row.mileage,
+      ignition_time: row.ignition_time,
+      source: 'daily_reporting'
+    }))
+    localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+    window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
   }
 
   const handleDropFile = async (file) => {
@@ -200,7 +249,52 @@ export default function DailyReporting() {
 
     const normalized = normalizeFleetRows(json)
     setPreviewRows(normalized.slice(0, 6))
-    setRows(normalized)
+    
+    // Enrich with codes before setting
+    const enriched = await enrichRowsWithCodes(normalized)
+    setRows(enriched)
+
+    // Immediate sync
+    const transferData = enriched.map(row => ({
+      vehicle_code: row.vehicle_code || row.reg_no,
+      reg_no: row.reg_no,
+      mileage: row.mileage,
+      ignition_time: row.ignition_time,
+      source: 'daily_reporting'
+    }))
+    localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+    window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
+  }
+
+  const enrichRowsWithCodes = async (targetRows) => {
+    try {
+      const regNos = [...new Set(targetRows.map(r => r.reg_no).filter(Boolean))]
+      if (regNos.length === 0) return targetRows
+
+      // Wrap codes in double quotes to handle spaces (e.g. "LED 1234")
+      const query = regNos.map(code => `reg_no.eq."${code}",vehicle_code.eq."${code}"`).join(',')
+      const { data: vInfo } = await supabase
+        .from('vehicle_registrations')
+        .select('reg_no, vehicle_code')
+        .or(query)
+
+      if (vInfo && vInfo.length > 0) {
+        const map = {}
+        vInfo.forEach(v => {
+          if (v.reg_no) map[v.reg_no.toLowerCase().trim()] = v.vehicle_code
+          if (v.vehicle_code) map[v.vehicle_code.toLowerCase().trim()] = v.vehicle_code
+        })
+
+        return targetRows.map(r => {
+          const key = (r.reg_no || '').toLowerCase().trim()
+          const code = map[key] || r.vehicle_code || r.reg_no
+          return { ...r, vehicle_code: code }
+        })
+      }
+    } catch (e) {
+      console.warn('Enrichment failed:', e)
+    }
+    return targetRows
   }
 
   const initPasteGrid = (rowsCount = 5) => {
@@ -272,7 +366,33 @@ export default function DailyReporting() {
     }
 
     if (newRows.length) {
-      setRows(prev => [...prev, ...newRows].map((r, idx) => ({ ...r, sr: idx + 1 })))
+      enrichRowsWithCodes(newRows).then(enriched => {
+        setRows(prev => {
+          const existing = [...prev]
+          enriched.forEach(nr => {
+            const idx = existing.findIndex(er => (er.reg_no || '').toLowerCase().trim() === (nr.reg_no || '').toLowerCase().trim())
+            if (idx >= 0) {
+              existing[idx] = { ...existing[idx], ...nr }
+            } else {
+              existing.push(nr)
+            }
+          })
+          const updated = existing.map((r, i) => ({ ...r, sr: i + 1 }))
+          
+          // Force immediate sync for tab switchers
+          const transferData = updated.map(row => ({
+            vehicle_code: row.vehicle_code || row.reg_no,
+            reg_no: row.reg_no,
+            mileage: row.mileage,
+            ignition_time: row.ignition_time,
+            source: 'daily_reporting'
+          }))
+          localStorage.setItem('mileageReportTransfer', JSON.stringify(transferData))
+          window.dispatchEvent(new CustomEvent('mileageTransfer', { detail: transferData }))
+          
+          return updated
+        })
+      })
     }
     setPasteGrid([])
     setShowUploadModal(false)
@@ -305,6 +425,7 @@ export default function DailyReporting() {
         const payload = {
           date: today,
           reg_no: regNo,
+          vehicle_code: row.vehicle_code || regNo, // Ensure vehicle_code is included
           town: (row.town || '').trim() || null,
           mileage: row.mileage ? parseFloat(row.mileage) : null,
           ignition_time: row.ignition_time ? hmsToDecimal(row.ignition_time) : null,

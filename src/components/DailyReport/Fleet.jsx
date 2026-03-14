@@ -29,8 +29,12 @@ export default function Fleet({ darkMode }) {
       </div>
 
       <div className={`rounded-2xl border shadow-lg p-6 transition-all duration-300 ${darkMode ? 'bg-white/5 border-white/10 shadow-black/20 text-slate-200' : 'bg-white/40 backdrop-blur-xl border-white/60 shadow-emerald-500/5'}`}>
-        {activeFleetTab === 'daily-reporting' && <DailyReporting darkMode={darkMode} />}
-        {activeFleetTab === 'mileage-report' && <MileageReport darkMode={darkMode} />}
+        <div style={{ display: activeFleetTab === 'daily-reporting' ? 'block' : 'none' }}>
+          <DailyReporting darkMode={darkMode} />
+        </div>
+        <div style={{ display: activeFleetTab === 'mileage-report' ? 'block' : 'none' }}>
+          <MileageReport darkMode={darkMode} />
+        </div>
       </div>
     </div>
   )
