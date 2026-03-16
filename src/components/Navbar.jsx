@@ -3,6 +3,61 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
+const FlipDigit = ({ val }) => (
+  <div className="flip-card flex items-center justify-center text-[15px] tabular-nums">
+    <div className="flip-card-divider" />
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={val}
+        initial={{ y: '100%', rotateX: -80, opacity: 0 }}
+        animate={{ y: '0%', rotateX: 0, opacity: 1 }}
+        exit={{ y: '-100%', rotateX: 80, opacity: 0 }}
+        transition={{
+          duration: 0.45,
+          ease: [0.34, 1.56, 0.64, 1], // Custom bouncy ease-out for mechanical feel
+          opacity: { duration: 0.15 }
+        }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        {val}
+      </motion.span>
+    </AnimatePresence>
+  </div>
+)
+
+const FlipClock = ({ date }) => {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const s = date.getSeconds();
+
+  const hStr = (h % 12 || 12).toString().padStart(2, '0');
+  const mStr = m.toString().padStart(2, '0');
+  const sStr = s.toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+
+  return (
+    <div className="flex items-center px-3 py-1 bg-emerald-500/5 dark:bg-emerald-400/5 border border-emerald-500/10 dark:border-emerald-400/10 rounded-full flip-clock-container origin-right shadow-sm shadow-emerald-500/5 transition-all hover:bg-emerald-500/10 dark:hover:bg-emerald-400/10">
+      <div className="flex">
+        <FlipDigit val={hStr[0]} />
+        <FlipDigit val={hStr[1]} />
+      </div>
+      <span className="text-emerald-500/40 animate-pulse-subtle text-xs select-none px-0.5">:</span>
+      <div className="flex">
+        <FlipDigit val={mStr[0]} />
+        <FlipDigit val={mStr[1]} />
+      </div>
+      <span className="text-emerald-500/40 animate-pulse-subtle text-xs select-none px-0.5">:</span>
+      <div className="flex">
+        <FlipDigit val={sStr[0]} />
+        <FlipDigit val={sStr[1]} />
+      </div>
+      <div className="ml-2 flex flex-col justify-center border-l border-emerald-500/10 pl-1.5">
+        <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 tracking-tighter leading-none select-none italic uppercase">{ampm}</span>
+      </div>
+    </div>
+  );
+};
+
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -21,7 +76,6 @@ export default function Navbar() {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
-  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
   // Theme Toggle Logic
   const [isDark, setIsDark] = useState(() => {
@@ -219,9 +273,11 @@ export default function Navbar() {
           </div>
 
           {/* User Menu */}
-          <div className="hidden md:flex items-center space-x-3">
-
-            <div className="text-xs font-mono text-slate-400 px-2" aria-live="polite">{timeString}</div>
+          <div className="hidden md:flex items-center space-x-4">
+            <div className="px-2" aria-live="polite">
+              <FlipClock date={now} />
+            </div>
+            <div className="h-4 w-px bg-slate-200 dark:bg-slate-800"></div>
 
             {/* Dark Mode Toggle */}
             <button
@@ -379,7 +435,9 @@ export default function Navbar() {
                     <div>
                       <div className="text-sm font-semibold text-slate-900">{user.name}</div>
                       <div className="text-xs text-slate-500 truncate">{user.email}</div>
-                      <div className="text-xs text-slate-400 font-mono mt-1">{timeString}</div>
+                      <div className="mt-2 scale-75 origin-left" aria-live="polite">
+                        <FlipClock date={now} />
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
