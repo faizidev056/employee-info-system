@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     UsersIcon,
-    DocumentTextIcon,
+    DocumentChartBarIcon,
     TruckIcon,
     LockClosedIcon,
     ArrowRightOnRectangleIcon
@@ -46,17 +46,17 @@ const Home = () => {
         {
             id: 'hr',
             title: 'Suthra Punjab HR',
-            color: 'blue',
+            color: 'emerald',
             icon: UsersIcon,
             path: '/workers?tab=dashboard',
-            gradient: 'from-blue-500 to-cyan-500',
-            glow: 'rgba(59, 130, 246, 0.5)'
+            gradient: 'from-emerald-500 to-teal-500',
+            glow: 'rgba(16, 185, 129, 0.5)'
         },
         {
             id: 'report',
             title: 'Daily Report',
             color: 'emerald',
-            icon: DocumentTextIcon,
+            icon: DocumentChartBarIcon,
             path: '/daily-report',
             gradient: 'from-emerald-500 to-teal-500',
             glow: 'rgba(16, 185, 129, 0.5)'
@@ -64,20 +64,20 @@ const Home = () => {
         {
             id: 'fleet',
             title: 'Vehicle Registration',
-            color: 'indigo',
+            color: 'emerald',
             icon: TruckIcon,
             path: '/vehicle-registration',
-            gradient: 'from-indigo-500 to-purple-500',
-            glow: 'rgba(99, 102, 241, 0.5)'
+            gradient: 'from-emerald-500 to-teal-500',
+            glow: 'rgba(16, 185, 129, 0.5)'
         },
         {
             id: 'private',
             title: 'Private HR',
-            color: 'rose',
+            color: 'emerald',
             icon: LockClosedIcon,
             path: '/private-hr',
-            gradient: 'from-rose-500 to-pink-500',
-            glow: 'rgba(244, 63, 94, 0.5)'
+            gradient: 'from-emerald-500 to-teal-500',
+            glow: 'rgba(16, 185, 129, 0.5)'
         }
     ];
 
@@ -210,9 +210,17 @@ const Home = () => {
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: showSplash ? 0 : 1, y: showSplash ? -20 : 0 }}
                     transition={{ delay: 0.2 }}
-                    className="text-center mb-12"
+                    className="text-center mb-16 flex flex-col items-center relative"
                 >
-                    <h2 className={`font-bold tracking-[0.8em] uppercase text-[10px] mb-4 transition-colors duration-300 ${darkMode ? 'text-emerald-400/40' : 'text-emerald-800/40'}`}>
+                    {/* Reinvented Lamp Effect */}
+                    <div className="reinvented-lamp-container animate-lamp-flicker">
+                        <div className="lamp-atmospheric-glow"></div>
+                        <div className="lamp-volume-glow"></div>
+                        <div className="lamp-portal-beam"></div>
+                        <div className="lamp-core-line"></div>
+                    </div>
+
+                    <h2 className={`font-bold tracking-[0.8em] uppercase text-[10px] mb-4 transition-colors duration-300 relative z-10 ${darkMode ? 'text-emerald-400/60' : 'text-emerald-800/40'}`}>
                         Tehsil Haroonabad
                     </h2>
                     <h1 className={`text-4xl md:text-7xl font-black mb-6 tracking-tighter uppercase italic transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -242,32 +250,20 @@ const Home = () => {
                                 onMouseLeave={() => setHoveredId(null)}
                                 onClick={() => navigate(card.path)}
                                 className={`
-                                    group relative w-28 h-28 md:w-36 md:h-36 
-                                    rounded-[3rem] flex items-center justify-center 
-                                    transition-all duration-500 ease-out
-                                    backdrop-blur-xl hover:border-emerald-500/30 hover:scale-110 active:scale-95
-                                    ${darkMode
-                                        ? 'bg-white/5 border border-white/10 shadow-xl shadow-black/20'
-                                        : 'bg-white/40 border border-white/60 shadow-xl shadow-emerald-900/5'
-                                    }
+                                    group relative w-32 h-32 md:w-40 md:h-40 
+                                    rounded-full flex items-center justify-center 
+                                    transition-all duration-300 ease-in-out
+                                    ${darkMode ? 'bg-white/5' : 'bg-white/40'}
                                 `}
-                                style={{
-                                    boxShadow: hoveredId === card.id
-                                        ? `0 20px 40px -10px ${card.glow.replace('0.5', '0.15')}, inset 0 0 10px white`
-                                        : '0 10px 25px -5px rgba(0,0,0,0.03)'
-                                }}
                             >
-                                {/* Inner Accent Glow */}
-                                <div className={`absolute inset-0 rounded-[3rem] bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-[0.07] transition-opacity duration-700`}></div>
-
-                                {/* Animated Hover Border */}
-                                <div className={`absolute -inset-[1px] rounded-[3rem] bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-30 transition-opacity duration-700 blur-[1px]`}></div>
+                                {/* Persistent Orbital Ring Hover Effect */}
+                                <div className="orbital-ring-base"></div>
+                                <div className="orbital-ring-ghost"></div>
 
                                 <card.icon className={`
                                     w-12 h-12 md:w-16 md:h-16 
-                                    transition-all duration-500
-                                    ${hoveredId === card.id ? `text-${card.color}-${darkMode ? '400' : '600'}` : `${darkMode ? 'text-slate-500' : 'text-slate-400'} group-hover:text-emerald-500`}
-                                    group-hover:drop-shadow-[0_0_20px_rgba(16,185,129,0.2)]
+                                    transition-all duration-500 dashboard-icon
+                                    ${darkMode ? 'text-white/40' : 'text-slate-400'}
                                 `} />
 
                                 {/* Tooltip Revealed on Hover */}

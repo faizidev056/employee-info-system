@@ -167,6 +167,211 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
   }
 
+  /* Reinvented Lamp Effect - High-Fidelity Atmospheric Lighting */
+  .reinvented-lamp-container {
+    position: relative;
+    width: 100%;
+    max-width: 1000px;
+    height: 120px;
+    margin-bottom: -40px;
+    /* Overlap with content below */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 5;
+    overflow: visible;
+  }
+
+  .lamp-core-line {
+    position: relative;
+    height: 3px;
+    width: 0;
+    background: linear-gradient(90deg, transparent, #10b981, #34d399, #10b981, transparent);
+    border-radius: 999px;
+    box-shadow:
+      0 0 10px #10b981,
+      0 0 25px rgba(16, 185, 129, 0.6),
+      0 0 50px rgba(16, 185, 129, 0.4);
+    animation: lampCoreReveal 1.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  .lamp-atmospheric-glow {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 450px;
+    background: radial-gradient(circle at 50% 0%,
+        rgba(16, 185, 129, 0.3) 0%,
+        rgba(16, 185, 129, 0.15) 35%,
+        rgba(16, 185, 129, 0.08) 60%,
+        transparent 90%);
+    filter: blur(110px);
+    opacity: 0;
+    transform: scaleX(0.5);
+    animation: lampGlobalBloom 2.5s ease-out forwards 0.3s;
+  }
+
+  .lamp-volume-glow {
+    position: absolute;
+    top: 0;
+    width: 70%;
+    height: 350px;
+    background: radial-gradient(circle at 50% 0%,
+        rgba(52, 211, 153, 0.2) 0%,
+        rgba(16, 185, 129, 0.1) 40%,
+        transparent 80%);
+    filter: blur(60px);
+    opacity: 0;
+    animation: lampGlobalBloom 3s ease-out forwards 0.6s;
+    z-index: 4;
+  }
+
+  .lamp-portal-beam {
+    position: absolute;
+    top: 0;
+    width: 65%;
+    height: 120%;
+    background: conic-gradient(from 180deg at 50% 0%,
+        transparent 145deg,
+        rgba(52, 211, 153, 0.2) 180deg,
+        transparent 215deg);
+    filter: blur(50px);
+    opacity: 0;
+    animation: lampBeamPulse 5s ease-in-out infinite alternate 2s;
+  }
+
+  @keyframes lampCoreReveal {
+    0% {
+      width: 0;
+      opacity: 0;
+      transform: scaleX(0);
+    }
+
+    10% {
+      opacity: 0.5;
+    }
+
+    100% {
+      width: 85%;
+      opacity: 1;
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes lampGlobalBloom {
+    0% {
+      opacity: 0;
+      transform: scaleX(0.5) translateY(-20px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scaleX(1.6) translateY(0);
+    }
+  }
+
+  @keyframes lampBeamPulse {
+    0% {
+      opacity: 0.3;
+      transform: scaleX(0.9);
+    }
+
+    100% {
+      opacity: 0.6;
+      transform: scaleX(1.1);
+    }
+  }
+
+  /* Micro-flicker for realism */
+  @keyframes lampFlicker {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    92% {
+      opacity: 1;
+    }
+
+    93% {
+      opacity: 0.8;
+    }
+
+    94% {
+      opacity: 1;
+    }
+
+    96% {
+      opacity: 0.9;
+    }
+
+    97% {
+      opacity: 1;
+    }
+  }
+
+  .animate-lamp-flicker {
+    animation: lampFlicker 10s infinite;
+  }
+
+  /* Premium Orbital Ring Hover Effect - Refined Image Match */
+  .orbital-ring-base,
+  .orbital-ring-ghost {
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 3px solid #10b981;
+    /* Thicker for image match */
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark .orbital-ring-base,
+  .dark .orbital-ring-ghost {
+    border-color: white;
+  }
+
+  .orbital-ring-base {
+    opacity: 0.5;
+    z-index: 2;
+  }
+
+  .orbital-ring-ghost {
+    opacity: 0;
+    transform: translate(0, 0);
+    z-index: 1;
+    /* Soft 'half-ring' mask for a premium crescent look */
+    -webkit-mask-image: linear-gradient(to right, transparent 30%, black 100%);
+    mask-image: linear-gradient(to right, transparent 30%, black 100%);
+  }
+
+  .group:hover .orbital-ring-base {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+
+  .group:hover .orbital-ring-ghost {
+    opacity: 0.7;
+    transform: translate(16px, 8px);
+    /* Deeper eccentric overlap */
+  }
+
+  .dashboard-icon {
+    transition: all 0.3s ease;
+  }
+
+  .group:hover .dashboard-icon {
+    color: #10b981 !important;
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.3));
+  }
+
+  .dark .group:hover .dashboard-icon {
+    color: white !important;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4));
+  }
+
   /* Flip Clock Styles */
   .flip-clock-container {
     perspective: 1000px;
@@ -220,6 +425,20 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.6;
   transition: all 0.2s ease;
+}
+
+input[type="month"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+input[type="month"]::-webkit-datetime-edit-year-field,
+input[type="month"]::-webkit-datetime-edit-month-field {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+input[type="month"]::-webkit-datetime-edit-text {
+  color: #94a3b8;
 }
 
 input[type="month"]:hover::-webkit-calendar-picker-indicator {
